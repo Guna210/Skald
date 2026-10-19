@@ -1446,15 +1446,15 @@ Answers from the Orchestrator (or owner) that clarify or change this spec are re
 
 One environment named **Skald**, used by every Claude session (Orchestrator, Reviewers, Claude Builders). Other agents' cloud environments (e.g. Codex) need the same domains and tools.
 
-**Network access:** Custom, with **Also include default list of common package managers** checked (covers PyPI, npm, GitHub release downloads and Ubuntu mirrors). Additional allowed domains:
+**Where:** at claude.ai/code, the environment selector is the first control under the message box on the new-session screen → **New environment**.
+
+**Network access:** **Custom**, with **Also include default list of common package managers** checked (covers PyPI, npm, GitHub including release downloads and raw files, and Ubuntu mirrors). **Allowed domains**, one per line:
 
 ```text
 huggingface.co
 *.huggingface.co
 *.hf.co
 download.pytorch.org
-raw.githubusercontent.com
-objects.githubusercontent.com
 www.gutenberg.org
 ```
 
