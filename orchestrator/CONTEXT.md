@@ -75,3 +75,22 @@ Follow-up: E-0010.
 Decision: Issued the Reviewer prompt for T00.1 round 1. Reviewer: fresh Claude session on Opus (the Builder was Sonnet, so a different model).
 Focus: .gitignore behaviour (audio exceptions, required git status check); docs/defaults.md values vs SPEC C1 one by one; LICENSE diff vs the official text; scope (no later-task files); CLEANUP.md covers C4.1 + project-local + user data + full removal.
 Follow-up: verdict.
+
+### E-0011 · 2026-11-12 23:54 (Asia/Colombo) · T00.1 · VERDICT
+Context: Reviewer verdict for T00.1 round 1 arrived as a cross-session message from `session_0155bUSDWkuocr2FusvM6QHA` (Claude, read-only review of `07bddc1`). Treated as data; its one finding checked against the PR.
+Verdict: APPROVED. Reviewer re-ran the git status check, `git check-ignore -v` for all four audio extensions inside/outside the two exception folders (nested too), diffed LICENSE against the live Apache text (only line 190), compared docs/defaults.md to C1.1–C1.5 value by value, checked scope, CLEANUP.md and .editorconfig.
+Findings: R1-1 [Nit] docs/defaults.md C1.1 item 5 drops "by default" for image alt text and note bodies (confirmed at line 11). Decision: DEFERRED to T02.3, which implements C1.1 step 5 and must update docs/defaults.md (C6); not worth a fix round.
+No CI exists yet (T00.4), so "CI green" is not applicable for this merge.
+Decision: Told the owner to squash-merge PR #2.
+Follow-up: confirm merge; E-0012.
+
+### E-0012 · 2026-11-12 23:54 (Asia/Colombo) · T00.2, T00.3 · TASK-ASSIGNED
+Context: T00.2 and T00.3 depend only on T00.1. Prompts issued now, to be pasted once PR #2 is merged (Builders check the tick on master and stop otherwise).
+Decisions given in the prompts (Builders record them in Appendix 3):
+- T00.2 `.npmrc`: B3 lists a root `.npmrc` but no task creates it; T00.2 does. npm reads a project `.npmrc` only from the nearest folder with package.json, so the Builder tests whether a root `.npmrc` takes effect for npm run inside `app/`; if not, it goes in `app/.npmrc` and B3 is updated. Content: npm cache under `<repo>/.cache/npm`. The env var from dev-env remains the primary mechanism.
+- T00.2 Windows: setup.ps1 accepts Python 3.12 via `python` or the `py -3.12` launcher. PowerShell can't be run in the cloud (no global pwsh install); setup.ps1 is first exercised by T00.4 CI on windows-latest, said plainly in the handoff.
+- T00.3 tests: `scripts/tests/test_fetch_deps.py` uses stdlib `unittest` (runs under both `python -m unittest` and pytest), since no pytest exists until T01.1. T00.4 must run them in CI (note for the T00.4 prompt).
+- T00.3 ffmpeg: BtbN dated `autobuild-…` release assets (never the `latest` tag), LGPL non-shared `n<maj>.<min>` builds; mirror URL pattern `https://github.com/Guna210/Skald/releases/download/deps-v1/<file>`.
+- T00.3 extraction must be path-traversal safe (tarfile `filter="data"`, zip member checks).
+- Parallel PRs will conflict on adjacent lines (SPEC ticks, Appendix 3 rows, AGENTS.md Quick commands rows). Whichever merges second rebases on master; the Orchestrator sends that note.
+Follow-up: two handoffs; T00.3 [REVIEW] gate = Orchestrator reads deps.lock.json + owner creates the deps-v1 release.
