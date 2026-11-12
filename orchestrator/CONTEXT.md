@@ -148,3 +148,10 @@ Decision: Issued the T01.1 Builder prompt, to be pasted after PR #3 merges. Clar
 - `core/requirements.lock` (listed in B3, created by no task): not created in T01.1. Open item: decide owner task later (likely T09.1, frozen core reproducibility).
 - `python -m skald_core` with no arguments in T01.1: write nothing to stdout (T01.2 turns it into the server); a one-line usage note on stderr, exit 2.
 Follow-up: handoff.
+
+### E-0021 · 2026-11-13 00:38 (Asia/Colombo) · — · DECISION
+Context: Owner, replying to the PR #3 merge steps: "I like normal merge. I'll continue to use normal merge. record that in context".
+Decision: PRs are merged with GitHub's normal **"Create a merge commit"**, not "Squash and merge". This replaces the reminders in E-0007 and E-0013 (no longer an issue; PR #1 and PR #2 were merged the owner's preferred way).
+Why: Owner's choice.
+Docs: only `CLAUDE.md` says squash (line 45 git conventions "Use **Squash and merge**", line 99 the APPROVED merge steps). `AGENTS.md` and `SPEC.md` don't mention it. Both CLAUDE.md lines change to the normal merge in the next Builder PR that is issued (instructed in its prompt), recorded in SPEC Appendix 3.
+Follow-up: merge steps given to the owner from now on: open the PR → check CI → (GPU report for [GPU] tasks) → "Merge pull request" → "Confirm merge".
