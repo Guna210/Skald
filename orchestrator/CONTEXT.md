@@ -212,3 +212,8 @@ Round count: first Skald CHANGES REQUESTED for T00.3 (rounds 1–3 were the Buil
 
 ### E-0028 · 2026-11-13 02:37 (Asia/Colombo) · T00.3 · FIX-PROMPT
 Decision: Issued the ROUND 5 fix prompt (R4-1 … R4-7, R4-10, Appendix 3 lock-shape row). Not fixing R4-8, R4-9. The next review goes to the same Opus Reviewer session as ROUND 5.
+
+### E-0029 · 2026-11-13 02:40 (Asia/Colombo) · T00.3 · DECISION
+Context: Owner, on the R4-1 licensing approach for the deps-v1 mirror (E-0027): "I'm okay with it".
+Decision: Owner confirms the Orchestrator's licensing reading: the deps-v1 release carries a description with each tool's licence and source location by commit SHA plus uv's MIT notice, and attaches the FFmpeg source and FFmpeg-Builds build-script snapshots; the bundled libraries are covered by directions through the build scripts. No outside licensing review requested.
+Follow-up: the owner still uploads only after the ROUND 5 approval, by 2026-11-25.

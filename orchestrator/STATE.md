@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 02:37 (Asia/Colombo) · last entry: E-0028
+Last updated: 2026-11-13 02:40 (Asia/Colombo) · last entry: E-0029
 Current log file: `CONTEXT.md` (entries E-0001 onward)
 
 ## Where the project is
@@ -19,7 +19,6 @@ Current log file: `CONTEXT.md` (entries E-0001 onward)
 
 ## Waiting on the owner
 1. Paste the T00.3 ROUND 5 fix prompt into the T00.3 Builder (E-0028).
-- Confirm (or object to) the Orchestrator's licensing reading for the deps-v1 mirror (E-0027 R4-1) — before uploading.
 - DEADLINE: deps-v1 mirror uploaded by 2026-11-25 (upstream ffmpeg build URLs vanish ~2026-11-26) (E-0027).
 2. Start T01.1 if not yet started (E-0020).
 3. After T00.3 approval: create the `deps-v1` release per docs/spikes/deps-mirror.md (8 assets incl. 2 source snapshots).
@@ -29,6 +28,7 @@ Current log file: `CONTEXT.md` (entries E-0001 onward)
 None.
 
 ## Open questions from Builders / Reviewers
+- (resolved) deps-v1 licensing approach confirmed by the owner (E-0029).
 None.
 
 ## Deferred findings
