@@ -155,3 +155,32 @@ Decision: PRs are merged with GitHub's normal **"Create a merge commit"**, not "
 Why: Owner's choice.
 Docs: only `CLAUDE.md` says squash (line 45 git conventions "Use **Squash and merge**", line 99 the APPROVED merge steps). `AGENTS.md` and `SPEC.md` don't mention it. Both CLAUDE.md lines change to the normal merge in the next Builder PR that is issued (instructed in its prompt), recorded in SPEC Appendix 3.
 Follow-up: merge steps given to the owner from now on: open the PR → check CI → (GPU report for [GPU] tasks) → "Merge pull request" → "Confirm merge".
+
+### E-0022 · 2026-11-13 01:48 (Asia/Colombo) · T00.2 · MERGED
+Context: Owner: "merged PR #3". Confirmed: `master` at `3278d73` (normal merge, per E-0021). T00.2 ticked on master.
+Follow-up: T01.1 can start (prompt E-0020).
+
+### E-0023 · 2026-11-13 01:48 (Asia/Colombo) · T00.3 · NOTE
+Context: T00.3 handoff pasted by the owner, labelled "round 3". Agent: "Teamwork Orchestrator + Builders" (a multi-agent builder tool). Its R1-1, R1-2, R2-1 findings came from the Builder tool's own internal review rounds, not from a Skald Reviewer. No Skald Reviewer has seen T00.3 yet.
+PR #4 (https://github.com/Guna210/Skald/pull/4), branch `task/T00.3-pinned-binaries`, commits 06baa7f, 99bea30, f6fbca8. NOT based on current master (3278d73): needs a rebase (conflicts expected in SPEC.md tick/Appendix 3 and AGENTS.md Part 5). 6 files, +1138: deps.lock.json 74, fetch_deps.py 459, test_fetch_deps.py 524 (9 tests), docs/spikes/deps-mirror.md 78. Far above size S (<300), mostly tests and a tar-extraction fallback for Python < 3.11.4.
+[REVIEW] gate, part 1 (Orchestrator reads deps.lock.json): every one of the 6 URLs downloaded from the cloud and its SHA-256 matched the lock file:
+- ffmpeg n9.0.2-57-gd838f9f9ae (FFmpeg-Builds autobuild-2026-11-12-15-40, lgpl-9.0, non-shared): win64 zip 168,582,281 B; linux64 tar.xz 135,634,940 B.
+- uv 0.13.8: win64 zip 15,529,884 B; linux64 tar.gz 16,855,069 B.
+- python-build-standalone 3.12.16+20261110 install_only_stripped: win64 22,365,213 B; linux64 34,709,145 B.
+- Total ≈ 393.6 MB (relevant for the owner's mirror upload).
+ffmpeg source repo is `github.com/FFmpeg-Builds/FFmpeg-Builds`, not `BtbN/FFmpeg-Builds`: GitHub search shows FFmpeg-Builds/FFmpeg-Builds created 2020-09-01, ~12k stars, not a fork, and no BtbN/FFmpeg-Builds result — the BtbN project moved to an organisation. Accepted as the D12 source. SPEC D12 still says "BtbN FFmpeg-Builds" — fine as the project name.
+Mirror asset names for python contain "+" (URL-encoded %2B in mirror_url, same as upstream). The owner's upload must keep the exact names; the mirror doc must say how to check.
+
+### E-0024 · 2026-11-13 01:48 (Asia/Colombo) · T00.3 · DECISION
+Answers to the Builder's open questions and pre-review decisions:
+1. ffmpeg license field → `LGPL-3.0-or-later`. This build is configured with `--enable-version3` and ships the LGPL-3.0 text, so the binary is LGPLv3. Compatible with D10/D12: run only as a separate executable, never linked. T09.4 must ship the LGPL-3.0 text and the source link. Record in Appendix 3.
+2. Remove the Python < 3.11.4 tar-extraction fallback (hand-written member validation + its test). fetch_deps.py runs under Python 3.12 (setup scripts, CI) or a recent notebook Python, where `tarfile.data_filter` (PEP 706) always exists. If it's missing, exit 1 with a clear "needs Python 3.12" message. Why: unrequested code (Ponytail), and hand-rolled path-safety code is a liability when the stdlib already provides it. Zip member checks stay (zipfile has no equivalent filter).
+3. Rebase on master and resolve the SPEC.md / AGENTS.md conflicts by keeping both sides.
+4. Windows execution of fetch_deps.py: no separate owner check required; T00.4's windows-latest CI runs setup.ps1 → fetch_deps.py. Optional for the owner.
+5. Owner creates the `deps-v1` release after the Reviewer approves, so the files are final before ~394 MB is uploaded.
+6. Numbering: the Builder tool used rounds 1–3 internally. The fix round is ROUND 4; the Skald Reviewer reviews it as ROUND 4 with findings R4-n, so IDs don't collide.
+Follow-up: E-0025.
+
+### E-0025 · 2026-11-13 01:48 (Asia/Colombo) · T00.3 · FIX-PROMPT
+Decision: Sent the T00.3 Builder a round-4 prompt (rebase, license field + Appendix 3, remove the fallback). Then a Reviewer (fresh Claude Opus: the [REVIEW] task touches licenses and security-sensitive extraction).
+Note: the CLAUDE.md squash→merge doc fix (E-0021) moves to the T00.4 prompt instead (keeps T00.3's diff on scope).
