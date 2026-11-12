@@ -1,23 +1,23 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 00:19 (Asia/Colombo) · last entry: E-0017
+Last updated: 2026-11-13 00:24 (Asia/Colombo) · last entry: E-0018
 Current log file: `CONTEXT.md` (entries E-0001 onward)
 
 ## Where the project is
-- Phase 0: T00.1 merged (`3e4a81d`). T00.2 in fix round 2 (PR #3). T00.3 assigned, building in parallel (no handoff yet).
+- Phase 0: T00.1 merged (`3e4a81d`). T00.2 round 2 pushed, in re-check (PR #3). T00.3 assigned, building in parallel (no handoff yet).
 - `master` at `3e4a81d`. Default branch `master`; spec v1.0 approved (E-0005).
-- Open PRs: PR #3 T00.2 (https://github.com/Guna210/Skald/pull/3) — round 1 APPROVED with minors; fix round 2 for R1-1, R1-2, R1-4 (E-0016).
+- Open PRs: PR #3 T00.2 (https://github.com/Guna210/Skald/pull/3) — round 1 APPROVED with minors; round 2 (`dd54d80`) fixes R1-1, R1-2, R1-4; re-check by the same Reviewer (E-0018).
 - Releases/tags: none (`deps-v1` mirror comes with T00.3).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2).
-- In fix round: T00.2 — round 2 fix prompt issued (E-0017); then a short re-check by the same Reviewer.
+- In review: T00.2 — round 2 re-check prompt issued (E-0018).
 - Assigned (round 1, building): T00.3 pinned binaries [REVIEW] (E-0012).
 - Next after T00.2 + T00.3: T00.4 CI skeleton. After T00.2 alone: T01.1 → then T01.x, T02.1, T03.9 in parallel.
 
 ## Waiting on the owner
-1. Paste the T00.2 round-2 fix prompt into the same Gemini Builder session (E-0017).
+1. Paste the T00.2 round-2 re-check prompt into the same Reviewer session (E-0018).
 2. Bring the T00.3 handoff when it arrives.
 
 ## Pending GPU runs

@@ -128,3 +128,8 @@ Round 2 review: the same Reviewer session checks only the three fixes.
 ### E-0017 · 2026-11-13 00:19 (Asia/Colombo) · T00.2 · FIX-PROMPT
 Decision: Issued the round-2 fix prompt to the T00.2 Builder (Gemini, same session): fix R1-1 (option a), R1-2, R1-4; R1-3 not fixing.
 Follow-up: round-2 handoff → short re-check prompt for the same Reviewer.
+
+### E-0018 · 2026-11-13 00:24 (Asia/Colombo) · T00.2 · REVIEW-PROMPT
+Context: T00.2 round-2 handoff (Gemini, pasted by the owner): commit `dd54d80` on PR #3. Checked against the branch: app/.npmrc deleted (no .npmrc anywhere in the tree); SPEC B3, C4.2 and the T00.2 Appendix 3 row changed exactly as instructed in E-0017; setup.sh/setup.ps1 now check `-m pip --version` and rebuild; `python3.12` probe removed from setup.ps1. Builder showed the --without-pip venv being rebuilt with pip.
+Decision: Short round-2 re-check by the same Reviewer session (Sonnet), limited to R1-1, R1-2, R1-4 and regressions.
+Note: no T00.3 branch pushed yet.
