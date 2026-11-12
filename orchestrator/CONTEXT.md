@@ -133,3 +133,18 @@ Follow-up: round-2 handoff → short re-check prompt for the same Reviewer.
 Context: T00.2 round-2 handoff (Gemini, pasted by the owner): commit `dd54d80` on PR #3. Checked against the branch: app/.npmrc deleted (no .npmrc anywhere in the tree); SPEC B3, C4.2 and the T00.2 Appendix 3 row changed exactly as instructed in E-0017; setup.sh/setup.ps1 now check `-m pip --version` and rebuild; `python3.12` probe removed from setup.ps1. Builder showed the --without-pip venv being rebuilt with pip.
 Decision: Short round-2 re-check by the same Reviewer session (Sonnet), limited to R1-1, R1-2, R1-4 and regressions.
 Note: no T00.3 branch pushed yet.
+
+### E-0019 · 2026-11-13 00:33 (Asia/Colombo) · T00.2 · VERDICT
+Context: Reviewer round-2 verdict for T00.2 (same Sonnet session, pasted by the owner): APPROVED. R1-1, R1-2, R1-4 verified fixed (incl. a fake-python shim for the "still no pip" exit 1; delete path can only hit <repo>/core/.venv; pwsh 7.4.6 on Linux exercised the PowerShell rebuild path). No regressions (space + non-ASCII path, other cwd).
+Findings: R2-1 [Nit] setup.sh has no custom hint when `-m venv` itself fails (Python's own error shows). NOT FIXING.
+Open risk carried to T00.4: Windows PowerShell 5.1 + $ErrorActionPreference=Stop with native stderr (E-0016). setup.ps1's Windows success path is first run by T00.4 CI.
+Decision: Told the owner to squash-merge PR #3. Optional owner check: run `.\scripts\setup.ps1` twice on the Windows laptop (needs C4.1 prerequisites installed); not required since T00.4 CI covers it.
+Follow-up: confirm merge; E-0020.
+
+### E-0020 · 2026-11-13 00:33 (Asia/Colombo) · T01.1 · TASK-ASSIGNED
+Context: T01.1 depends only on T00.2 (approved). T00.3 still building (no branch pushed); T00.4 waits for it.
+Decision: Issued the T01.1 Builder prompt, to be pasted after PR #3 merges. Clarifications (Builder records in Appendix 3):
+- CI acceptance: T01.1 can't be green in CI until T00.4 exists. Builder proves Windows installability now with `pip download --only-binary=:all: --platform win_amd64 --python-version 3.12` for every pin (into a temp folder) and runs the Linux checks locally; the "CI core job green on both OSes" criterion is met by whichever of the T01.1/T00.4 PRs merges second (its CI must show the core job green on both OSes, not skipped).
+- `core/requirements.lock` (listed in B3, created by no task): not created in T01.1. Open item: decide owner task later (likely T09.1, frozen core reproducibility).
+- `python -m skald_core` with no arguments in T01.1: write nothing to stdout (T01.2 turns it into the server); a one-line usage note on stderr, exit 2.
+Follow-up: handoff.
