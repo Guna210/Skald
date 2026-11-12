@@ -184,3 +184,8 @@ Follow-up: E-0025.
 ### E-0025 · 2026-11-13 01:48 (Asia/Colombo) · T00.3 · FIX-PROMPT
 Decision: Sent the T00.3 Builder a round-4 prompt (rebase, license field + Appendix 3, remove the fallback). Then a Reviewer (fresh Claude Opus: the [REVIEW] task touches licenses and security-sensitive extraction).
 Note: the CLAUDE.md squash→merge doc fix (E-0021) moves to the T00.4 prompt instead (keeps T00.3's diff on scope).
+
+### E-0026 · 2026-11-13 01:56 (Asia/Colombo) · T00.3 · REVIEW-PROMPT
+Context: T00.3 round-4 handoff (agent now reported as "Antigravity / Gemini", pasted by the owner). Checked against the branch: rebased onto 3278d73 (commits 882ed34, 85f7705, 24ba4d0, 494abc3); +944 lines (fetch_deps.py 355, tests 433, lock 74, mirror doc 78); ffmpeg license LGPL-3.0-or-later; fallback functions gone, `tarfile.data_filter` guard in main() (exit 1) and safe_extract(); Appendix 3 has the unittest row and the LGPL-3.0/org-move row; AGENTS.md Part 5 row filled; all 6 SHA-256 values unchanged since the E-0023 gate check.
+Decision: Review by a fresh Claude Opus session as ROUND 4 (findings R4-n). Focus: download/verify/extract safety, mirror fallback, no-op/tamper logic, the mirror doc for a non-developer (incl. "+" in asset names), Ponytail size, licenses.
+Small note for the Reviewer: AGENTS.md Linux command is `python3 scripts/fetch_deps.py`, which on systems whose python3 is < 3.12 exits with the "needs Python 3.12" message; the venv/vendored python is the intended interpreter.
