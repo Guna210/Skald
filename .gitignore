@@ -1,0 +1,35 @@
+# Environments, caches, build output
+.venv/
+node_modules/
+.cache/
+vendor/
+dist/
+out/
+release/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+logs/
+*.log
+selftest/out/
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Audio is never committed, except test data and bundled assets (these lines must stay last)
+*.wav
+*.flac
+*.m4b
+*.mp3
+!/core/tests/data/**/*.wav
+!/core/tests/data/**/*.flac
+!/core/tests/data/**/*.m4b
+!/core/tests/data/**/*.mp3
+!/worker/skald_worker/assets/**/*.wav
+!/worker/skald_worker/assets/**/*.flac
+!/worker/skald_worker/assets/**/*.m4b
+!/worker/skald_worker/assets/**/*.mp3

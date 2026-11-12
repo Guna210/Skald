@@ -603,7 +603,7 @@ The Builder workflow (branches, question and handoff formats, fix rounds) is in 
 Agents tick `[x]` when a task is done.
 
 **Phase 0 — Foundation**
-- [ ] T00.1 Repository scaffolding
+- [x] T00.1 Repository scaffolding
 - [ ] T00.2 Development setup scripts with project-local caches
 - [ ] T00.3 Pinned binaries (ffmpeg, uv, Python) with checksums and mirror [REVIEW]
 - [ ] T00.4 CI skeleton (Windows + Linux)
@@ -1441,6 +1441,8 @@ Answers from the Orchestrator (or owner) that clarify or change this spec are re
 | Date | Task | Question | Answer | Decided by |
 |---|---|---|---|---|
 | 2026-11-12 | — | Is the spec approved, and which branch is the default? | Spec v1.0 is approved as written. The default branch is `master` (not renamed to `main`); `SPEC.md`, `AGENTS.md` and `CLAUDE.md` were updated to say `master`. | Owner |
+| 2026-11-12 | T00.1 | What does "tree matches B3" mean for T00.1? | Create every B3 directory (with `.gitkeep` where empty), but only the files T00.1's Do list names. Files owned by later tasks are not created now: `catalog/catalog.json`, `catalog/catalog.schema.json`, `scripts/*` (setup, dev-env, deps.lock.json, fetch_deps.py, make_locks.py), `core/` and `worker/` `pyproject.toml`, `selftest/selftest.ipynb`, `selftest/thresholds.json`, `.github/workflows/*.yml`, `CONTRIBUTING.md`, `CITATION.cff`, `THIRD_PARTY_NOTICES.md`, `MODEL_LICENSES.md`, `.npmrc`. `vendor/` and `.cache/` are gitignored, so they are not committed. | Orchestrator |
+| 2026-11-12 | T00.1 | Which LICENSE text exactly? | The official text from https://www.apache.org/licenses/LICENSE-2.0.txt, byte-for-byte, except that the appendix placeholder line `Copyright [yyyy] [name of copyright owner]` is replaced by `Copyright 2026 Skald contributors`. | Orchestrator |
 
 ## Appendix 4 — Claude Code cloud environment
 
