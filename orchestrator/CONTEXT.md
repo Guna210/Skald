@@ -94,3 +94,15 @@ Decisions given in the prompts (Builders record them in Appendix 3):
 - T00.3 extraction must be path-traversal safe (tarfile `filter="data"`, zip member checks).
 - Parallel PRs will conflict on adjacent lines (SPEC ticks, Appendix 3 rows, AGENTS.md Quick commands rows). Whichever merges second rebases on master; the Orchestrator sends that note.
 Follow-up: two handoffs; T00.3 [REVIEW] gate = Orchestrator reads deps.lock.json + owner creates the deps-v1 release.
+
+### E-0013 · 2026-11-13 00:13 (Asia/Colombo) · T00.1 · MERGED
+Context: Repo check while processing the T00.2 handoff.
+State: PR #2 merged into `master` as merge commit `3e4a81d` (again a merge commit, not "Squash and merge"; history still fine since the PR had one commit). T00.1 ticked on master. Branch `task/T00.1-repo-scaffolding` still exists (can be deleted).
+Follow-up: remind the owner to choose "Squash and merge" from the merge button's dropdown.
+
+### E-0014 · 2026-11-13 00:13 (Asia/Colombo) · T00.2 · REVIEW-PROMPT
+Context: T00.2 handoff pasted by the owner. Builder: Gemini 2.5 (Antigravity), cloud Linux. PR #3 (https://github.com/Guna210/Skald/pull/3), branch `task/T00.2-dev-setup-scripts`, one commit `b02f9b5` on top of current master: scripts/dev-env.{sh,ps1}, scripts/setup.{sh,ps1}, app/.npmrc (`cache=../.cache/npm`), removed scripts/.gitkeep, AGENTS.md Part 5 two rows, SPEC B3 (.npmrc moved root → app/), tick, two Appendix 3 rows. Matches the handoff.
+Builder found a root .npmrc doesn't apply inside app/, so placed it at app/.npmrc per E-0012. PowerShell scripts not run (no pwsh in cloud); first exercised by T00.4 CI.
+Concern for the Reviewer: E-0012 asked that the .npmrc path not depend on the current directory; `../.cache/npm` is relative and may resolve against cwd (e.g. npm run from app/src). Reviewer to test.
+Decision: Reviewer = fresh Claude session on Sonnet (Builder was Gemini, so Sonnet is already a different family). Reviewer may optionally download PowerShell 7 for Linux into `.cache/` (inside the repo, gitignored, not global) to at least parse and run the .ps1 scripts.
+Follow-up: verdict. T00.3 (parallel) will need a rebase on master if T00.2 merges first.
