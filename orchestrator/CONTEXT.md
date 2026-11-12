@@ -114,3 +114,17 @@ Context: Tested the E-0014 concern in a scratch folder (package.json + `.npmrc` 
 - `npm --prefix app …` from the repo root → `<parent of repo>/.cache/npm` (outside the repo — violates T00.2 step 3).
 Also: this npm refuses `npm config get cache` when the value comes from a project .npmrc ("The cache option is protected"), unlike the Builder's output; the Reviewer should note the npm version used.
 Decision: Passed to the Reviewer as confirmed evidence rather than sending a fix now, so all findings are fixed in one round.
+
+### E-0016 · 2026-11-13 00:19 (Asia/Colombo) · T00.2 · VERDICT
+Context: Reviewer verdict for T00.2 round 1 (Claude Sonnet, pasted by the owner): APPROVED with 2 Minor + 2 Nit. Reviewer ran setup.sh twice, from other cwds, from a repo copy at a path with a space and non-ASCII characters; checked all 7 dev-env variables in bash and PowerShell 7.4.6 (downloaded into .cache/, then deleted); both .ps1 files parse; setup.ps1's Windows-only paths (Scripts\python.exe, py -3.12, pip steps) only read, not run. npm 10.9.9 in that session.
+Decisions on findings:
+- R1-1 [Minor] app/.npmrc relative `cache=../.cache/npm` resolves against cwd; `npm --prefix app` from the root puts the cache outside the repo; no .npmrc-only form works (env-var expansion leaves literal text when unset). FIX NOW, option (a): delete app/.npmrc, drop `.npmrc` from B3 entirely, change C4.2 "set by scripts/dev-env.* and .npmrc" to "set by scripts/dev-env.*", and rewrite the T00.2 Appendix 3 row to record the outcome. Why fix before merge: it touches T00.2 step 3 (never write outside the repo) and the spec text would otherwise be wrong. Why (a): `npm_config_cache` from dev-env is the real mechanism; a file that only works from one directory misleads.
+- R1-2 [Minor] setup.sh:55 (and setup.ps1): a half-built core/.venv with python but no pip is never repaired. FIX NOW (we're doing a round anyway, and it's a few lines): treat the venv as valid only if `<venv python> -m pip --version` works; otherwise delete and recreate it.
+- R1-3 [Nit] dev-env.ps1 leaves $ScriptDir/$RepoRoot/$CacheDir in the session. NOT FIXING (harmless; setup.ps1 reuses $RepoRoot).
+- R1-4 [Nit] setup.ps1 third probe for `python3.12` isn't in the spec or Appendix 3. FIX NOW: remove that probe (Ponytail; one less path to explain). The Push-Location repetition: not fixing.
+Standing notes added: T00.4 CI and every Builder prompt that runs npm must source dev-env first; T00.4 watch-out: Windows PowerShell 5.1 + $ErrorActionPreference=Stop can turn native stderr into terminating errors (pip steps).
+Round 2 review: the same Reviewer session checks only the three fixes.
+
+### E-0017 · 2026-11-13 00:19 (Asia/Colombo) · T00.2 · FIX-PROMPT
+Decision: Issued the round-2 fix prompt to the T00.2 Builder (Gemini, same session): fix R1-1 (option a), R1-2, R1-4; R1-3 not fixing.
+Follow-up: round-2 handoff → short re-check prompt for the same Reviewer.

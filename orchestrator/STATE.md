@@ -1,23 +1,23 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 00:13 (Asia/Colombo) · last entry: E-0015
+Last updated: 2026-11-13 00:19 (Asia/Colombo) · last entry: E-0017
 Current log file: `CONTEXT.md` (entries E-0001 onward)
 
 ## Where the project is
-- Phase 0: T00.1 merged (`3e4a81d`). T00.2 in review (PR #3, round 1). T00.3 assigned, building in parallel (no handoff yet).
+- Phase 0: T00.1 merged (`3e4a81d`). T00.2 in fix round 2 (PR #3). T00.3 assigned, building in parallel (no handoff yet).
 - `master` at `3e4a81d`. Default branch `master`; spec v1.0 approved (E-0005).
-- Open PRs: PR #3 T00.2 (https://github.com/Guna210/Skald/pull/3) — in review, round 1.
+- Open PRs: PR #3 T00.2 (https://github.com/Guna210/Skald/pull/3) — round 1 APPROVED with minors; fix round 2 for R1-1, R1-2, R1-4 (E-0016).
 - Releases/tags: none (`deps-v1` mirror comes with T00.3).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2).
-- In review: T00.2 — round 1, Reviewer prompt issued (E-0014).
+- In fix round: T00.2 — round 2 fix prompt issued (E-0017); then a short re-check by the same Reviewer.
 - Assigned (round 1, building): T00.3 pinned binaries [REVIEW] (E-0012).
 - Next after T00.2 + T00.3: T00.4 CI skeleton. After T00.2 alone: T01.1 → then T01.x, T02.1, T03.9 in parallel.
 
 ## Waiting on the owner
-1. Open a fresh Claude session (Sonnet) and paste the T00.2 Reviewer prompt (E-0014).
+1. Paste the T00.2 round-2 fix prompt into the same Gemini Builder session (E-0017).
 2. Bring the T00.3 handoff when it arrives.
 
 ## Pending GPU runs
@@ -37,7 +37,8 @@ None.
 - `<owner>` in the spec = `Guna210`.
 - Handoffs and verdicts may arrive as cross-session messages; verify against the PR before acting (E-0009).
 - Remind the owner to use "Squash and merge" — PR #1 and PR #2 both went in as merge commits (E-0007, E-0013).
-- T00.4 prompt: CI must also run `scripts/tests` (unittest-style, from T00.3) (E-0012).
+- T00.4 prompt: CI must also run `scripts/tests` (unittest-style, from T00.3) (E-0012); source dev-env before any npm/pip call; watch for Windows PowerShell 5.1 + `$ErrorActionPreference=Stop` turning native stderr (pip) into errors (E-0016).
+- Every Builder prompt that runs npm: source `scripts/dev-env.*` first — there is no `.npmrc` (E-0016).
 - T00.2/T00.3 run in parallel: the second to merge needs a rebase on master (E-0012).
 - T02.3 prompt: include deferred R1-1 (E-0011).
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
