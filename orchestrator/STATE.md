@@ -1,23 +1,22 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-12 23:37 (Asia/Colombo) · last entry: E-0006
+Last updated: 2026-11-12 23:41 (Asia/Colombo) · last entry: E-0008
 Current log file: `CONTEXT.md` (entries E-0001 onward)
 
 ## Where the project is
-- Phase 0 has not started. No task is merged, in progress or assigned.
-- Repo: 2 commits; only `AGENTS.md`, `CLAUDE.md`, `SPEC.md` (v1.0, 16 Oct 2026).
-- Default branch is `master` and stays `master` (owner decision, E-0005). Spec v1.0 is approved (E-0005).
-- Open PRs: PR #1 (docs say `master`, spec approved) — open, no conflicts, waiting for the owner to merge (E-0006). Releases/tags: none (`deps-v1` mirror not created yet).
+- Phase 0 started: T00.1 assigned (round 1), not yet picked up by a Builder.
+- `master` at `db7a0d9` (PR #1 merged): `AGENTS.md`, `CLAUDE.md`, `SPEC.md` only. Default branch `master` (E-0005); spec v1.0 approved (E-0005).
+- Open PRs: none. Releases/tags: none (`deps-v1` mirror comes with T00.3).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: none.
-- In progress: none.
-- Next: **T00.1 Repository scaffolding** (S, no dependencies, cloud, any Builder agent, standard model).
-- After T00.1: T00.2 and T00.3 can run in parallel (both depend only on T00.1); T00.4 needs both.
+- In progress: **T00.1 Repository scaffolding** — round 1, prompt issued (E-0008), branch `task/T00.1-repo-scaffolding`.
+- Next after T00.1: T00.2 and T00.3 in parallel (both depend only on T00.1); T00.4 needs both. T00.3 is [REVIEW] and needs the owner to create the `deps-v1` release.
+- Also unlocked by T00.2 alone: T01.1 → then T01.x, T02.1, T03.9 can start in parallel.
 
 ## Waiting on the owner
-1. Squash-merge PR #1 (https://github.com/Guna210/Skald/pull/1). Blocks T00.1 (E-0005, E-0006).
+1. Open a Builder session and paste the T00.1 prompt (E-0008).
 
 ## Pending GPU runs
 None.
@@ -26,12 +25,14 @@ None.
 None.
 
 ## Decisions not yet written into SPEC.md
-None (E-0005 is written in `b7a3cde`, pending merge).
+- E-0008 T00.1 clarifications (B3 vs Do list, LICENSE copyright line) — the T00.1 Builder records them in Appendix 3.
 
 ## Standing notes for prompts
-- Builder prompts: state that the owner authorizes pushing to `task/<ID>-<slug>` and opening a PR, even though a Claude cloud session is given a `claude/…` branch by default (E-0004).
-- T00.1: create B3 directories plus only the files in T00.1's Do list; stop and ask if the pinned Ponytail commit can't be fetched (E-0004).
+- Builder prompts: state that the owner authorizes pushing to `task/<ID>-<slug>` and opening a PR, even though a Claude cloud session is given a `claude/…` branch by default (E-0004). Reviewer prompts: read-only, no pushes.
 - `<owner>` in the spec = `Guna210`.
+- T00.2 prompt: also create the root `.npmrc` (B3; nothing else creates it) — npm cache under `.cache/npm` (E-0008).
+- Remind the owner to use "Squash and merge" (PR #1 was merged with a merge commit; E-0007).
+- Ponytail pinned commit verified reachable (E-0007).
 
 ## Recommended next step
-Once PR #1 is merged into `master`, issue `PASTE TO: BUILDER · T00.1`.
+Owner runs the T00.1 Builder. When the handoff comes back: sanity-check it, then issue `PASTE TO: REVIEWER · T00.1` (fresh Claude session, Sonnet; a different model from the Builder's if the Builder was Claude).

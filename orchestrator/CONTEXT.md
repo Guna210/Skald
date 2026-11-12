@@ -47,3 +47,19 @@ Context: Owner opened PR #1 (https://github.com/Guna210/Skald/pull/1) from `clau
 State: open, 1 commit, 3 files, no conflicts ("clean"). No CI exists yet (T00.4), so there is nothing to wait for. Docs-only change made at the owner's direct request, so no Reviewer round.
 Decision: Told the owner to squash-merge it.
 Follow-up: confirm the merge on `master`, then issue T00.1.
+
+### E-0007 · 2026-11-12 23:41 (Asia/Colombo) · — · MERGED
+Context: New Orchestrator session (owner: "you are the orchestrator, read the files and get up to speed"). Read `STATE.md`, `CONTEXT.md`, and `CLAUDE.md`, `AGENTS.md`, `SPEC.md` from `origin/master` in full.
+Repo check: PR #1 (https://github.com/Guna210/Skald/pull/1) merged 2026-11-12 18:08 UTC as merge commit `db7a0d9` (a merge commit, not a squash; harmless for a docs-only PR, but later PRs use "Squash and merge"). `master` now says `master` everywhere and SPEC status is "Approved by the owner on 12 November 2026". No other PRs; no tags or releases. All Part D tasks unticked. Nothing disagrees with `STATE.md` apart from PR #1 now being merged.
+Verified: Ponytail commit `84740e3d344b69b4a133201fa519eb37a62a2b2a` is fetchable from https://github.com/DietrichGebert/ponytail and contains `skills/ponytail/SKILL.md`, `skills/ponytail-review/SKILL.md` and `LICENSE` (resolves the open check in E-0004). `https://www.apache.org/licenses/LICENSE-2.0.txt` is reachable from the cloud environment.
+Follow-up: E-0008.
+
+### E-0008 · 2026-11-12 23:41 (Asia/Colombo) · T00.1 · TASK-ASSIGNED
+Context: T00.1 has no dependencies and nothing blocks it now (E-0005, E-0006 resolved by the merge).
+Decision: Issued the Builder prompt for T00.1 (branch `task/T00.1-repo-scaffolding`, round 1, cloud, any Builder agent, standard model). Clarifications given in the prompt, to be recorded by the Builder in SPEC Appendix 3:
+- B3 vs T00.1: create every B3 directory (`.gitkeep` in empty ones) but only the files T00.1's Do list names; files owned by later tasks (`catalog.json`, `catalog.schema.json`, `deps.lock.json`, scripts, `pyproject.toml`s, the notebook, `thresholds.json`, workflows, `CONTRIBUTING.md`, `CITATION.cff`, notices, `.npmrc`) arrive with their tasks. `vendor/` and `.cache/` are gitignored, so not created.
+- `LICENSE`: the official Apache-2.0 text byte-for-byte, with only the appendix placeholder line `Copyright [yyyy] [name of copyright owner]` replaced by `Copyright 2026 Skald contributors`.
+- Ponytail files copied byte-identical; the handoff lists the SHA-256 of each copied file next to upstream's.
+- The owner authorizes pushing to `task/T00.1-repo-scaffolding` and opening the PR, even if a Claude cloud session was given a `claude/…` branch (E-0004).
+Why: E-0004 readings; keeps T00.1 small and avoids empty placeholder files that later tasks would have to overwrite.
+Follow-up: `.npmrc` (B3 lists it, no task's Do list creates it) → give it to T00.2, whose subject is caches. Note for the T00.2 prompt.
