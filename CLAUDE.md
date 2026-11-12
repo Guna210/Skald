@@ -41,10 +41,10 @@ Valid destinations: `PASTE TO: ORCHESTRATOR`, `PASTE TO: BUILDER · <task>`, `PA
 - One task = one branch = one pull request (PR).
 - Branch name: `task/<ID>-<short-slug>`, for example `task/T00.1-repo-scaffolding`.
 - PR title: `<ID>: <task title>`, for example `T00.1: Repository scaffolding`.
-- Builders branch from the latest `main` and never push to `main` directly.
+- Builders branch from the latest `master` and never push to `master` directly.
 - A PR is merged only after the Reviewer says **APPROVED**, CI is green and, for **[GPU]** tasks, the owner's self-test report passes. Use **Squash and merge**.
 - Fix rounds push new commits to the same branch and PR.
-- The branch `orchestrator` holds only the Orchestrator's memory files (see "Orchestrator memory" below). It is never merged into `main`, and Builders and Reviewers never commit to it.
+- The branch `orchestrator` holds only the Orchestrator's memory files (see "Orchestrator memory" below). It is never merged into `master`, and Builders and Reviewers never commit to it.
 
 ### Skills (Ponytail)
 
@@ -71,7 +71,7 @@ Only the skill files are copied, not Ponytail's plugin hooks, status line or com
 ### What the Orchestrator does when the owner says…
 
 **"What's next?"**
-1. Work out the current state: read `STATE.md` on the `orchestrator` branch, then confirm it against the repo — which tasks are merged (the ticked boxes in `SPEC.md` Part D on `main`), which PRs are open, and anything still waiting on the owner (GPU runs, reviews, mirror uploads). If they disagree, trust the repo and log a correction.
+1. Work out the current state: read `STATE.md` on the `orchestrator` branch, then confirm it against the repo — which tasks are merged (the ticked boxes in `SPEC.md` Part D on `master`), which PRs are open, and anything still waiting on the owner (GPU runs, reviews, mirror uploads). If they disagree, trust the repo and log a correction.
 2. Pick the next task: the lowest-numbered unticked task whose dependencies are all merged and whose **[REVIEW]** gates are cleared. If several independent tasks are ready and the owner wants to go faster, offer to run them in parallel in separate Builder sessions.
 3. Reply with:
    - one line for the owner: which builder agent to open (any of the owner's agents, Claude included, using its strongest available model for **[STRONG MODEL]** tasks) and where (cloud or laptop — see "Where to run" below);
@@ -112,7 +112,7 @@ Only the skill files are copied, not Ponytail's plugin hooks, status line or com
 
 When a [GPU] task is ready, give the owner steps like these (fill in the branch and models):
 
-1. Open the "Open in Colab" link from `CONTRIBUTING.md` (it opens `selftest/selftest.ipynb` from `main`). If the PR itself changed the notebook, instead use Colab's **File → Open notebook → GitHub**, paste the repo URL, choose the PR branch and the notebook.
+1. Open the "Open in Colab" link from `CONTRIBUTING.md` (it opens `selftest/selftest.ipynb` from `master`). If the PR itself changed the notebook, instead use Colab's **File → Open notebook → GitHub**, paste the repo URL, choose the PR branch and the notebook.
 2. In the first cell, set `BRANCH = "task/<ID>-<slug>"` and `MODELS = [<ids from the handoff>]`.
 3. **Runtime → Change runtime type → T4 GPU**, then **Runtime → Run all**. If Colab gives no GPU, try again later or use the same notebook on Kaggle.
 4. Don't mount Google Drive and don't paste any tokens.
@@ -124,7 +124,7 @@ If a model doesn't fit on a T4, say so to the owner and ask before suggesting a 
 
 The Orchestrator keeps a permanent record of everything it decides, so it can get back up to speed after its context is compacted or a new session starts. This requires the Orchestrator session to have access to the GitHub repo (run it as a Claude Code session connected to `Skald`).
 
-**Branch.** `orchestrator` is created once, as an *orphan* branch (`git switch --orphan orchestrator`), so it contains only the memory files and none of the code. The Orchestrator reads the spec and code from `main` (e.g. `git show origin/main:SPEC.md`) and writes only to `orchestrator`. It is never merged anywhere.
+**Branch.** `orchestrator` is created once, as an *orphan* branch (`git switch --orphan orchestrator`), so it contains only the memory files and none of the code. The Orchestrator reads the spec and code from `master` (e.g. `git show origin/master:SPEC.md`) and writes only to `orchestrator`. It is never merged anywhere.
 
 **Files** (in the folder `orchestrator/` on that branch):
 
@@ -154,7 +154,7 @@ Entry types: `TASK-ASSIGNED`, `QUESTION`, `ANSWER`, `DECISION`, `REVIEW-PROMPT`,
 **After a compaction or at the start of a new session:**
 1. Fetch the repo and read `orchestrator/STATE.md`.
 2. Read the current `CONTEXT` file in full.
-3. Check `main` and open PRs; if anything disagrees with `STATE.md`, trust the repo and add a `CORRECTION` entry.
+3. Check `master` and open PRs; if anything disagrees with `STATE.md`, trust the repo and add a `CORRECTION` entry.
 4. Look up older history only when needed, by searching the older `CONTEXT` files (e.g. `git grep "T04.5"`), instead of reading them all.
 
 ### Where to run
@@ -169,7 +169,7 @@ Entry types: `TASK-ASSIGNED`, `QUESTION`, `ANSWER`, `DECISION`, `REVIEW-PROMPT`,
 PASTE TO: BUILDER · <ID>
 ROLE: Builder
 TASK: <ID> — <title>
-BRANCH: task/<ID>-<slug>  (create from the latest main)
+BRANCH: task/<ID>-<slug>  (create from the latest master)
 ROUND: 1
 READ: AGENTS.md (all parts), SPEC.md Parts A–C and task <ID> in Part D. Load the Ponytail skill as described in AGENTS.md Part 3.
 EXTRA CONTEXT: <clarifications, answers already given, relevant earlier decisions — or "none">

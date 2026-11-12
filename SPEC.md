@@ -3,7 +3,7 @@
 **Product:** Skald — a modern, free, open-source desktop app that turns e-books into audiobooks with local text-to-speech (TTS) models. Named after the Norse poets who recited sagas aloud.
 **Repository:** `Skald` (on the owner's personal GitHub account).
 **Spec version:** 1.0 — 16 October 2026
-**Status:** Draft for owner approval. Once approved, decisions in Part A are final unless the owner changes them.
+**Status:** Approved by the owner on 12 November 2026. Decisions in Part A are final unless the owner changes them.
 
 ---
 
@@ -97,7 +97,7 @@ Every decision made in planning, with the reason. Agents must not reverse these 
 | D11 | **EPUB parsing uses the standard library (`zipfile`) plus `lxml`**, not EbookLib. | EbookLib is AGPL (D10). EPUB is a zip of XML/XHTML files with a documented structure, so reading it is a small, well-defined job. |
 | D12 | **ffmpeg: LGPL static builds** (BtbN FFmpeg-Builds), run as a subprocess, pinned by SHA-256 and **mirrored to a `deps-v1` release in our own repo**, because upstream keeps only the most recent daily builds. Same mirroring for any other pinned binary whose source URL may disappear. | LGPL is compatible when used as a separate executable; AAC encoding is built in; mirroring keeps old builds reproducible. |
 | D13 | **Model-file safety:** every file is pinned by revision and SHA-256. Preferred formats: safetensors, ONNX, GGUF. Pickle checkpoints (`.pt`, `.pth`, `.bin`) are loaded only with `torch.load(..., weights_only=True)`; any exception needs Orchestrator approval and a note in the model card. **No `trust_remote_code`**: all inference code comes from the packages pinned in our lockfiles. | Pickle files can run code when loaded; the catalog is a supply-chain surface. |
-| D14 | **The catalog lives in the repo** (`catalog/catalog.json`) and is fetched over HTTPS from the `main` branch. Every change goes through a PR, a Reviewer, catalog CI (V5) and, for GPU models, the GPU self-test (V6). The app caches the last valid catalog and works offline with it. | One reviewed source of truth; point updates without app releases. |
+| D14 | **The catalog lives in the repo** (`catalog/catalog.json`) and is fetched over HTTPS from the `master` branch. Every change goes through a PR, a Reviewer, catalog CI (V5) and, for GPU models, the GPU self-test (V6). The app caches the last valid catalog and works offline with it. | One reviewed source of truth; point updates without app releases. |
 | D15 | **Voice ethics:** cloning only from a **local** audio file, after the user ticks "I have the right to use this voice", which is recorded in the voice profile. Model watermarks (e.g. Chatterbox's PerTh) are **never removed**. Exported files carry an "AI-narrated" note and the model credits in their metadata. | Consent and provenance; matches upstream model terms. |
 | D16 | **Designed voices are frozen into a reference clip before a book is rendered.** The user designs a voice from a description, approves a sample, and the book is then rendered by cloning from that sample. | Voice design varies between runs (VoxCPM2's README says so; Qwen recommends design-then-clone for consistent characters). An audiobook needs the same voice for hours. |
 | D17 | **Verification from day one** (C3): unit tests, golden text-pipeline tests, adapter contract tests, a speech → Whisper → text intelligibility check, catalog checks, the GPU self-test and a human listening review. | Bad audio (skipped sentences, babble, wrong language) can sound fine in a 5-second demo. Tests must catch it, not listeners at hour six. |
@@ -462,7 +462,7 @@ Every default here is also written into `docs/defaults.md` with its rationale (T
 
 | Service | Use | Notes |
 |---|---|---|
-| GitHub raw (`raw.githubusercontent.com`) | `catalog/catalog.json` from `main` | Validated against the schema before use; on failure keep the cached catalog. |
+| GitHub raw (`raw.githubusercontent.com`) | `catalog/catalog.json` from `master` | Validated against the schema before use; on failure keep the cached catalog. |
 | Hugging Face (`huggingface.co` and its CDN hosts) | Model files at a pinned commit: `/{repo}/resolve/{sha}/{path}` | Resumable downloads; SHA-256 verified; no token in MVP. |
 | GitHub Releases | Kokoro ONNX files (kokoro-onnx releases), our `deps-v1` mirror | |
 | PyPI, `download.pytorch.org` | Pack installs (hash-locked) | |
@@ -505,8 +505,8 @@ Exact audio equality is **not** a test criterion, except where an adapter declar
 
 ### C3.6 GPU self-test (Colab / Kaggle)
 
-- `selftest/selftest.ipynb`, opened with an **Open in Colab** badge in `CONTRIBUTING.md`, linking to `https://colab.research.google.com/github/<owner>/Skald/blob/main/selftest/selftest.ipynb`. To test a PR, open the notebook from `main` and set `BRANCH` in the first cell to the PR branch (task branch names contain `/`, which doesn't fit Colab's link format reliably). If the PR changes the notebook itself, open it via Colab's **File → Open notebook → GitHub** and pick the PR branch.
-- The notebook's metadata requests a GPU runtime. Cell 1 sets `BRANCH = "main"` and `MODELS = [...]`, checks for a GPU, and if there is none stops with "Runtime → Change runtime type → T4 GPU, then Run all again."
+- `selftest/selftest.ipynb`, opened with an **Open in Colab** badge in `CONTRIBUTING.md`, linking to `https://colab.research.google.com/github/<owner>/Skald/blob/master/selftest/selftest.ipynb`. To test a PR, open the notebook from `master` and set `BRANCH` in the first cell to the PR branch (task branch names contain `/`, which doesn't fit Colab's link format reliably). If the PR changes the notebook itself, open it via Colab's **File → Open notebook → GitHub** and pick the PR branch.
+- The notebook's metadata requests a GPU runtime. Cell 1 sets `BRANCH = "master"` and `MODELS = [...]`, checks for a GPU, and if there is none stops with "Runtime → Change runtime type → T4 GPU, then Run all again."
 - It clones the repo at `BRANCH`, fetches the pinned binaries, builds packs **exactly as the app does** (uv + python-build-standalone + lockfiles; it never uses Colab's preinstalled PyTorch), installs models from that branch's catalog, then runs `python -m skald_core.cli selftest --models … --report report.json`.
 - **The report, per checkpoint:** install time, load time, peak VRAM, RTF, WER/CER per passage, QC results, pass/fail against thresholds, and environment (GPU, driver, CUDA, versions). Audio samples are saved and shown with players.
 - **Safety rules** (stated in the notebook's first markdown cell): never mount Google Drive; no tokens or secrets in cells; clear outputs before committing the notebook; only run branches that have been reviewed.
@@ -903,7 +903,7 @@ Agents tick `[x]` when a task is done.
 - **Depends on:** T01.4
 - **Size:** M
 - **Read:** B4, C3.1 (V5), D3, D13, D14
-- **Do:** `catalog/schema.py` (Pydantic, following B4.2); export `catalog/catalog.schema.json`; `python -m skald_core.catalog.validate catalog/catalog.json [--network] [--release]` checking: schema; at most 5 active models, and at least 3 with `--release`; unique ids; every `family_adapter` is in the worker's adapter registry (read from `worker/skald_worker/adapters/__init__.py`) with a version satisfying `min_adapter_version`; the license allowlist rule for `commercial`; every active model has `docs/models/<id>.md`; with `--network`, every URL is reachable and entries changed in the PR (diff against `origin/main`) are downloaded and SHA-256-checked. `.github/workflows/catalog.yml` runs it on PRs touching `catalog/` and weekly. Start `catalog/catalog.json` with `"models": []`.
+- **Do:** `catalog/schema.py` (Pydantic, following B4.2); export `catalog/catalog.schema.json`; `python -m skald_core.catalog.validate catalog/catalog.json [--network] [--release]` checking: schema; at most 5 active models, and at least 3 with `--release`; unique ids; every `family_adapter` is in the worker's adapter registry (read from `worker/skald_worker/adapters/__init__.py`) with a version satisfying `min_adapter_version`; the license allowlist rule for `commercial`; every active model has `docs/models/<id>.md`; with `--network`, every URL is reachable and entries changed in the PR (diff against `origin/master`) are downloaded and SHA-256-checked. `.github/workflows/catalog.yml` runs it on PRs touching `catalog/` and weekly. Start `catalog/catalog.json` with `"models": []`.
 - **Acceptance:** valid and invalid example catalogs behave as expected; the workflow is green.
 - **Tests:** a table of invalid catalogs (6 active models, wrong `commercial` flag, missing model card, unknown adapter, bad hash with mocked network).
 
@@ -911,7 +911,7 @@ Agents tick `[x]` when a task is done.
 - **Depends on:** T03.1, T01.6
 - **Size:** S
 - **Read:** B4.1, C2
-- **Do:** `catalog/client.py`: `catalog.refresh` job (fetch `https://raw.githubusercontent.com/<owner>/Skald/main/catalog/catalog.json`, URL configurable for tests and dev; validate; atomically replace `catalog.cache.json`); `catalog.get` annotates each model/checkpoint/revision with `compatible` + `reason` (adapter missing, adapter too old, app too old), `installed`, `update_available`, and fit (T03.3; a stub until then). A copy of the catalog is bundled with the app as a fallback for the first offline launch.
+- **Do:** `catalog/client.py`: `catalog.refresh` job (fetch `https://raw.githubusercontent.com/<owner>/Skald/master/catalog/catalog.json`, URL configurable for tests and dev; validate; atomically replace `catalog.cache.json`); `catalog.get` annotates each model/checkpoint/revision with `compatible` + `reason` (adapter missing, adapter too old, app too old), `installed`, `update_available`, and fit (T03.3; a stub until then). A copy of the catalog is bundled with the app as a fallback for the first offline launch.
 - **Acceptance:** the first offline launch uses the bundled copy; an invalid remote catalog keeps the cache and logs why.
 - **Tests:** mocked fetch; compatibility matrix.
 
@@ -1300,7 +1300,7 @@ Every UI task includes loading, empty and error states; keyboard access; both th
 - **Depends on:** T04.4, T04.5, T04.6, T04.8
 - **Size:** S
 - **Read:** C3.6
-- **Do:** The owner runs the notebook on `main` with `MODELS = "all-gpu"` (T4; a rented GPU for any model that doesn't fit). A Builder turns the reports into `docs/verification/gpu-selftest-<date>.md` and updates the catalog's `hardware` blocks and the model cards with the measured VRAM and RTF, via a normal PR.
+- **Do:** The owner runs the notebook on `master` with `MODELS = "all-gpu"` (T4; a rented GPU for any model that doesn't fit). A Builder turns the reports into `docs/verification/gpu-selftest-<date>.md` and updates the catalog's `hardware` blocks and the model cards with the measured VRAM and RTF, via a normal PR.
 - **Acceptance:** every active GPU checkpoint passes its thresholds; the catalog numbers match the report.
 - **Tests:** —
 
@@ -1440,7 +1440,7 @@ Answers from the Orchestrator (or owner) that clarify or change this spec are re
 
 | Date | Task | Question | Answer | Decided by |
 |---|---|---|---|---|
-| — | — | — | — | — |
+| 2026-11-12 | — | Is the spec approved, and which branch is the default? | Spec v1.0 is approved as written. The default branch is `master` (not renamed to `main`); `SPEC.md`, `AGENTS.md` and `CLAUDE.md` were updated to say `master`. | Owner |
 
 ## Appendix 4 — Claude Code cloud environment
 
