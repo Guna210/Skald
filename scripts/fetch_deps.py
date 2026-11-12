@@ -58,8 +58,30 @@ def download_file(url: str, dest: Path, timeout: int = 120) -> None:
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp, part_path.open("wb") as out:
+            expected_len: int | None = None
+            if hasattr(resp, "length"):
+                raw_len = resp.length
+                if isinstance(raw_len, int) and not isinstance(raw_len, bool) and raw_len >= 0:
+                    expected_len = raw_len
+            elif not getattr(resp, "chunked", False):
+                headers = getattr(resp, "headers", None)
+                if hasattr(headers, "get"):
+                    te = headers.get("Transfer-Encoding")
+                    if not (isinstance(te, str) and "chunked" in te.lower()):
+                        raw_cl = headers.get("Content-Length")
+                        if isinstance(raw_cl, int) and not isinstance(raw_cl, bool) and raw_cl >= 0:
+                            expected_len = raw_cl
+                        elif isinstance(raw_cl, str):
+                            stripped = raw_cl.strip()
+                            if stripped.isascii() and stripped.isdigit():
+                                expected_len = int(stripped)
+
+            bytes_written = 0
             while chunk := resp.read(CHUNK_SIZE):
                 out.write(chunk)
+                bytes_written += len(chunk)
+        if expected_len is not None and bytes_written < expected_len:
+            raise http.client.IncompleteRead(b"", expected_len - bytes_written)
         os.replace(part_path, dest)
     except Exception:
         part_path.unlink(missing_ok=True)

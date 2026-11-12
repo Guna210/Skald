@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import hashlib
 import http.client
+import http.server
 import io
 import json
 import sys
 import tarfile
 import tempfile
+import threading
 import unittest
 import urllib.error
+import urllib.request
 import zipfile
 from pathlib import Path
 from unittest import mock
@@ -110,6 +113,62 @@ class TestFetchDeps(unittest.TestCase):
                         )
                     self.assertEqual(used, "https://source.example/tool.tar.gz")
                     self.assertEqual(dest.read_bytes(), b"ok")
+
+    def test_content_length_premature_eof_falls_back(self) -> None:
+        payload = b"A" * 100_000
+        truncated_len = 70_000  # > CHUNK_SIZE (65536) to exercise multi-chunk accounting
+        requests: list[str] = []
+
+        class _Handler(http.server.BaseHTTPRequestHandler):
+            protocol_version = "HTTP/1.1"
+
+            def do_GET(self) -> None:
+                requests.append(self.path)
+                self.send_response(200)
+                self.send_header("Content-Length", str(len(payload)))
+                self.send_header("Connection", "close")
+                self.end_headers()
+                body = payload[:truncated_len] if self.path == "/mirror.tar.gz" else payload
+                self.wfile.write(body)
+                self.wfile.flush()
+
+            def log_message(self, format: str, *args: object) -> None:
+                return
+
+        no_proxy_opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            http.server.HTTPServer(("127.0.0.1", 0), _Handler) as server,
+        ):
+            thread = threading.Thread(
+                target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
+            )
+            thread.start()
+            try:
+                base_url = f"http://127.0.0.1:{server.server_port}"
+                mirror_url = f"{base_url}/mirror.tar.gz"
+                source_url = f"{base_url}/source.tar.gz"
+
+                with mock.patch.object(
+                    fetch_deps.urllib.request, "urlopen", no_proxy_opener.open
+                ):
+                    direct_dest = Path(tmp) / "direct.tar.gz"
+                    with self.assertRaises(http.client.IncompleteRead):
+                        fetch_deps.download_file(mirror_url, direct_dest)
+                    self.assertFalse(direct_dest.exists())
+                    self.assertFalse(direct_dest.with_name(f"{direct_dest.name}.part").exists())
+
+                    requests.clear()
+                    fallback_dest = Path(tmp) / "fallback.tar.gz"
+                    used = fetch_deps.download_with_fallback(mirror_url, source_url, fallback_dest)
+
+                self.assertEqual(used, source_url)
+                self.assertEqual(requests, ["/mirror.tar.gz", "/source.tar.gz"])
+                self.assertEqual(fallback_dest.read_bytes(), payload)
+                self.assertEqual(list(Path(tmp).glob("*.part")), [])
+            finally:
+                server.shutdown()
+                thread.join(timeout=2)
 
     def test_checksum_mismatch_deletes_archive_and_exits_1(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
