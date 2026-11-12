@@ -189,7 +189,7 @@ Skald/
 ├─ CLEANUP.md                      # every global install + removal command
 ├─ README.md  CONTRIBUTING.md  LICENSE  CITATION.cff
 ├─ THIRD_PARTY_NOTICES.md  MODEL_LICENSES.md   # generated (T09.4)
-├─ .gitignore  .editorconfig  .npmrc
+├─ .gitignore  .editorconfig
 ├─ .agents/skills/ponytail/        # D24
 ├─ .claude/skills/ponytail-review/ # D24
 ├─ catalog/
@@ -224,7 +224,7 @@ Skald/
 │  ├─ passages/<lang>/             # public-domain test passages
 │  └─ thresholds.json              # intelligibility thresholds (C3.5)
 ├─ app/
-│  ├─ package.json  electron.vite.config.ts  electron-builder.yml
+│  ├─ package.json  .npmrc  electron.vite.config.ts  electron-builder.yml
 │  └─ src/ main/ preload/ renderer/ shared/   # shared/ holds generated RPC types (do not hand-edit)
 ├─ vendor/                         # gitignored: ffmpeg, uv, python for dev
 ├─ .cache/                         # gitignored: pip/uv/npm/electron caches, dev packs and models
@@ -604,7 +604,7 @@ Agents tick `[x]` when a task is done.
 
 **Phase 0 — Foundation**
 - [x] T00.1 Repository scaffolding
-- [ ] T00.2 Development setup scripts with project-local caches
+- [x] T00.2 Development setup scripts with project-local caches
 - [ ] T00.3 Pinned binaries (ffmpeg, uv, Python) with checksums and mirror [REVIEW]
 - [ ] T00.4 CI skeleton (Windows + Linux)
 
@@ -1443,6 +1443,8 @@ Answers from the Orchestrator (or owner) that clarify or change this spec are re
 | 2026-11-12 | — | Is the spec approved, and which branch is the default? | Spec v1.0 is approved as written. The default branch is `master` (not renamed to `main`); `SPEC.md`, `AGENTS.md` and `CLAUDE.md` were updated to say `master`. | Owner |
 | 2026-11-12 | T00.1 | What does "tree matches B3" mean for T00.1? | Create every B3 directory (with `.gitkeep` where empty), but only the files T00.1's Do list names. Files owned by later tasks are not created now: `catalog/catalog.json`, `catalog/catalog.schema.json`, `scripts/*` (setup, dev-env, deps.lock.json, fetch_deps.py, make_locks.py), `core/` and `worker/` `pyproject.toml`, `selftest/selftest.ipynb`, `selftest/thresholds.json`, `.github/workflows/*.yml`, `CONTRIBUTING.md`, `CITATION.cff`, `THIRD_PARTY_NOTICES.md`, `MODEL_LICENSES.md`, `.npmrc`. `vendor/` and `.cache/` are gitignored, so they are not committed. | Orchestrator |
 | 2026-11-12 | T00.1 | Which LICENSE text exactly? | The official text from https://www.apache.org/licenses/LICENSE-2.0.txt, byte-for-byte, except that the appendix placeholder line `Copyright [yyyy] [name of copyright owner]` is replaced by `Copyright 2026 Skald contributors`. | Orchestrator |
+| 2026-11-12 | T00.2 | Where should the project `.npmrc` be placed to ensure npm uses `.cache/npm`? | B3 listed a root `.npmrc`. Testing confirmed npm reads a project `.npmrc` only from the nearest folder containing `package.json`, so a root `.npmrc` does not take effect inside `app/`. The file is placed at `app/.npmrc` setting `cache=../.cache/npm`, and B3 is updated. The `npm_config_cache` variable exported by `scripts/dev-env.*` (pointing to `<repo>/.cache/npm`) remains the primary mechanism; `app/.npmrc` covers shells where dev-env was not sourced. | Orchestrator |
+| 2026-11-12 | T00.2 | Which Python executable should `scripts/setup.ps1` use on Windows? | On Windows, `setup.ps1` accepts Python 3.12 found as `python` or through the `py -3.12` launcher, and uses whichever it found to create `core/.venv`. | Orchestrator |
 
 ## Appendix 4 — Claude Code cloud environment
 

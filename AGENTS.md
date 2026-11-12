@@ -167,8 +167,8 @@ Filled in by later tasks as the tooling appears.
 
 | What | Windows (PowerShell) | Linux (bash) |
 |---|---|---|
-| Set up / update the dev environment | *(added by T00.2)* | *(added by T00.2)* |
-| Activate project-local caches | *(added by T00.2)* | *(added by T00.2)* |
+| Set up / update the dev environment | `.\scripts\setup.ps1` | `./scripts/setup.sh` |
+| Activate project-local caches | `. .\scripts\dev-env.ps1` | `source scripts/dev-env.sh` |
 | Fetch pinned binaries (ffmpeg, uv, Python) | *(added by T00.3)* | *(added by T00.3)* |
 | Run core tests | *(added by T01.1)* | *(added by T01.1)* |
 | Run worker contract tests | *(added by T03.7)* | *(added by T03.7)* |
