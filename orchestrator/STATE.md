@@ -1,24 +1,26 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 00:24 (Asia/Colombo) · last entry: E-0018
+Last updated: 2026-11-13 00:33 (Asia/Colombo) · last entry: E-0020
 Current log file: `CONTEXT.md` (entries E-0001 onward)
 
 ## Where the project is
-- Phase 0: T00.1 merged (`3e4a81d`). T00.2 round 2 pushed, in re-check (PR #3). T00.3 assigned, building in parallel (no handoff yet).
+- Phase 0: T00.1 merged. T00.2 APPROVED round 2 (PR #3), merge pending. T00.3 assigned, building (no branch pushed yet).
+- Phase 1: T01.1 prompt issued (paste after PR #3 merges).
 - `master` at `3e4a81d`. Default branch `master`; spec v1.0 approved (E-0005).
-- Open PRs: PR #3 T00.2 (https://github.com/Guna210/Skald/pull/3) — round 1 APPROVED with minors; round 2 (`dd54d80`) fixes R1-1, R1-2, R1-4; re-check by the same Reviewer (E-0018).
+- Open PRs: PR #3 T00.2 (https://github.com/Guna210/Skald/pull/3) — APPROVED round 2 (E-0019), merge pending.
 - Releases/tags: none (`deps-v1` mirror comes with T00.3).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2).
-- In review: T00.2 — round 2 re-check prompt issued (E-0018).
-- Assigned (round 1, building): T00.3 pinned binaries [REVIEW] (E-0012).
-- Next after T00.2 + T00.3: T00.4 CI skeleton. After T00.2 alone: T01.1 → then T01.x, T02.1, T03.9 in parallel.
+- Approved, merge pending: T00.2 (PR #3).
+- Assigned (round 1): T00.3 pinned binaries [REVIEW] (E-0012, building); T01.1 core package skeleton (E-0020, not started).
+- Next: T00.4 after T00.3. After T01.1: T01.2, T01.6, T02.1, T03.9 in parallel; T03.4 also needs T00.3.
 
 ## Waiting on the owner
-1. Paste the T00.2 round-2 re-check prompt into the same Reviewer session (E-0018).
-2. Bring the T00.3 handoff when it arrives.
+1. Squash-merge PR #3 (E-0019). Optional: run `.\scripts\setup.ps1` twice on the laptop.
+2. Then paste the T01.1 prompt into a Builder session (E-0020).
+3. Bring the T00.3 handoff when it arrives.
 
 ## Pending GPU runs
 None.
@@ -27,9 +29,11 @@ None.
 None.
 
 ## Deferred findings
+- Open item: who creates `core/requirements.lock` (B3)? Not T01.1. Decide by T04.1/T09.1 (E-0020).
 - R1-1 (T00.1, Nit): docs/defaults.md C1.1 item 5 should say alt text / note bodies are skipped "by default". Fix in T02.3 (E-0011).
 
 ## Decisions not yet written into SPEC.md
+- E-0020 T01.1 clarifications (CI criterion timing, requirements.lock not created, no-arg behaviour) — the T01.1 Builder records them.
 - E-0012 clarifications (T00.2 `.npmrc` placement, setup.ps1 Python lookup; T00.3 unittest-style tests, ffmpeg build choice, safe extraction) — the T00.2/T00.3 Builders record them.
 
 ## Standing notes for prompts
@@ -44,4 +48,4 @@ None.
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-Wait for the T00.2 verdict and the T00.3 handoff. If T00.2 merges first, tell the T00.3 Builder to rebase on master before review/merge.
+Owner merges PR #3 and starts T01.1. On the T00.3 handoff: it must rebase on master (conflicts in SPEC ticks / Appendix 3 / AGENTS.md Part 5), then review. On the T01.1 handoff: same rebase check if T00.3 merged first.
