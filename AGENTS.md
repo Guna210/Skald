@@ -71,7 +71,7 @@ Text outside the block is for the owner: keep it short and plain. Never split on
 - One task = one branch = one pull request (PR).
 - Branch: `task/<ID>-<short-slug>`, for example `task/T00.1-repo-scaffolding`. Use the exact name in the Orchestrator's prompt.
 - PR title: `<ID>: <task title>`, for example `T00.1: Repository scaffolding`.
-- Branch from the latest `main`. Never push to `main` directly. Never merge your own PR.
+- Branch from the latest `master`. Never push to `master` directly. Never merge your own PR.
 - Fix rounds push new commits to the same branch and PR.
 - Never touch the `orchestrator` branch. It holds the Orchestrator's notes only.
 - Never commit notebook outputs: clear all outputs in `selftest/selftest.ipynb` before committing.
@@ -102,8 +102,8 @@ The repository includes the **Ponytail** skill at `.agents/skills/ponytail/SKILL
 
 ### Start of a task
 1. Read this file, `SPEC.md` Parts A–C, your task in `SPEC.md` Part D, and anything the prompt lists under EXTRA CONTEXT.
-2. Check that every task in the task's **Depends on** line is ticked on `main`. If one isn't, stop and ask.
-3. Create the branch named in the prompt from the latest `main`. For a fix round, check out the existing branch and pull.
+2. Check that every task in the task's **Depends on** line is ticked on `master`. If one isn't, stop and ask.
+3. Create the branch named in the prompt from the latest `master`. For a fix round, check out the existing branch and pull.
 4. Load the Ponytail skill (Part 3).
 5. Note where you're running (cloud Linux or the owner's Windows laptop). If an acceptance check needs another environment (Windows, or a GPU), say so in your handoff rather than skipping it silently.
 
@@ -132,7 +132,7 @@ Blocked until answered: <yes / no — continuing with <assumption> meanwhile>
 ### Finishing
 1. Run everything the task and the Definition of Done (SPEC C6) require: tests, lint, format, type checks, and `python -m skald_core.catalog.validate catalog/catalog.json` if you touched the catalog. Fix failures. Never weaken tests or edit golden values, thresholds or checksums to make them pass.
 2. Tick the task in the `SPEC.md` Part D index.
-3. Push the branch and open a PR to `main` using the title convention. Put the handoff content in the PR description too.
+3. Push the branch and open a PR to `master` using the title convention. Put the handoff content in the PR description too.
 4. Reply with the handoff block:
 
 ```
