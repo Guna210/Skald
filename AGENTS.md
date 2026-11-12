@@ -169,7 +169,7 @@ Filled in by later tasks as the tooling appears.
 |---|---|---|
 | Set up / update the dev environment | `.\scripts\setup.ps1` | `./scripts/setup.sh` |
 | Activate project-local caches | `. .\scripts\dev-env.ps1` | `source scripts/dev-env.sh` |
-| Fetch pinned binaries (ffmpeg, uv, Python) | *(added by T00.3)* | *(added by T00.3)* |
+| Fetch pinned binaries (ffmpeg, uv, Python) | `python scripts\fetch_deps.py` | `python3 scripts/fetch_deps.py` |
 | Run core tests | *(added by T01.1)* | *(added by T01.1)* |
 | Run worker contract tests | *(added by T03.7)* | *(added by T03.7)* |
 | Validate the catalog | *(added by T03.1)* | *(added by T03.1)* |

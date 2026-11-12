@@ -605,7 +605,7 @@ Agents tick `[x]` when a task is done.
 **Phase 0 — Foundation**
 - [x] T00.1 Repository scaffolding
 - [x] T00.2 Development setup scripts with project-local caches
-- [ ] T00.3 Pinned binaries (ffmpeg, uv, Python) with checksums and mirror [REVIEW]
+- [x] T00.3 Pinned binaries (ffmpeg, uv, Python) with checksums and mirror [REVIEW]
 - [ ] T00.4 CI skeleton (Windows + Linux)
 
 **Phase 1 — Core engine**
@@ -1445,6 +1445,7 @@ Answers from the Orchestrator (or owner) that clarify or change this spec are re
 | 2026-11-12 | T00.1 | Which LICENSE text exactly? | The official text from https://www.apache.org/licenses/LICENSE-2.0.txt, byte-for-byte, except that the appendix placeholder line `Copyright [yyyy] [name of copyright owner]` is replaced by `Copyright 2026 Skald contributors`. | Orchestrator |
 | 2026-11-12 | T00.2 | Should the repo ship an `.npmrc` to keep npm's cache in `.cache/npm`? | No. npm reads a project `.npmrc` only from the nearest folder with `package.json`, and a relative `cache=` path resolves against the current directory (from the repo root with `--prefix app` it lands outside the repo); no `.npmrc`-only form avoids that. The `npm_config_cache` variable exported by `scripts/dev-env.*` is the only mechanism: source dev-env before any npm command (the setup scripts do). `.npmrc` was removed from B3 and C4.2. | Orchestrator |
 | 2026-11-12 | T00.2 | Which Python executable should `scripts/setup.ps1` use on Windows? | On Windows, `setup.ps1` accepts Python 3.12 found as `python` or through the `py -3.12` launcher, and uses whichever it found to create `core/.venv`. | Orchestrator |
+| 2026-11-12 | T00.3 | Which test framework should `scripts/tests/test_fetch_deps.py` use before T01.1 adds pytest? | Use the standard library's `unittest` (`TestCase` classes and `unittest.mock` for patched downloads), so it runs with `python -m unittest discover -s scripts/tests` today and under `pytest` later (and in T00.4 CI). | Orchestrator |
 
 ## Appendix 4 — Claude Code cloud environment
 

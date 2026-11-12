@@ -1,0 +1,74 @@
+{
+  "ffmpeg": {
+    "version": "n9.0.2-57-gd838f9f9ae",
+    "source_url": "https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/tag/autobuild-2026-11-12-15-40",
+    "license": "LGPL-2.1-or-later",
+    "version_args": [
+      "-version"
+    ],
+    "assets": {
+      "win64": {
+        "file": "ffmpeg-n9.0.2-57-gd838f9f9ae-win64-lgpl-9.0.zip",
+        "url": "https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/autobuild-2026-11-12-15-40/ffmpeg-n9.0.2-57-gd838f9f9ae-win64-lgpl-9.0.zip",
+        "mirror_url": "https://github.com/Guna210/Skald/releases/download/deps-v1/ffmpeg-n9.0.2-57-gd838f9f9ae-win64-lgpl-9.0.zip",
+        "sha256": "7a7d4b2adafe4b2de2a0fe0077a37e3d1dae43de28df38538ca79bc5d861e33e",
+        "bin": "bin/ffmpeg.exe"
+      },
+      "linux64": {
+        "file": "ffmpeg-n9.0.2-57-gd838f9f9ae-linux64-lgpl-9.0.tar.xz",
+        "url": "https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/autobuild-2026-11-12-15-40/ffmpeg-n9.0.2-57-gd838f9f9ae-linux64-lgpl-9.0.tar.xz",
+        "mirror_url": "https://github.com/Guna210/Skald/releases/download/deps-v1/ffmpeg-n9.0.2-57-gd838f9f9ae-linux64-lgpl-9.0.tar.xz",
+        "sha256": "416081d93cb6cdcac9fade4f76d94321964253860b85b80404b5b9fb38dc3499",
+        "bin": "bin/ffmpeg"
+      }
+    }
+  },
+  "uv": {
+    "version": "0.13.8",
+    "source_url": "https://github.com/astral-sh/uv/releases/tag/0.13.8",
+    "license": "MIT OR Apache-2.0",
+    "version_args": [
+      "--version"
+    ],
+    "assets": {
+      "win64": {
+        "file": "uv-x86_64-pc-windows-msvc.zip",
+        "url": "https://github.com/astral-sh/uv/releases/download/0.13.8/uv-x86_64-pc-windows-msvc.zip",
+        "mirror_url": "https://github.com/Guna210/Skald/releases/download/deps-v1/uv-x86_64-pc-windows-msvc.zip",
+        "sha256": "529e78a9cec6cd7e3e014f7ecd8bda0c113969d4ed0f2efeedb85c30943325b8",
+        "bin": "uv.exe"
+      },
+      "linux64": {
+        "file": "uv-x86_64-unknown-linux-gnu.tar.gz",
+        "url": "https://github.com/astral-sh/uv/releases/download/0.13.8/uv-x86_64-unknown-linux-gnu.tar.gz",
+        "mirror_url": "https://github.com/Guna210/Skald/releases/download/deps-v1/uv-x86_64-unknown-linux-gnu.tar.gz",
+        "sha256": "5acfd9177cfecf0bf87578f059728215ccc884388988f55f7a65041b57387d91",
+        "bin": "uv"
+      }
+    }
+  },
+  "python": {
+    "version": "3.12.16+20261110",
+    "source_url": "https://github.com/astral-sh/python-build-standalone/releases/tag/20261110",
+    "license": "PSF-2.0 (plus bundled components' licenses; build scripts MPL-2.0)",
+    "version_args": [
+      "--version"
+    ],
+    "assets": {
+      "win64": {
+        "file": "cpython-3.12.16+20261110-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
+        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.12.16%2B20261110-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
+        "mirror_url": "https://github.com/Guna210/Skald/releases/download/deps-v1/cpython-3.12.16%2B20261110-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
+        "sha256": "355ee61b8207b91574491b1c6dc9b0ebb4408fc56bfafe498f3ef439314b52dc",
+        "bin": "python.exe"
+      },
+      "linux64": {
+        "file": "cpython-3.12.16+20261110-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.12.16%2B20261110-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+        "mirror_url": "https://github.com/Guna210/Skald/releases/download/deps-v1/cpython-3.12.16%2B20261110-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+        "sha256": "6a9e62dad033790aef722dbd370e0ce76ce17b73627ba3ae679f537049350b39",
+        "bin": "bin/python"
+      }
+    }
+  }
+}
