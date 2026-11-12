@@ -244,7 +244,7 @@ class TestFetchDeps(unittest.TestCase):
 
             bad_tar_traversal = root / "traversal.tar.gz"
             bad_tar_traversal.write_bytes(_make_targz_bytes([("../outside.txt", b"pwn")]))
-            with self.assertRaises(ValueError):
+            with self.assertRaises(tarfile.FilterError):
                 fetch_deps.safe_extract(bad_tar_traversal, root / "dest4", "bin/tool")
             self.assertFalse(outside.exists())
 
@@ -256,7 +256,7 @@ class TestFetchDeps(unittest.TestCase):
                 sym.linkname = "../../outside.txt"
                 tf.addfile(sym)
             bad_tar_sym.write_bytes(buf.getvalue())
-            with self.assertRaises(ValueError):
+            with self.assertRaises(tarfile.FilterError):
                 fetch_deps.safe_extract(bad_tar_sym, root / "dest5", "bin/tool")
 
             bad_tar_abs_sym = root / "abs_sym.tar.gz"
@@ -267,7 +267,7 @@ class TestFetchDeps(unittest.TestCase):
                 sym.linkname = "/etc/passwd"
                 tf.addfile(sym)
             bad_tar_abs_sym.write_bytes(buf2.getvalue())
-            with self.assertRaises(ValueError):
+            with self.assertRaises(tarfile.FilterError):
                 fetch_deps.safe_extract(bad_tar_abs_sym, root / "dest6", "bin/tool")
 
             bad_tar_hardlink = root / "hardlink.tar.gz"
@@ -278,111 +278,20 @@ class TestFetchDeps(unittest.TestCase):
                 lnk.linkname = "../outside.txt"
                 tf.addfile(lnk)
             bad_tar_hardlink.write_bytes(buf3.getvalue())
-            with self.assertRaises(ValueError):
+            with self.assertRaises(tarfile.FilterError):
                 fetch_deps.safe_extract(bad_tar_hardlink, root / "dest7", "bin/tool")
 
-    def test_chained_symlink_tar_escape_rejected_on_fallback(self) -> None:
+    def test_missing_tar_data_filter_exits_1(self) -> None:
         orig_data_filter = getattr(fetch_deps.tarfile, "data_filter", None)
         if orig_data_filter is not None:
             delattr(fetch_deps.tarfile, "data_filter")
             self.addCleanup(setattr, fetch_deps.tarfile, "data_filter", orig_data_filter)
-        self.assertFalse(hasattr(fetch_deps.tarfile, "data_filter"))
 
-        def add_dir(tf: tarfile.TarFile, name: str) -> None:
-            info = tarfile.TarInfo(name)
-            info.type = tarfile.DIRTYPE
-            info.mode = 0o755
-            tf.addfile(info)
-
-        def add_sym(tf: tarfile.TarFile, name: str, target: str) -> None:
-            info = tarfile.TarInfo(name)
-            info.type = tarfile.SYMTYPE
-            info.linkname = target
-            tf.addfile(info)
-
-        def add_lnk(tf: tarfile.TarFile, name: str, target: str) -> None:
-            info = tarfile.TarInfo(name)
-            info.type = tarfile.LNKTYPE
-            info.linkname = target
-            tf.addfile(info)
-
-        def add_file(tf: tarfile.TarFile, name: str, data: bytes) -> None:
-            info = tarfile.TarInfo(name)
-            info.size = len(data)
-            info.mode = 0o755
-            tf.addfile(info, io.BytesIO(data))
-
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-
-            cases = [
-                (
-                    "chained_root",
-                    "escape.txt",
-                    lambda tf: (
-                        add_sym(tf, "a", "."),
-                        add_sym(tf, "a/b", ".."),
-                        add_file(tf, "a/b/escape.txt", b"pwn"),
-                        add_file(tf, "bin/tool", b"ok"),
-                    ),
-                ),
-                (
-                    "chained_sub",
-                    "pwned.txt",
-                    lambda tf: (
-                        add_dir(tf, "d1"),
-                        add_sym(tf, "d1/s1", ".."),
-                        add_sym(tf, "d1/s1/s2", ".."),
-                        add_file(tf, "d1/s1/s2/pwned.txt", b"pwn"),
-                        add_file(tf, "bin/tool", b"ok"),
-                    ),
-                ),
-                (
-                    "chained_deep",
-                    "pwned.txt",
-                    lambda tf: (
-                        add_sym(tf, "x/y/z", "../.."),
-                        add_sym(tf, "x/y/z/escape", ".."),
-                        add_file(tf, "x/y/z/escape/pwned.txt", b"pwn"),
-                        add_file(tf, "bin/tool", b"ok"),
-                    ),
-                ),
-                (
-                    "hardlink_to_sym",
-                    "pwned.txt",
-                    lambda tf: (
-                        add_dir(tf, "sub"),
-                        add_sym(tf, "sub/sym", ".."),
-                        add_lnk(tf, "top_link", "sub/sym"),
-                        add_file(tf, "top_link/pwned.txt", b"pwn"),
-                        add_file(tf, "bin/tool", b"ok"),
-                    ),
-                ),
-            ]
-            for label, escaped_name, populate in cases:
-                with self.subTest(case=label):
-                    sandbox = root / label
-                    sandbox.mkdir()
-                    archive = root / f"{label}.tar.gz"
-                    with tarfile.open(archive, "w:gz") as tf:
-                        populate(tf)
-                    with self.assertRaises(ValueError):
-                        fetch_deps.safe_extract(archive, sandbox / "dest", "bin/tool")
-                    self.assertFalse((sandbox / escaped_name).exists())
-                    self.assertFalse((sandbox / "dest").exists())
-
-            valid_archive = root / "valid_links.tar.gz"
-            with tarfile.open(valid_archive, "w:gz") as tf:
-                add_file(tf, "python/share/terminfo/a/adm1178", b"terminfo")
-                add_sym(tf, "python/share/terminfo/1/1178", "../a/adm1178")
-                add_file(tf, "python/a/file.txt", b"hello")
-                add_lnk(tf, "python/b/hard.txt", "python/a/file.txt")
-                add_file(tf, "python/bin/tool", b"ok")
-            valid_dest = root / "valid_dest"
-            fetch_deps.safe_extract(valid_archive, valid_dest, "bin/tool")
-            self.assertEqual((valid_dest / "bin" / "tool").read_bytes(), b"ok")
-            self.assertTrue((valid_dest / "share" / "terminfo" / "1" / "1178").is_symlink())
-            self.assertEqual((valid_dest / "b" / "hard.txt").read_bytes(), b"hello")
+        stderr = io.StringIO()
+        with mock.patch.object(fetch_deps.sys, "stderr", stderr):
+            rc = fetch_deps.main([])
+        self.assertEqual(rc, 1)
+        self.assertIn("fetch_deps.py needs Python 3.12 or newer", stderr.getvalue())
 
     def test_tar_uses_data_filter_when_available(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
