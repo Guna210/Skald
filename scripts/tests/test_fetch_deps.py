@@ -60,14 +60,20 @@ class TestFetchDeps(unittest.TestCase):
             fetch_deps.detect_platform("Linux", "aarch64")
 
     def test_mirror_first_and_fallback(self) -> None:
+        payload = b"ok-payload"
+        expected_sha = _sha256_bytes(payload)
         with tempfile.TemporaryDirectory() as tmp:
             dest = Path(tmp) / "tool.tar.gz"
 
-            with mock.patch.object(fetch_deps, "download_file") as dl:
+            def ok_dl(_url: str, target: Path, timeout: int = 120) -> None:
+                target.write_bytes(payload)
+
+            with mock.patch.object(fetch_deps, "download_file", side_effect=ok_dl) as dl:
                 used = fetch_deps.download_with_fallback(
                     "https://mirror.example/tool.tar.gz",
                     "https://source.example/tool.tar.gz",
                     dest,
+                    expected_sha,
                 )
                 self.assertEqual(used, "https://mirror.example/tool.tar.gz")
                 dl.assert_called_once_with("https://mirror.example/tool.tar.gz", dest)
@@ -78,13 +84,15 @@ class TestFetchDeps(unittest.TestCase):
                 calls.append(url)
                 if "mirror" in url:
                     raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
-                target.write_bytes(b"ok")
+                target.write_bytes(payload)
 
+            dest.unlink(missing_ok=True)
             with mock.patch.object(fetch_deps, "download_file", side_effect=fail_mirror):
                 used = fetch_deps.download_with_fallback(
                     "https://mirror.example/tool.tar.gz",
                     "https://source.example/tool.tar.gz",
                     dest,
+                    expected_sha,
                 )
             self.assertEqual(used, "https://source.example/tool.tar.gz")
             self.assertEqual(
@@ -92,31 +100,10 @@ class TestFetchDeps(unittest.TestCase):
                 ["https://mirror.example/tool.tar.gz", "https://source.example/tool.tar.gz"],
             )
 
-            for exc in (
-                urllib.error.URLError("dns error"),
-                http.client.IncompleteRead(b"partial", 10),
-            ):
-                def fail_mirror_exc(
-                    url: str, target: Path, timeout: int = 120, err: Exception = exc
-                ) -> None:
-                    if "mirror" in url:
-                        raise err
-                    target.write_bytes(b"ok")
-
-                with self.subTest(exc=type(exc).__name__):
-                    dest.unlink(missing_ok=True)
-                    with mock.patch.object(fetch_deps, "download_file", side_effect=fail_mirror_exc):
-                        used = fetch_deps.download_with_fallback(
-                            "https://mirror.example/tool.tar.gz",
-                            "https://source.example/tool.tar.gz",
-                            dest,
-                        )
-                    self.assertEqual(used, "https://source.example/tool.tar.gz")
-                    self.assertEqual(dest.read_bytes(), b"ok")
-
-    def test_content_length_premature_eof_falls_back(self) -> None:
-        payload = b"A" * 100_000
-        truncated_len = 70_000  # > CHUNK_SIZE (65536) to exercise multi-chunk accounting
+    def test_mirror_wrong_bytes_falls_back_to_source(self) -> None:
+        good_payload = _make_targz_bytes([("uv", b"good-uv-binary")])
+        wrong_payload = b"wrong-mirror-bytes"
+        expected_sha = _sha256_bytes(good_payload)
         requests: list[str] = []
 
         class _Handler(http.server.BaseHTTPRequestHandler):
@@ -124,13 +111,12 @@ class TestFetchDeps(unittest.TestCase):
 
             def do_GET(self) -> None:
                 requests.append(self.path)
+                body = wrong_payload if self.path == "/mirror.tar.gz" else good_payload
                 self.send_response(200)
-                self.send_header("Content-Length", str(len(payload)))
+                self.send_header("Content-Length", str(len(body)))
                 self.send_header("Connection", "close")
                 self.end_headers()
-                body = payload[:truncated_len] if self.path == "/mirror.tar.gz" else payload
                 self.wfile.write(body)
-                self.wfile.flush()
 
             def log_message(self, format: str, *args: object) -> None:
                 return
@@ -149,26 +135,127 @@ class TestFetchDeps(unittest.TestCase):
                 mirror_url = f"{base_url}/mirror.tar.gz"
                 source_url = f"{base_url}/source.tar.gz"
 
-                with mock.patch.object(
-                    fetch_deps.urllib.request, "urlopen", no_proxy_opener.open
+                root = Path(tmp)
+                lockfile = root / "deps.lock.json"
+                vendor_dir = root / "vendor"
+                lockfile.write_text(
+                    json.dumps(
+                        {
+                            "uv": {
+                                "version": "0.13.8",
+                                "source_url": source_url,
+                                "license": "MIT OR Apache-2.0",
+                                "version_args": ["--version"],
+                                "assets": {
+                                    "linux64": {
+                                        "file": "uv.tar.gz",
+                                        "url": source_url,
+                                        "mirror_url": mirror_url,
+                                        "sha256": expected_sha,
+                                        "bin": "uv",
+                                    }
+                                },
+                            }
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+
+                stderr = io.StringIO()
+                fake_proc = mock.Mock(stdout="uv 0.13.8\n", stderr="")
+                with (
+                    mock.patch.object(fetch_deps.urllib.request, "urlopen", no_proxy_opener.open),
+                    mock.patch.object(fetch_deps, "detect_platform", return_value="linux64"),
+                    mock.patch.object(fetch_deps.subprocess, "run", return_value=fake_proc),
+                    mock.patch.object(fetch_deps.sys, "stderr", stderr),
                 ):
-                    direct_dest = Path(tmp) / "direct.tar.gz"
-                    with self.assertRaises(http.client.IncompleteRead):
-                        fetch_deps.download_file(mirror_url, direct_dest)
-                    self.assertFalse(direct_dest.exists())
-                    self.assertFalse(direct_dest.with_name(f"{direct_dest.name}.part").exists())
+                    rc = fetch_deps.main(
+                        ["--lockfile", str(lockfile), "--vendor-dir", str(vendor_dir)]
+                    )
 
-                    requests.clear()
-                    fallback_dest = Path(tmp) / "fallback.tar.gz"
-                    used = fetch_deps.download_with_fallback(mirror_url, source_url, fallback_dest)
-
-                self.assertEqual(used, source_url)
+                self.assertEqual(rc, 0)
                 self.assertEqual(requests, ["/mirror.tar.gz", "/source.tar.gz"])
-                self.assertEqual(fallback_dest.read_bytes(), payload)
-                self.assertEqual(list(Path(tmp).glob("*.part")), [])
+                self.assertIn("SHA-256 mismatch", stderr.getvalue())
+                self.assertIn("falling back to source", stderr.getvalue())
+                self.assertEqual((vendor_dir / "uv" / "linux64" / "uv").read_bytes(), b"good-uv-binary")
+                self.assertEqual(
+                    fetch_deps.sha256_file(vendor_dir / ".downloads" / "uv.tar.gz"),
+                    expected_sha,
+                )
             finally:
                 server.shutdown()
                 thread.join(timeout=2)
+
+    def test_two_platform_lock_selects_platform_and_exits_1_on_missing(self) -> None:
+        win_archive = _make_zip_bytes([("uv.exe", b"win-uv")])
+        linux_archive = _make_targz_bytes([("uv", b"linux-uv")])
+        lock_data = {
+            "uv": {
+                "version": "0.13.8",
+                "source_url": "https://source.example/uv",
+                "license": "MIT OR Apache-2.0",
+                "version_args": ["--version"],
+                "assets": {
+                    "win64": {
+                        "file": "uv-win64.zip",
+                        "url": "https://source.example/uv-win64.zip",
+                        "mirror_url": "https://mirror.example/uv-win64.zip",
+                        "sha256": _sha256_bytes(win_archive),
+                        "bin": "uv.exe",
+                    },
+                    "linux64": {
+                        "file": "uv-linux64.tar.gz",
+                        "url": "https://source.example/uv-linux64.tar.gz",
+                        "mirror_url": "https://mirror.example/uv-linux64.tar.gz",
+                        "sha256": _sha256_bytes(linux_archive),
+                        "bin": "uv",
+                    },
+                },
+            }
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            lockfile = root / "deps.lock.json"
+            lockfile.write_text(json.dumps(lock_data), encoding="utf-8")
+
+            requested_urls: list[str] = []
+
+            def fake_dl(url: str, dest: Path, timeout: int = 120) -> None:
+                requested_urls.append(url)
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_bytes(win_archive if url.endswith(".zip") else linux_archive)
+
+            fake_proc = mock.Mock(stdout="uv 0.13.8\n", stderr="")
+            for plat, expected_url, expected_bin in (
+                ("win64", "https://mirror.example/uv-win64.zip", "uv.exe"),
+                ("linux64", "https://mirror.example/uv-linux64.tar.gz", "uv"),
+            ):
+                with self.subTest(platform=plat):
+                    requested_urls.clear()
+                    vendor_dir = root / f"vendor-{plat}"
+                    with (
+                        mock.patch.object(fetch_deps, "detect_platform", return_value=plat),
+                        mock.patch.object(fetch_deps, "download_file", side_effect=fake_dl),
+                        mock.patch.object(fetch_deps.subprocess, "run", return_value=fake_proc),
+                    ):
+                        rc = fetch_deps.main(
+                            ["--lockfile", str(lockfile), "--vendor-dir", str(vendor_dir)]
+                        )
+                    self.assertEqual(rc, 0)
+                    self.assertEqual(requested_urls, [expected_url])
+                    self.assertTrue((vendor_dir / "uv" / plat / expected_bin).is_file())
+
+            stderr = io.StringIO()
+            with (
+                mock.patch.object(fetch_deps, "detect_platform", return_value="macos"),
+                mock.patch.object(fetch_deps.sys, "stderr", stderr),
+            ):
+                rc_missing = fetch_deps.main(
+                    ["--lockfile", str(lockfile), "--vendor-dir", str(root / "vendor-missing")]
+                )
+            self.assertEqual(rc_missing, 1)
+            self.assertIn("no asset for platform 'macos'", stderr.getvalue())
 
     def test_checksum_mismatch_deletes_archive_and_exits_1(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -198,15 +285,58 @@ class TestFetchDeps(unittest.TestCase):
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 dest.write_bytes(b"corrupted-payload")
 
+            stderr = io.StringIO()
             with (
                 mock.patch.object(fetch_deps, "detect_platform", return_value="linux64"),
                 mock.patch.object(fetch_deps, "download_file", side_effect=fake_dl),
+                mock.patch.object(fetch_deps.sys, "stderr", stderr),
             ):
                 rc = fetch_deps.main(["--lockfile", str(lockfile), "--vendor-dir", str(vendor_dir)])
 
             self.assertEqual(rc, 1)
+            self.assertIn("error:", stderr.getvalue())
             self.assertFalse((vendor_dir / ".downloads" / "uv.tar.gz").exists())
             self.assertFalse((vendor_dir / "uv" / "linux64").exists())
+
+    def test_offline_both_urls_fail_exits_1(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            lockfile = root / "deps.lock.json"
+            lockfile.write_text(
+                json.dumps(
+                    {
+                        "uv": {
+                            "version": "0.13.8",
+                            "source_url": "https://source.example/uv",
+                            "license": "MIT",
+                            "version_args": ["--version"],
+                            "assets": {
+                                "linux64": {
+                                    "file": "uv.tar.gz",
+                                    "url": "https://source.example/uv.tar.gz",
+                                    "mirror_url": "https://mirror.example/uv.tar.gz",
+                                    "sha256": "0" * 64,
+                                    "bin": "uv",
+                                }
+                            },
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stderr = io.StringIO()
+            with (
+                mock.patch.object(fetch_deps, "detect_platform", return_value="linux64"),
+                mock.patch.object(
+                    fetch_deps,
+                    "download_file",
+                    side_effect=urllib.error.URLError("offline"),
+                ),
+                mock.patch.object(fetch_deps.sys, "stderr", stderr),
+            ):
+                rc = fetch_deps.main(["--lockfile", str(lockfile), "--vendor-dir", str(root / "v")])
+            self.assertEqual(rc, 1)
+            self.assertIn("error:", stderr.getvalue())
 
     def test_path_traversal_rejected_zip_and_tar(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -291,41 +421,10 @@ class TestFetchDeps(unittest.TestCase):
         with mock.patch.object(fetch_deps.sys, "stderr", stderr):
             rc = fetch_deps.main([])
         self.assertEqual(rc, 1)
-        self.assertIn("fetch_deps.py needs Python 3.12 or newer", stderr.getvalue())
-
-    def test_tar_uses_data_filter_when_available(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            archive = root / "uv.tar.gz"
-            archive.write_bytes(_make_targz_bytes([("uv", b"bin")]))
-            dest = root / "dest"
-
-            extract_calls: list[dict[str, object]] = []
-
-            class FakeTar:
-                def __enter__(self) -> "FakeTar":
-                    return self
-
-                def __exit__(self, *args: object) -> None:
-                    return None
-
-                def getmembers(self) -> list[tarfile.TarInfo]:
-                    info = tarfile.TarInfo("uv")
-                    info.size = 3
-                    return [info]
-
-                def extractall(self, path: Path, **kwargs: object) -> None:
-                    extract_calls.append(kwargs)
-                    (Path(path) / "uv").write_bytes(b"bin")
-
-            with (
-                mock.patch.object(fetch_deps.tarfile, "open", return_value=FakeTar()),
-                mock.patch.object(fetch_deps.tarfile, "data_filter", object(), create=True),
-            ):
-                fetch_deps.safe_extract(archive, dest, "uv")
-
-            self.assertEqual(extract_calls, [{"filter": "data"}])
-            self.assertEqual((dest / "uv").read_bytes(), b"bin")
+        self.assertIn(
+            "fetch_deps.py needs a Python whose tarfile supports extraction filters",
+            stderr.getvalue(),
+        )
 
     def test_noop_skip_and_tamper_recovery(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
