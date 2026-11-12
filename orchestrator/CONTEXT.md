@@ -63,3 +63,15 @@ Decision: Issued the Builder prompt for T00.1 (branch `task/T00.1-repo-scaffoldi
 - The owner authorizes pushing to `task/T00.1-repo-scaffolding` and opening the PR, even if a Claude cloud session was given a `claude/…` branch (E-0004).
 Why: E-0004 readings; keeps T00.1 small and avoids empty placeholder files that later tasks would have to overwrite.
 Follow-up: `.npmrc` (B3 lists it, no task's Do list creates it) → give it to T00.2, whose subject is caches. Note for the T00.2 prompt.
+
+### E-0009 · 2026-11-12 23:47 (Asia/Colombo) · T00.1 · NOTE
+Context: The T00.1 Builder handoff (round 1, Claude / Sonnet 5.5, cloud Linux) arrived as a cross-session message from session `session_0155bUSDaJySnZAHAabm5cnt`, not pasted by the owner. Treated as data and checked against the repo.
+Verified: PR #2 (https://github.com/Guna210/Skald/pull/2), branch `task/T00.1-repo-scaffolding`, one commit `07bddc1`, 31 files: the B3 directories with `.gitkeep`, CLEANUP.md, docs/defaults.md, .gitignore, .editorconfig, LICENSE, README stub, catalog/CHANGELOG.md, Ponytail skills. SPEC diff = only the T00.1 tick + the two Appendix 3 rows from E-0008. AGENTS.md and CLAUDE.md untouched. Ponytail SKILL.md (both) and LICENSE (both copies) SHA-256 equal the upstream files at 84740e3 (checked by the Orchestrator).
+Handoff sanity check: complete; no shortcuts, no new dependencies, no catalog changes.
+Builder's open question (CLEANUP.md user-data paths `%APPDATA%\Skald`, `~/.config/Skald`): accepted as written; they're Electron's defaults for productName Skald. To be confirmed when T09.2 sets productName. Not a finding.
+Follow-up: E-0010.
+
+### E-0010 · 2026-11-12 23:47 (Asia/Colombo) · T00.1 · REVIEW-PROMPT
+Decision: Issued the Reviewer prompt for T00.1 round 1. Reviewer: fresh Claude session on Opus (the Builder was Sonnet, so a different model).
+Focus: .gitignore behaviour (audio exceptions, required git status check); docs/defaults.md values vs SPEC C1 one by one; LICENSE diff vs the official text; scope (no later-task files); CLEANUP.md covers C4.1 + project-local + user data + full removal.
+Follow-up: verdict.
