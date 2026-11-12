@@ -106,3 +106,11 @@ Builder found a root .npmrc doesn't apply inside app/, so placed it at app/.npmr
 Concern for the Reviewer: E-0012 asked that the .npmrc path not depend on the current directory; `../.cache/npm` is relative and may resolve against cwd (e.g. npm run from app/src). Reviewer to test.
 Decision: Reviewer = fresh Claude session on Sonnet (Builder was Gemini, so Sonnet is already a different family). Reviewer may optionally download PowerShell 7 for Linux into `.cache/` (inside the repo, gitignored, not global) to at least parse and run the .ps1 scripts.
 Follow-up: verdict. T00.3 (parallel) will need a rebase on master if T00.2 merges first.
+
+### E-0015 · 2026-11-13 00:14 (Asia/Colombo) · T00.2 · NOTE
+Context: Tested the E-0014 concern in a scratch folder (package.json + `.npmrc` with `cache=../.cache/npm`, npm_config_cache unset, cloud npm). npm's debug-log location shows where the cache resolves:
+- run in `app/` → `<repo>/.cache/npm` (correct);
+- run in `app/src/` → `<repo>/app/.cache/npm` (wrong, inside the repo but not ignored by name? `.cache/` pattern is unanchored in .gitignore, so ignored — Reviewer to confirm);
+- `npm --prefix app …` from the repo root → `<parent of repo>/.cache/npm` (outside the repo — violates T00.2 step 3).
+Also: this npm refuses `npm config get cache` when the value comes from a project .npmrc ("The cache option is protected"), unlike the Builder's output; the Reviewer should note the npm version used.
+Decision: Passed to the Reviewer as confirmed evidence rather than sending a fix now, so all findings are fixed in one round.
