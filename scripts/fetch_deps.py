@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
+import http.client
 import json
 import ntpath
 import os
 import platform
+import posixpath
 import shutil
 import stat
 import subprocess
@@ -69,7 +72,13 @@ def download_with_fallback(mirror_url: str | None, source_url: str, dest: Path) 
             download_file(mirror_url, dest)
             print(f"using mirror: {mirror_url}")
             return mirror_url
-        except (urllib.error.URLError, urllib.error.HTTPError, OSError, TimeoutError) as exc:
+        except (
+            http.client.HTTPException,
+            urllib.error.URLError,
+            urllib.error.HTTPError,
+            OSError,
+            TimeoutError,
+        ) as exc:
             print(f"mirror unavailable ({exc}); falling back to source: {source_url}")
     download_file(source_url, dest)
     print(f"using source: {source_url}")
@@ -90,30 +99,115 @@ def validate_member_path(name: str) -> list[str]:
     return [part for part in parts if part and part != "."]
 
 
-def _check_within_root(target: Path, root: Path, raw_name: str) -> None:
-    resolved = target.resolve(strict=False)
+def _check_within_root(target: Path, root: Path, raw_name: str) -> Path:
+    try:
+        resolved = target.resolve(strict=False)
+    except RuntimeError as exc:
+        raise ValueError(f"Symlink loop in archive member: {raw_name!r}") from exc
     if resolved != root and not resolved.is_relative_to(root):
         raise ValueError(f"Archive member escapes staging directory: {raw_name!r}")
+    return resolved
+
+
+def _validate_tar_member(
+    member: tarfile.TarInfo, resolved_root: Path, *, live: bool = False
+) -> tuple[tarfile.TarInfo, list[str]]:
+    rel_parts = validate_member_path(member.name)
+    if not (member.isreg() or member.isdir() or member.issym() or member.islnk()):
+        raise ValueError(f"Unsupported special file in tar archive: {member.name!r}")
+    if not rel_parts:
+        if not member.isdir():
+            raise ValueError(f"Archive member cannot overwrite staging root: {member.name!r}")
+        return member, rel_parts
+
+    member_path = resolved_root.joinpath(*rel_parts)
+    live_parent = _check_within_root(member_path.parent, resolved_root, member.name)
+    if live:
+        prefix = resolved_root
+        for part in rel_parts[:-1]:
+            prefix = prefix / part
+            if os.path.islink(prefix):
+                _check_within_root(prefix, resolved_root, member.name)
+        if os.path.islink(member_path):
+            raise ValueError(f"Refusing to overwrite existing symlink: {member.name!r}")
+    _check_within_root(live_parent / rel_parts[-1], resolved_root, member.name)
+
+    if member.issym():
+        if not member.linkname or "\x00" in member.linkname:
+            raise ValueError(f"Invalid symlink target in tar: {member.name!r}")
+        if member.linkname.startswith(("/", "\\")) or ntpath.splitdrive(member.linkname)[0]:
+            raise ValueError(f"Absolute symlink target rejected: {member.name!r} -> {member.linkname!r}")
+        normalized_link = posixpath.normpath(member.linkname.replace("\\", "/"))
+        if normalized_link.startswith("/") or ntpath.splitdrive(normalized_link)[0]:
+            raise ValueError(f"Absolute symlink target rejected: {member.name!r} -> {member.linkname!r}")
+        link_parts = [p for p in normalized_link.split("/") if p and p != "."]
+        cur = live_parent
+        for part in link_parts:
+            cur = _check_within_root(cur / part, resolved_root, member.name)
+        if normalized_link != member.linkname:
+            member = copy.copy(member)
+            member.linkname = normalized_link
+    elif member.islnk():
+        link_parts = validate_member_path(member.linkname)
+        if not link_parts:
+            raise ValueError(f"Invalid hardlink target in tar: {member.name!r} -> {member.linkname!r}")
+        link_target = resolved_root.joinpath(*link_parts)
+        live_link = _check_within_root(link_target, resolved_root, member.name)
+        if live:
+            prefix = resolved_root
+            for part in link_parts[:-1]:
+                prefix = prefix / part
+                if os.path.islink(prefix):
+                    _check_within_root(prefix, resolved_root, member.name)
+            if link_target.is_symlink():
+                if not live_link.is_file() or live_link.is_symlink():
+                    raise ValueError(
+                        f"Unsafe hardlink target in tar archive: {member.name!r} -> {member.linkname!r}"
+                    )
+                member = copy.copy(member)
+                member.linkname = live_link.relative_to(resolved_root).as_posix()
+            elif not link_target.exists() or link_target.is_dir():
+                raise ValueError(
+                    f"Unsafe hardlink target in tar archive: {member.name!r} -> {member.linkname!r}"
+                )
+    return member, rel_parts
 
 
 def _validate_tar_members(members: list[tarfile.TarInfo], staging_root: Path) -> None:
     resolved_root = staging_root.resolve()
     for member in members:
-        rel_parts = validate_member_path(member.name)
-        if member.isdev() or member.ischr() or member.isblk() or member.isfifo():
-            raise ValueError(f"Unsupported special file in tar archive: {member.name!r}")
-        member_path = resolved_root.joinpath(*rel_parts) if rel_parts else resolved_root
-        _check_within_root(member_path, resolved_root, member.name)
-        if member.issym():
-            if not member.linkname or "\x00" in member.linkname:
-                raise ValueError(f"Invalid symlink target in tar: {member.name!r}")
-            if member.linkname.startswith(("/", "\\")) or ntpath.splitdrive(member.linkname)[0]:
-                raise ValueError(f"Absolute symlink target rejected: {member.name!r} -> {member.linkname!r}")
-            link_parts = [p for p in member.linkname.replace("\\", "/").split("/") if p]
-            _check_within_root(member_path.parent.joinpath(*link_parts), resolved_root, member.name)
-        elif member.islnk():
-            link_parts = validate_member_path(member.linkname)
-            _check_within_root(resolved_root.joinpath(*link_parts), resolved_root, member.name)
+        _validate_tar_member(member, resolved_root, live=False)
+
+
+def _extract_tar_members_safe(
+    tf: tarfile.TarFile, members: list[tarfile.TarInfo], staging_root: Path
+) -> None:
+    resolved_root = staging_root.resolve()
+    directories: list[tuple[tarfile.TarInfo, list[str]]] = []
+    for member in members:
+        checked, rel_parts = _validate_tar_member(member, resolved_root, live=True)
+        if checked.isdir():
+            directories.append((checked, rel_parts))
+            dir_member = copy.copy(checked)
+            dir_member.mode = 0o700
+            tf.extract(dir_member, staging_root, set_attrs=False)
+        else:
+            tf.extract(checked, staging_root, set_attrs=True)
+
+    directories.sort(key=lambda item: (len(item[1]), item[0].name), reverse=True)
+    for dir_member, rel_parts in directories:
+        if not rel_parts:
+            continue
+        dirpath = resolved_root.joinpath(*rel_parts)
+        if dirpath.is_symlink() or not dirpath.is_dir():
+            continue
+        real_dir = dirpath.resolve(strict=False)
+        if real_dir != resolved_root and not real_dir.is_relative_to(resolved_root):
+            continue
+        tf.chown(dir_member, str(dirpath), numeric_owner=False)
+        tf.utime(dir_member, str(dirpath))
+        mode = ((dir_member.mode if dir_member.mode is not None else 0o755) & 0o755) | 0o700
+        os.chmod(dirpath, mode)
 
 
 def _select_payload_dir(staging_root: Path, bin_rel: str, archive_name: str) -> Path:
@@ -161,11 +255,11 @@ def safe_extract(archive_path: Path, dest_dir: Path, bin_rel: str) -> None:
             with tarfile.open(archive_path, "r:*") as tf:
                 members = tf.getmembers()
                 _validate_tar_members(members, staging_root)
-                # Python 3.11.4+ / 3.12+ provides PEP 706 filter="data"; older 3.11 uses explicit validation above.
+                # Python 3.11.4+ / 3.12+ provides PEP 706 filter="data"; older 3.11 validates live paths per member.
                 if hasattr(tarfile, "data_filter"):
                     tf.extractall(staging_root, filter="data")
                 else:
-                    tf.extractall(staging_root, members=members)
+                    _extract_tar_members_safe(tf, members, staging_root)
 
         payload_dir = _select_payload_dir(staging_root, bin_rel, archive_path.name)
         _replace_dir(payload_dir, dest_dir)
