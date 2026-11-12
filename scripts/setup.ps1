@@ -55,18 +55,6 @@ if (-not $PythonCmd) {
     }
 }
 
-# If still not found, check 'python3.12'
-if (-not $PythonCmd) {
-    try {
-        $ver = & python3.12 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null
-        if ($LASTEXITCODE -eq 0 -and $ver -eq "3.12") {
-            $PythonCmd = "python3.12"
-            $PythonArgs = @()
-        }
-    } catch {
-    }
-}
-
 if (-not $PythonCmd) {
     Write-Host "Error: Python 3.12.x was not found on PATH or via the py launcher." -ForegroundColor Red
     Write-Host "Skald requires Python 3.12.x."
@@ -91,16 +79,40 @@ if ($NodeVer -notmatch '^v(22|24)\.') {
     exit 1
 }
 
-# 3. Create core/.venv if missing
+# 3. Create core\.venv if missing or broken (must contain working pip)
 $VenvDir = Join-Path $RepoRoot "core\.venv"
 $VenvPython = Join-Path $VenvDir "Scripts\python.exe"
 
-if (-not (Test-Path -LiteralPath $VenvPython)) {
+$PipOk = $false
+if (Test-Path -LiteralPath $VenvPython) {
+    try {
+        & $VenvPython -m pip --version 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            $PipOk = $true
+        }
+    } catch {
+    }
+}
+
+if (-not $PipOk) {
     Write-Host "Creating core virtual environment at $VenvDir..."
+    if (Test-Path -LiteralPath $VenvDir) {
+        Remove-Item -LiteralPath $VenvDir -Recurse -Force
+    }
     & $PythonCmd @PythonArgs -m venv $VenvDir
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Failed to create virtual environment"
         exit $LASTEXITCODE
+    }
+    try {
+        & $VenvPython -m pip --version 2>$null | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "core\.venv was created without pip. Please ensure ensurepip/pip is available."
+            exit 1
+        }
+    } catch {
+        Write-Error "core\.venv was created without pip. Please ensure ensurepip/pip is available."
+        exit 1
     }
 }
 

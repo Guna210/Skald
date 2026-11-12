@@ -54,13 +54,18 @@ case "$NODE_VER" in
     ;;
 esac
 
-# 3. Create core/.venv if missing
+# 3. Create core/.venv if missing or broken (must contain working pip)
 VENV_DIR="$REPO_ROOT/core/.venv"
 VENV_PYTHON="$VENV_DIR/bin/python"
 
-if [ ! -f "$VENV_PYTHON" ]; then
+if [ ! -f "$VENV_PYTHON" ] || ! "$VENV_PYTHON" -m pip --version >/dev/null 2>&1; then
   echo "Creating core virtual environment at $VENV_DIR..."
+  rm -rf "$VENV_DIR"
   "$PYTHON_BIN" -m venv "$VENV_DIR"
+  if ! "$VENV_PYTHON" -m pip --version >/dev/null 2>&1; then
+    echo "Error: core/.venv was created without pip. Please install python3.12-venv (or ensurepip)." >&2
+    exit 1
+  fi
 fi
 
 # 4. Upgrade pip inside core/.venv
