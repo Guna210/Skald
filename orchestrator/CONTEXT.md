@@ -260,3 +260,7 @@ Context: PR #4 merged into master as `b2bfeb8` (normal merge). T00.3 ticked on m
 Context: Owner: "okay I did the release".
 Verified by the Orchestrator: release `deps-v1` (https://github.com/Guna210/Skald/releases/tag/deps-v1) published 2026-11-13 07:26 UTC, prerelease: true, not a draft, target master, title "Pinned build dependencies (v1)", description identical to the doc's block. Exactly 8 assets, names exact (both cpython names keep "+"). All 8 downloaded from the mirror URLs (the 6 `mirror_url`s, incl. %2B) with SHA-256 and size matching docs/spikes/deps-mirror.md and deps.lock.json; GitHub's per-asset digests agree. R5-1 (snapshot byte-stability) is moot: the uploaded snapshots match the documented compressed hashes.
 Decision: T00.3 [REVIEW] gate fully signed off (part 1 E-0032, part 2 now). The 2026-11-25 deadline is met. From now on fetch_deps.py should print "using mirror" for all three tools; the T00.4 CI logs should show it (check in T00.4 review).
+
+### E-0037 · 2026-11-13 13:00 (Asia/Colombo) · T00.4, T01.1 · NOTE
+Context: Owner asked for the T00.4 and T01.1 prompts again.
+Re-issued both with small updates (decisions unchanged from E-0020 and E-0033): T00.4 now says the deps-v1 mirror exists, the handoff must confirm "using mirror" in the CI logs, and the T00.3 sign-off row records the mirror as created and verified on 2026-11-13. T01.1 now says T00.4 (not T00.3) runs in parallel, and that setup.sh also runs fetch_deps.py (~190 MB on Linux, from the mirror).
