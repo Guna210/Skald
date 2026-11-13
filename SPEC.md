@@ -617,7 +617,7 @@ Agents tick `[x]` when a task is done.
 - [ ] T01.6 HTTP helper and verified downloader
 
 **Phase 2 — Book import and text**
-- [ ] T02.1 EPUB fixture generator and public-domain fixtures
+- [x] T02.1 EPUB fixture generator and public-domain fixtures
 - [ ] T02.2 EPUB container, spine, navigation and metadata
 - [ ] T02.3 XHTML to paragraphs
 - [ ] T02.4 TXT and Markdown import
@@ -1463,6 +1463,8 @@ Answers from the Orchestrator (or owner) that clarify or change this spec are re
 | 2026-11-13 | T01.2 | What encoding and line endings does the JSON-RPC stdio server use on all OSes? | The server reads stdin and writes stdout as UTF-8 with "\n" line endings on every OS, regardless of locale (Windows text mode would otherwise write "\r\n" and use the system code page). Tested with a non-ASCII string round-trip in the subprocess test. | Orchestrator |
 | 2026-11-13 | T01.2 | What `data` shape do protocol errors carry? | Every error object carries `data: { "kind", "details", "hint" }` (`details` and `hint` may be `null`). Protocol errors `-32700`, `-32600`, `-32601`, `-32602` and `-32603` use `kind: "internal"` (they mean a bug in the caller or the core, not a user situation); `-32602` puts the Pydantic error details in `details`. Application errors (`-32000`) keep their `SkaldError` kind. T01.4's `SkaldErrorData` will follow this. | Orchestrator |
 | 2026-11-13 | T01.2 | How should child processes handle stdout? | Subprocesses launched by the core or by workers never inherit stdout: always pass `stdout=` explicitly (a pipe, `DEVNULL`, or `stderr`). Replacing `sys.stdout` only catches Python `print()`; `os.write(1, …)`, `sys.__stdout__` and inheriting child processes still reach the real stream. Whether workers also need an fd-level redirect is evaluated in T03.7. | Orchestrator |
+| 2026-11-13 | T02.1 | Which format do the synthetic EPUB fixture definitions use? | Fixture definitions are TOML files (`core/tests/data/epub_defs/*.toml`), read with the standard library's `tomllib`, not YAML, because `make_epubs.py` must be standard-library only and Python has no stdlib YAML parser. Wherever `SPEC.md` says the fixtures' "YAML" (C3.2, T02.1, T02.2, T02.3, T02.8), it means these TOML files. | Orchestrator |
+| 2026-11-13 | T02.1 | How do generated EPUBs guarantee byte-identical regeneration across OSes and zlib builds? | Generated EPUBs store every entry uncompressed (`ZIP_STORED`, which EPUB allows), with fixed timestamps (`2026-01-01 00:00:00`), fixed `ZipInfo` metadata, and a fixed entry order (`mimetype` first with no extra field), so regeneration is byte-identical on Windows and Linux. | Orchestrator |
 
 ## Appendix 4 — Claude Code cloud environment
 
