@@ -270,3 +270,12 @@ Context: T01.1 handoff (Antigravity / Gemini, cloud Linux, pasted by the owner).
 Noticed for the Reviewer: core/skald_core/.gitkeep left in a non-empty folder; build backend `setuptools>=61.0` with a PEP 639 `license = "Apache-2.0"` string (needs a newer setuptools).
 CI state: T00.4 is PR #5 (https://github.com/Guna210/Skald/pull/5, head fe6aea2); its CI already ran green twice (push run 43386727354, pull_request run 43386741754) though no T00.4 handoff yet. PR #6 has no CI because ci.yml isn't on master.
 Decision: Review T01.1 now (fresh Claude Sonnet; the Builder was Gemini). Merge order: T00.4 first, then T01.1 rebases so its PR CI runs the core job for real on both OSes, which closes the E-0020 criterion. If T01.1 is approved first, it still waits for T00.4.
+
+### E-0039 · 2026-11-13 13:16 (Asia/Colombo) · T00.4 · REVIEW-PROMPT
+Context: T00.4 handoff (Antigravity / Gemini, pasted by the owner). PR #5, branch `task/T00.4-ci-skeleton`, one commit `fe6aea2` on master b2bfeb8. ci.yml (269 lines: core/worker/app × windows-latest/ubuntu-latest), CLAUDE.md lines 45 and 99 changed exactly per E-0021, SPEC tick + 7 Appendix 3 rows (T00.3 sign-off, merge method, 5 T00.4 decisions). CI runs 43386727354 (push) and 43386741754 (PR) green; handoff reports "using mirror" ×3 on run 1 and "up to date" on Windows run 2, 10/10 script tests, explicit skip messages.
+Builder decisions: actions/checkout@v4, setup-python@v5, setup-node@v4, cache@v4; Node 24 also in core/worker jobs (setup scripts check Node); pip cache separate from uv+vendor cache.
+Concerns passed to the Reviewer:
+- Windows "Run setup twice" step runs `.\scripts\setup.ps1` twice with no $LASTEXITCODE check between them; if the first run ends with `exit 1` (not a terminating error), the second run may reset $LASTEXITCODE and the step goes green, masking a first-run failure (the first run is the one that matters).
+- core and worker jobs both run full setup and the script tests (duplication; Ponytail).
+- Both jobs save the same cache keys (harmless race?).
+Decision: Review by a fresh Claude Sonnet session (Builder was Gemini). Merge order unchanged: T00.4 first, then T01.1 rebases (E-0038).
