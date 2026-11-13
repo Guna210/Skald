@@ -609,7 +609,7 @@ Agents tick `[x]` when a task is done.
 - [x] T00.4 CI skeleton (Windows + Linux)
 
 **Phase 1 — Core engine**
-- [ ] T01.1 Core package skeleton and dependency pins
+- [x] T01.1 Core package skeleton and dependency pins
 - [ ] T01.2 JSON-RPC stdio server
 - [ ] T01.3 Background job manager with pause
 - [ ] T01.4 Schema models, schema export, `system.info`
@@ -1456,6 +1456,8 @@ Answers from the Orchestrator (or owner) that clarify or change this spec are re
 | 2026-11-13 | T00.4 | How should CI cache pip, uv, and `vendor/`? | Cache `.cache/pip`, `.cache/uv`, and `vendor/` with `actions/cache`, keyed on the lockfiles/manifests that exist (`scripts/deps.lock.json` now; `core/pyproject.toml`, `worker/pyproject.toml`, `app/package-lock.json` when present via `hashFiles`). Do not use `setup-python`'s built-in `cache: pip`. | Orchestrator |
 | 2026-11-13 | T00.4 | How should `concurrency.group` be keyed? | Include `github.event_name` as well as the branch so `push` and `pull_request` runs for the same branch do not cancel each other; only superseded runs of the same kind are cancelled. | Orchestrator |
 | 2026-11-13 | T00.4 | What workflow permissions and actions are allowed? | `permissions: contents: read` at workflow level; only official `actions/*` actions. | Orchestrator |
+| 2026-11-12 | T01.1 | How is the "CI core job green on both OSes" criterion handled while T00.4 is built in parallel? | CI doesn't exist yet in T01.1. Instead: (1) run `ruff`, `ruff format --check`, `mypy`, and `pytest` locally on Linux; (2) prove every runtime and dev pin installs from wheels on Windows with `pip download --only-binary=:all: --platform win_amd64 --python-version 3.12 --no-deps`. The CI criterion is then met by whichever of T01.1 and T00.4 merges second: its CI run must show the `core` job green (not skipped) on `windows-latest` and `ubuntu-latest`. | Orchestrator |
+| 2026-11-12 | T01.1 | Should T01.1 create `core/requirements.lock` (listed in B3)? | No. B3 lists `core/requirements.lock`, but no task's Do list creates it. Do not create it in T01.1; its owner task is decided later. | Orchestrator |
 
 ## Appendix 4 — Claude Code cloud environment
 
