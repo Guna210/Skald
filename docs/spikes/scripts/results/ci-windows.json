@@ -1,31 +1,305 @@
 {
-  "_source": "Condensed from the RESULTS_JSON line of https://github.com/Guna210/Skald/actions/runs/43472375698/job/132047305690 (windows-latest, NTFS C: and D:, 4 CPUs, uv 0.13.8). Per-step check blobs and hash listings dropped; every number is copied unchanged.",
-  "machine": {"os": "windows", "cpus": 4, "fs": "C: NTFS (packs, cache), D: NTFS (checkout, other volume)", "core.autocrlf": "true", "LongPathsEnabled": 1,
-    "defender_default": {"RealTimeProtectionEnabled": false, "ExclusionPath": ["C:\\", "D:\\"]},
-    "locks": {"cpu": {"sha256_raw_8": "374fd357", "sha256_lf_8": "acf54e6a", "has_crlf": true}, "cu12": {"sha256_raw_8": "9069168c", "sha256_lf_8": "af8b1015", "has_crlf": true}}},
-  "cold_cpu": {"venv_s": 0.26, "sync_s": 20.68, "dummy_wheel_offline_s": 0.04, "first_import_s": 7.27, "second_import_s": 1.51, "free_space_delta_mb": 623.1, "pack_mb": 577.5, "pack_files": 16778, "cache_added_mb": 562.0, "pack_plus_cache_unique_mb": 581.7, "biggest_file": {"path": "Lib\\site-packages\\torch\\lib\\torch_cpu.dll", "mb": 305.9, "nlink": 2}, "longest_relative_path": 143},
-  "warm_cpu": {"venv_s": 0.03, "sync_s": 6.84, "free_space_delta_mb": 11.9, "second_pack_alone_mb": 560.3, "both_packs_unique_mb": 579.9, "both_packs_plus_cache_unique_mb": 584.1, "nlink": 3},
-  "bytecode_cpu": {"compileall_s": 29.42, "added_mb": 126.8, "import_s_after": 1.52},
-  "tamper": {"warm_cache": {"rc": 1, "s": 0.15, "error": "Hash mismatch for `sympy==1.14.0`", "files_installed": 16}, "cold_cache": {"rc": 1, "s": 0.47, "files_installed": 16}},
-  "move_cpu": {"plain_venv_moved": {"import": "ok", "entry_point": "failed: uv trampoline failed to canonicalize script path"}, "relocatable_venv_moved": {"import": "ok", "entry_point": "ok"}, "base_python_moved": "No Python at 'C:\\sk\\pybase1\\python.exe'", "rehome_with_allow_existing": {"s": 0.14, "rc": 0, "after": "ok"}},
-  "deep": [
-    {"LongPathsEnabled": 1, "pack_root_len": 202, "pack_python_len": 221, "install_rc": 0, "longest_full_path": 346, "check": "failed: FileNotFoundError [WinError 206] The filename or extension is too long. Error loading ...\\torch\\lib\\torch_global_deps.dll or one of its dependencies"},
-    {"LongPathsEnabled": 1, "pack_root_len": 246, "pack_python_len": 265, "install_rc": 0, "longest_full_path": 390, "check": "could not start: [WinError 206] The filename or extension is too long"},
-    {"LongPathsEnabled": 0, "pack_root_len": 202, "pack_python_len": 221, "install_rc": 0, "longest_full_path": 346, "check": "failed: No module named 'numpy._core._multiarray_umath'"},
-    {"LongPathsEnabled": 0, "pack_root_len": 246, "pack_python_len": 265, "install_rc": 0, "longest_full_path": 390, "check": "could not start: [WinError 2] The system cannot find the file specified"}
+ "_source": "Condensed from the RESULTS_JSON line of https://github.com/Guna210/Skald/actions/runs/43472375698/job/132047305690 (windows-latest, NTFS C: and D:, 4 CPUs, uv 0.13.8). Per-step check blobs and hash listings dropped; every number is copied unchanged.",
+ "machine": {
+  "os": "windows",
+  "cpus": 4,
+  "fs": "C: NTFS (packs, cache), D: NTFS (checkout, other volume)",
+  "core.autocrlf": "true",
+  "LongPathsEnabled": 1,
+  "defender_default": {
+   "RealTimeProtectionEnabled": false,
+   "ExclusionPath": [
+    "C:\\",
+    "D:\\"
+   ]
+  },
+  "locks": {
+   "cpu": {
+    "sha256_raw_8": "374fd357",
+    "sha256_lf_8": "acf54e6a",
+    "has_crlf": true
+   },
+   "cu12": {
+    "sha256_raw_8": "9069168c",
+    "sha256_lf_8": "af8b1015",
+    "has_crlf": true
+   }
+  }
+ },
+ "cold_cpu": {
+  "venv_s": 0.26,
+  "sync_s": 20.68,
+  "dummy_wheel_offline_s": 0.04,
+  "first_import_s": 7.27,
+  "second_import_s": 1.51,
+  "free_space_delta_mb": 623.1,
+  "pack_mb": 577.5,
+  "pack_files": 16778,
+  "cache_added_mb": 562.0,
+  "pack_plus_cache_unique_mb": 581.7,
+  "biggest_file": {
+   "path": "Lib\\site-packages\\torch\\lib\\torch_cpu.dll",
+   "mb": 305.9,
+   "nlink": 2
+  },
+  "longest_relative_path": 143
+ },
+ "warm_cpu": {
+  "venv_s": 0.03,
+  "sync_s": 6.84,
+  "free_space_delta_mb": 11.9,
+  "second_pack_alone_mb": 560.3,
+  "both_packs_unique_mb": 579.9,
+  "both_packs_plus_cache_unique_mb": 584.1,
+  "nlink": 3
+ },
+ "bytecode_cpu": {
+  "compileall_s": 29.42,
+  "added_mb": 126.8,
+  "import_s_after": 1.52
+ },
+ "tamper": {
+  "warm_cache": {
+   "rc": 1,
+   "s": 0.15,
+   "error": "Hash mismatch for `sympy==1.14.0`",
+   "files_installed": 16
+  },
+  "cold_cache": {
+   "rc": 1,
+   "s": 0.47,
+   "files_installed": 16
+  }
+ },
+ "move_cpu": {
+  "plain_venv_moved": {
+   "import": "ok",
+   "entry_point": "failed: uv trampoline failed to canonicalize script path"
+  },
+  "relocatable_venv_moved": {
+   "import": "ok",
+   "entry_point": "ok"
+  },
+  "base_python_moved": "No Python at 'C:\\sk\\pybase1\\python.exe'",
+  "rehome_with_allow_existing": {
+   "s": 0.14,
+   "rc": 0,
+   "after": "ok"
+  }
+ },
+ "deep": [
+  {
+   "LongPathsEnabled": 1,
+   "pack_root_len": 202,
+   "pack_python_len": 221,
+   "install_rc": 0,
+   "longest_full_path": 346,
+   "check": "failed: FileNotFoundError [WinError 206] The filename or extension is too long. Error loading ...\\torch\\lib\\torch_global_deps.dll or one of its dependencies"
+  },
+  {
+   "LongPathsEnabled": 1,
+   "pack_root_len": 246,
+   "pack_python_len": 265,
+   "install_rc": 0,
+   "longest_full_path": 390,
+   "check": "could not start: [WinError 206] The filename or extension is too long"
+  },
+  {
+   "LongPathsEnabled": 0,
+   "pack_root_len": 202,
+   "pack_python_len": 221,
+   "install_rc": 0,
+   "longest_full_path": 346,
+   "check": "failed: No module named 'numpy._core._multiarray_umath'"
+  },
+  {
+   "LongPathsEnabled": 0,
+   "pack_root_len": 246,
+   "pack_python_len": 265,
+   "install_rc": 0,
+   "longest_full_path": 390,
+   "check": "could not start: [WinError 2] The system cannot find the file specified"
+  }
+ ],
+ "xvol": {
+  "cold_sync_s": 24.28,
+  "packs_volume_delta_mb": 598.7,
+  "cache_volume_delta_mb": 617.0,
+  "nlink": 1,
+  "second_pack_sync_s": 27.18,
+  "second_pack_delta_mb": 613.8
+ },
+ "relocate": {
+  "cache_copy_s": 5.9,
+  "cache_mb": 562.1,
+  "offline_rebuild_s": 1.27,
+  "rebuild_free_space_delta_mb": 9.1,
+  "nlink": 2,
+  "check": "ok"
+ },
+ "py311": {
+  "downloads_never_rc": 2,
+  "download_url": "https://releases.astral.sh/github/python-build-standalone/releases/download/20261110/cpython-3.11.18%2B20261110-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
+  "download_mib": 24.3,
+  "tampered_mirror_rc": 2,
+  "venv_with_download_s": 3.85,
+  "install_dir_mb": 71.7,
+  "free_space_delta_mb": 81.1,
+  "pins_differing_from_py312_lock": [
+   "networkx==3.6.1 vs 3.7",
+   "numpy==2.4.6 vs 2.5.4"
   ],
-  "xvol": {"cold_sync_s": 24.28, "packs_volume_delta_mb": 598.7, "cache_volume_delta_mb": 617.0, "nlink": 1, "second_pack_sync_s": 27.18, "second_pack_delta_mb": 613.8},
-  "relocate": {"cache_copy_s": 5.9, "cache_mb": 562.1, "offline_rebuild_s": 1.27, "rebuild_free_space_delta_mb": 9.1, "nlink": 2, "check": "ok"},
-  "py311": {"downloads_never_rc": 2, "download_url": "https://releases.astral.sh/github/python-build-standalone/releases/download/20261110/cpython-3.11.18%2B20261110-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", "download_mib": 24.3, "tampered_mirror_rc": 2, "venv_with_download_s": 3.85, "install_dir_mb": 71.7, "free_space_delta_mb": 81.1, "pins_differing_from_py312_lock": ["networkx==3.6.1 vs 3.7", "numpy==2.4.6 vs 2.5.4"], "sync_s": 16.9, "check_python": "3.11.18"},
-  "proxy": {"cold_sync_s": 22.29, "check": "ok", "hosts_pack_install": ["download-r2.pytorch.org:443", "download.pytorch.org:443", "files.pythonhosted.org:443", "pypi.org:443"], "hosts_with_python_download_extra": ["releases.astral.sh:443"], "py311_via_proxy": {"venv_with_download_s": 3.94, "sync_s": 26.35}, "dead_proxy": {"s": 14.36, "rc": 2, "error": "tunnel error: failed to create underlying connection / actively refused (os error 10061)"}},
-  "av": [
-    {"label": "Defender real-time scanning off (runner default)", "cold_sync_s": 18.54, "first_import_s": 6.77, "uv_phases": ["Prepared 11 packages in 10.37s", "Installed 11 packages in 7.66s"]},
-    {"label": "Defender real-time scanning switched on (RealTimeProtectionEnabled=True)", "cold_sync_s": 88.98, "first_import_s": 12.99, "uv_phases": ["Prepared 11 packages in 1m 04s", "Installed 11 packages in 24.11s"]}
+  "sync_s": 16.9,
+  "check_python": "3.11.18"
+ },
+ "proxy": {
+  "cold_sync_s": 22.29,
+  "check": "ok",
+  "hosts_pack_install": [
+   "download-r2.pytorch.org:443",
+   "download.pytorch.org:443",
+   "files.pythonhosted.org:443",
+   "pypi.org:443"
   ],
-  "prune": {"prune_s": 0.02, "output": "No unused entries found", "cache_mb_before": 1086.7, "cache_mb_after": 1086.7, "cache_not_linked_from_a_pack_mb": 528.8, "free_space_gained_mb": 0.0},
-  "clean": {"clean_s": 6.32, "output": "Removed 29892 files (1.0GiB)", "free_space_gained_mb": 579.5, "pack_still_works": true, "nlink": 1},
-  "cold_cu12": {"venv_s": 0.13, "sync_s": 50.98, "first_import_s": 8.08, "second_import_s": 1.78, "free_space_delta_mb": 4326.4, "pack_mb": 4293.4, "pack_files": 16813, "cache_added_mb": 4277.8, "biggest_file": {"path": "Lib\\site-packages\\torch\\lib\\torch_cuda.dll", "mb": 1060.4, "nlink": 2}, "longest_relative_path": 145,
-    "check": {"torch": "2.14.1+cu126", "cuda_version": "12.6", "cuda_available": false, "cuda_arch_list": ["sm_50", "sm_60", "sm_61", "sm_70", "sm_75", "sm_80", "sm_86", "sm_90"], "cudnn": 91002}},
-  "warm_cu12": {"sync_s": 7.89, "free_space_delta_mb": 10.4, "both_packs_unique_mb": 4295.9, "nlink": 3},
-  "bytecode_cu12": {"compileall_s": 28.71, "added_mb": 126.8, "import_s_after": 1.77}
+  "hosts_with_python_download_extra": [
+   "releases.astral.sh:443"
+  ],
+  "py311_via_proxy": {
+   "venv_with_download_s": 3.94,
+   "sync_s": 26.35
+  },
+  "dead_proxy": {
+   "s": 14.36,
+   "rc": 2,
+   "error": "tunnel error: failed to create underlying connection / actively refused (os error 10061)"
+  }
+ },
+ "av": [
+  {
+   "label": "Defender real-time scanning off (runner default)",
+   "cold_sync_s": 18.54,
+   "first_import_s": 6.77,
+   "uv_phases": [
+    "Prepared 11 packages in 10.37s",
+    "Installed 11 packages in 7.66s"
+   ]
+  },
+  {
+   "label": "Defender real-time scanning switched on (RealTimeProtectionEnabled=True)",
+   "cold_sync_s": 88.98,
+   "first_import_s": 12.99,
+   "uv_phases": [
+    "Prepared 11 packages in 1m 04s",
+    "Installed 11 packages in 24.11s"
+   ]
+  }
+ ],
+ "prune": {
+  "prune_s": 0.02,
+  "output": "No unused entries found",
+  "cache_mb_before": 1086.7,
+  "cache_mb_after": 1086.7,
+  "cache_not_linked_from_a_pack_mb": 528.8,
+  "free_space_gained_mb": 0.0
+ },
+ "clean": {
+  "clean_s": 6.32,
+  "output": "Removed 29892 files (1.0GiB)",
+  "free_space_gained_mb": 579.5,
+  "pack_still_works": true,
+  "nlink": 1
+ },
+ "cold_cu12": {
+  "venv_s": 0.13,
+  "sync_s": 50.98,
+  "first_import_s": 8.08,
+  "second_import_s": 1.78,
+  "free_space_delta_mb": 4326.4,
+  "pack_mb": 4293.4,
+  "pack_files": 16813,
+  "cache_added_mb": 4277.8,
+  "biggest_file": {
+   "path": "Lib\\site-packages\\torch\\lib\\torch_cuda.dll",
+   "mb": 1060.4,
+   "nlink": 2
+  },
+  "longest_relative_path": 145,
+  "check": {
+   "torch": "2.14.1+cu126",
+   "cuda_version": "12.6",
+   "cuda_available": false,
+   "cuda_arch_list": [
+    "sm_50",
+    "sm_60",
+    "sm_61",
+    "sm_70",
+    "sm_75",
+    "sm_80",
+    "sm_86",
+    "sm_90"
+   ],
+   "cudnn": 91002
+  }
+ },
+ "warm_cu12": {
+  "sync_s": 7.89,
+  "free_space_delta_mb": 10.4,
+  "both_packs_unique_mb": 4295.9,
+  "nlink": 3
+ },
+ "bytecode_cu12": {
+  "compileall_s": 28.71,
+  "added_mb": 126.8,
+  "import_s_after": 1.77
+ },
+ "deep_run5": {
+  "_source": "https://github.com/Guna210/Skald/actions/runs/43475133643/job/132057131782 (same runner image; CPU pack)",
+  "rows": [
+   {
+    "LongPathsEnabled": 1,
+    "pack_root_len": 112,
+    "pack_python_len": 131,
+    "longest_full_path": 256,
+    "install_rc": 0,
+    "check": "ok",
+    "import_s": 5.43
+   },
+   {
+    "LongPathsEnabled": 1,
+    "pack_root_len": 131,
+    "pack_python_len": 150,
+    "longest_full_path": 275,
+    "install_rc": 0,
+    "check": "ok",
+    "import_s": 5.0
+   },
+   {
+    "LongPathsEnabled": 1,
+    "pack_root_len": 161,
+    "pack_python_len": 180,
+    "longest_full_path": 305,
+    "install_rc": 0,
+    "check": "ok",
+    "import_s": 4.95
+   },
+   {
+    "LongPathsEnabled": 0,
+    "pack_root_len": 112,
+    "pack_python_len": 131,
+    "longest_full_path": 256,
+    "install_rc": 0,
+    "check": "ok",
+    "import_s": 4.83
+   },
+   {
+    "LongPathsEnabled": 0,
+    "pack_root_len": 131,
+    "pack_python_len": 150,
+    "longest_full_path": 275,
+    "install_rc": 0,
+    "check": "ok",
+    "import_s": 4.82
+   }
+  ]
+ }
 }

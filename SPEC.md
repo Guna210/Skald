@@ -630,7 +630,7 @@ Agents tick `[x]` when a task is done.
 - [ ] T03.1 Catalog schema, validator and catalog CI
 - [ ] T03.2 Catalog fetch, cache and compatibility
 - [ ] T03.3 Hardware probe and fit rating
-- [ ] T03.4 Engine-pack spike: uv + python-build-standalone + hash-locked PyTorch [SPIKE] [STRONG MODEL] [REVIEW]
+- [x] T03.4 Engine-pack spike: uv + python-build-standalone + hash-locked PyTorch [SPIKE] [STRONG MODEL] [REVIEW]
 - [ ] T03.5 Pack builder: lockfiles, install, repair, remove
 - [ ] T03.6 Model file installer, revisions and license acceptance
 - [ ] T03.7 Worker protocol, `skald_worker` package, fake adapter, contract suite
