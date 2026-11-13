@@ -1,0 +1,79 @@
+[meta]
+id = "05_nested_sections_and_blocks"
+description = "Nested sections, headings, br, blockquote, lists, tables row by row, images skipped, inline markup, script/style ignored"
+
+[epub]
+version = "3.0"
+identifier = "urn:uuid:11111111-1111-4111-8111-000000000005"
+title = "Elements of Structure"
+authors = ["Grace Hopper"]
+language = "en"
+has_nav = true
+has_ncx = false
+cover_mode = "none"
+include_sample_image = true
+
+[[spine]]
+id = "ch1"
+href = "ch1.xhtml"
+properties = "scripted"
+head_extra = '<style type="text/css">.hidden { display: none; }</style>'
+body_xhtml = """
+<script type="text/javascript">console.log("ignore me");</script>
+<section>
+  <h1>Main Section</h1>
+  <p>This sentence contains <em>nested <strong>inline</strong> markup</em> and a <a href="#end">hyperlink</a> inside one paragraph.</p>
+  <p>First line of verse.<br/>Second line of verse.</p>
+  <img src="images/diagram.png" alt="A schematic diagram that must not be read aloud"/>
+  <section id="end">
+    <h2>Nested Subsection</h2>
+    <blockquote>
+      <p>Listen carefully to every quiet detail in the courtyard.</p>
+    </blockquote>
+    <ul>
+      <li>First item in an unordered list.</li>
+      <li>Second item in an unordered list.</li>
+    </ul>
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Role</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Ada</td><td>Mathematician</td></tr>
+        <tr><td>Alan</td><td>Logician</td></tr>
+      </tbody>
+    </table>
+  </section>
+</section>
+"""
+
+[[nav]]
+title = "Main Section"
+href = "ch1.xhtml"
+
+[expected]
+status = "ok"
+title = "Elements of Structure"
+authors = ["Grace Hopper"]
+language = "en"
+has_cover = false
+
+[[expected.chapters]]
+title = "Main Section"
+href = "OEBPS/ch1.xhtml"
+linear = true
+suggested_skip = false
+skip_reasons = []
+# Table rows flatten cell text separated by a single space, one paragraph per row.
+paragraphs = [
+  "Main Section",
+  "This sentence contains nested inline markup and a hyperlink inside one paragraph.",
+  "First line of verse.\nSecond line of verse.",
+  "Nested Subsection",
+  "Listen carefully to every quiet detail in the courtyard.",
+  "First item in an unordered list.",
+  "Second item in an unordered list.",
+  "Name Role",
+  "Ada Mathematician",
+  "Alan Logician",
+]

@@ -1,0 +1,79 @@
+[meta]
+id = "06_footnotes_endnotes"
+description = "Footnotes and endnotes via epub:type noteref/footnote/endnote and role=doc-noteref"
+
+[epub]
+version = "3.0"
+identifier = "urn:uuid:11111111-1111-4111-8111-000000000006"
+title = "Annotated Tales"
+authors = ["Jane Austen"]
+language = "en"
+has_nav = true
+has_ncx = false
+cover_mode = "none"
+
+[[spine]]
+id = "ch1"
+href = "ch1.xhtml"
+body_xhtml = """
+<h1>Chapter 1: Footnotes</h1>
+<p>The stone manor stood high above the green meadow<a epub:type="noteref" href="#fn1">1</a> where spotted cattle grazed peacefully through the long, golden summer afternoon.</p>
+<p>Her elderly uncle kept a leather-bound almanac beside the warm hearth<sup><a epub:type="noteref" href="#fn2">[2]</a></sup> and faithfully recorded every early autumn frost and winter gale.</p>
+<aside epub:type="footnote" id="fn1">
+  <p>Built in 1742 of local limestone.</p>
+</aside>
+<aside epub:type="footnote" id="fn2">
+  <p>Published annually in Bath.</p>
+</aside>
+"""
+
+[[spine]]
+id = "ch2"
+href = "ch2.xhtml"
+body_xhtml = """
+<h1>Chapter 2: Endnotes</h1>
+<p>When the black traveling carriage arrived slowly at twilight<a role="doc-noteref" href="#en1">*</a> the tall wrought-iron lanterns along the gravel avenue had only just been lit.</p>
+<p>Hot tea was promptly served in the oak drawing room while cold November rain drummed steadily against all the tall latticed bay windows.</p>
+<aside epub:type="endnote" id="en1">
+  <p>Twilight fell around five o'clock in November.</p>
+</aside>
+"""
+
+[[nav]]
+title = "Chapter 1: Footnotes"
+href = "ch1.xhtml"
+
+[[nav]]
+title = "Chapter 2: Endnotes"
+href = "ch2.xhtml"
+
+[expected]
+status = "ok"
+title = "Annotated Tales"
+authors = ["Jane Austen"]
+language = "en"
+has_cover = false
+
+[[expected.chapters]]
+title = "Chapter 1: Footnotes"
+href = "OEBPS/ch1.xhtml"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Chapter 1: Footnotes",
+  "The stone manor stood high above the green meadow where spotted cattle grazed peacefully through the long, golden summer afternoon.",
+  "Her elderly uncle kept a leather-bound almanac beside the warm hearth and faithfully recorded every early autumn frost and winter gale.",
+]
+
+[[expected.chapters]]
+title = "Chapter 2: Endnotes"
+href = "OEBPS/ch2.xhtml"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Chapter 2: Endnotes",
+  "When the black traveling carriage arrived slowly at twilight the tall wrought-iron lanterns along the gravel avenue had only just been lit.",
+  "Hot tea was promptly served in the oak drawing room while cold November rain drummed steadily against all the tall latticed bay windows.",
+]

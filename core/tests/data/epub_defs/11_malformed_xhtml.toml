@@ -1,0 +1,54 @@
+[meta]
+id = "11_malformed_xhtml"
+description = "Malformed content XHTML recovered via lxml XMLParser(recover=True) with step-7 flags -> imports ok with warning"
+
+[epub]
+version = "3.0"
+identifier = "urn:uuid:11111111-1111-4111-8111-000000000011"
+title = "Broken Markup"
+authors = ["Unknown Scribe"]
+language = "en"
+has_nav = true
+has_ncx = false
+cover_mode = "none"
+
+[[spine]]
+id = "ch1"
+href = "ch1.xhtml"
+raw_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Broken Markup</title>
+</head>
+<body>
+  <h1>Chapter 1: Broken Ledger</h1>
+  <p>When the archivist opened the leather ledger by candlelight, he noticed an unclosed <b>bold annotation near the edge of the first folio.</p></b>
+  <p>Even so, the second paragraph remained completely legible across every surviving page of the quiet northern winter chronicle.</p>
+</body>
+</html>
+"""
+
+[[nav]]
+title = "Chapter 1: Broken Ledger"
+href = "ch1.xhtml"
+
+[expected]
+status = "ok"
+title = "Broken Markup"
+authors = ["Unknown Scribe"]
+language = "en"
+has_cover = false
+
+[[expected.chapters]]
+title = "Chapter 1: Broken Ledger"
+href = "OEBPS/ch1.xhtml"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Chapter 1: Broken Ledger",
+  "When the archivist opened the leather ledger by candlelight, he noticed an unclosed bold annotation near the edge of the first folio.",
+  "Even so, the second paragraph remained completely legible across every surviving page of the quiet northern winter chronicle.",
+]

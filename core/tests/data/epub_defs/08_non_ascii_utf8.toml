@@ -1,0 +1,70 @@
+[meta]
+id = "08_non_ascii_utf8"
+description = "Non-ASCII filenames inside the zip (UTF-8 flag) and non-ASCII metadata and prose"
+
+[epub]
+version = "3.0"
+identifier = "urn:uuid:11111111-1111-4111-8111-000000000008"
+title = "Café de l’Aube — Récits"
+authors = ["René Descartes", "Søren Kierkegaard"]
+language = "fr"
+has_nav = true
+has_ncx = false
+cover_mode = "none"
+
+[[spine]]
+id = "ch1"
+href = "chapitre_éàü_01.xhtml"
+body_xhtml = """
+<h1>Chapitre 1 : À l’aube</h1>
+<p>Sur la terrasse du vieux café, l’horloge de la gare voisine sonna lentement six heures — un timbre clair dans l’air frais du matin d’hiver.</p>
+<p>« Avez-vous apporté les cahiers reliés en toile ? » demanda Élodie en posant sa tasse de porcelaine blanche sur le marbre poli.</p>
+"""
+
+[[spine]]
+id = "ch2"
+href = "kapitel_über_α.xhtml"
+body_xhtml = """
+<h1>Chapitre 2 : L’étoile α</h1>
+<p>Dans l’observatoire voisin, l’astronome nota la déclinaison précise de l’étoile α sur une large feuille quadrillée avec beaucoup de soin.</p>
+<p>Les volets de bois s’ouvrirent vers l’ouest où s’effaçaient déjà les dernières lueurs argentées de la longue nuit d’hiver.</p>
+"""
+
+[[nav]]
+title = "Chapitre 1 : À l’aube"
+href = "chapitre_éàü_01.xhtml"
+
+[[nav]]
+title = "Chapitre 2 : L’étoile α"
+href = "kapitel_über_α.xhtml"
+
+[expected]
+status = "ok"
+title = "Café de l’Aube — Récits"
+authors = ["René Descartes", "Søren Kierkegaard"]
+language = "fr"
+has_cover = false
+
+[[expected.chapters]]
+title = "Chapitre 1 : À l’aube"
+href = "OEBPS/chapitre_éàü_01.xhtml"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Chapitre 1 : À l’aube",
+  "Sur la terrasse du vieux café, l’horloge de la gare voisine sonna lentement six heures — un timbre clair dans l’air frais du matin d’hiver.",
+  "« Avez-vous apporté les cahiers reliés en toile ? » demanda Élodie en posant sa tasse de porcelaine blanche sur le marbre poli.",
+]
+
+[[expected.chapters]]
+title = "Chapitre 2 : L’étoile α"
+href = "OEBPS/kapitel_über_α.xhtml"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Chapitre 2 : L’étoile α",
+  "Dans l’observatoire voisin, l’astronome nota la déclinaison précise de l’étoile α sur une large feuille quadrillée avec beaucoup de soin.",
+  "Les volets de bois s’ouvrirent vers l’ouest où s’effaçaient déjà les dernières lueurs argentées de la longue nuit d’hiver.",
+]

@@ -1,0 +1,113 @@
+[meta]
+id = "03_title_fallbacks_and_linear"
+description = "Spine order independent of manifest order, title fallback chain (nav -> heading -> Chapter N), and linear='no'"
+
+[epub]
+version = "3.0"
+identifier = "urn:uuid:11111111-1111-4111-8111-000000000003"
+title = "Order and Fallbacks"
+authors = ["Jules Verne"]
+language = "en"
+has_nav = true
+has_ncx = false
+cover_mode = "none"
+manifest_order = ["nav", "ch_a", "ch_b", "ch_c", "appendix"]
+
+[[spine]]
+id = "ch_b"
+href = "ch_b.xhtml"
+linear = true
+body_xhtml = """
+<p>Although this file appears second in the manifest list, the OPF spine deliberately places it first in reading order for the listener opening the book.</p>
+<p>Its chapter title comes directly from the EPUB 3 navigation document rather than relying on any heading element inside the XHTML file itself.</p>
+"""
+
+[[spine]]
+id = "ch_a"
+href = "ch_a.xhtml"
+linear = true
+body_xhtml = """
+<h2>Heading Fallback Title</h2>
+<p>No navigation entry points to this chapter, so the importer falls back to the first heading inside the XHTML file.</p>
+<p>Keeping the heading as its own paragraph preserves the natural pause between the chapter title and the opening sentence.</p>
+"""
+
+[[spine]]
+id = "ch_c"
+href = "ch_c.xhtml"
+linear = true
+body_xhtml = """
+<p>This third spine item contains neither an entry in the navigation table nor any heading element anywhere inside the document body.</p>
+<p>Therefore the title fallback chain assigns it the numbered label Chapter 3 based strictly on its position in the linear reading order.</p>
+"""
+
+[[spine]]
+id = "appendix"
+href = "appendix.xhtml"
+linear = false
+body_xhtml = """
+<h1>Technical Appendix</h1>
+<p>This auxiliary reference section is marked linear equals no in the OPF spine, so it is excluded by default during import under reading-order rules.</p>
+<p>A listener can still choose to include non-linear items manually later if they want every supplemental note narrated aloud in full.</p>
+"""
+
+[[nav]]
+title = "Part One: Nav Title"
+href = "ch_b.xhtml"
+
+[[nav]]
+title = "Technical Appendix"
+href = "appendix.xhtml"
+
+[expected]
+status = "ok"
+title = "Order and Fallbacks"
+authors = ["Jules Verne"]
+language = "en"
+has_cover = false
+
+[[expected.chapters]]
+title = "Part One: Nav Title"
+href = "OEBPS/ch_b.xhtml"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Although this file appears second in the manifest list, the OPF spine deliberately places it first in reading order for the listener opening the book.",
+  "Its chapter title comes directly from the EPUB 3 navigation document rather than relying on any heading element inside the XHTML file itself.",
+]
+
+[[expected.chapters]]
+title = "Heading Fallback Title"
+href = "OEBPS/ch_a.xhtml"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Heading Fallback Title",
+  "No navigation entry points to this chapter, so the importer falls back to the first heading inside the XHTML file.",
+  "Keeping the heading as its own paragraph preserves the natural pause between the chapter title and the opening sentence.",
+]
+
+[[expected.chapters]]
+title = "Chapter 3"
+href = "OEBPS/ch_c.xhtml"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "This third spine item contains neither an entry in the navigation table nor any heading element anywhere inside the document body.",
+  "Therefore the title fallback chain assigns it the numbered label Chapter 3 based strictly on its position in the linear reading order.",
+]
+
+[[expected.chapters]]
+title = "Technical Appendix"
+href = "OEBPS/appendix.xhtml"
+linear = false
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Technical Appendix",
+  "This auxiliary reference section is marked linear equals no in the OPF spine, so it is excluded by default during import under reading-order rules.",
+  "A listener can still choose to include non-linear items manually later if they want every supplemental note narrated aloud in full.",
+]

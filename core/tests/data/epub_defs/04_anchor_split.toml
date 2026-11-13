@@ -1,0 +1,114 @@
+[meta]
+id = "04_anchor_split"
+description = "Single spine XHTML file split into three chapters by navigation anchor targets"
+
+[epub]
+version = "3.0"
+identifier = "urn:uuid:11111111-1111-4111-8111-000000000004"
+title = "Three Acts in One File"
+authors = ["Henrik Ibsen"]
+language = "en"
+has_nav = true
+has_ncx = false
+cover_mode = "none"
+
+[[spine]]
+id = "acts"
+href = "acts.xhtml"
+body_xhtml = """
+<section id="act1">
+  <h1>Act I: The Courtyard</h1>
+  <p>Morning sunlight slanted across the worn cobblestones while the village baker arranged warm loaves in the timber window above the quiet arcade.</p>
+  <p>Two messengers paused beside the carved stone fountain to trade rumors about the arriving northern steamship and its heavy cargo.</p>
+</section>
+<section id="act2">
+  <h1>Act II: The Council Hall</h1>
+  <p>Inside the oak-panelled council chamber, brass lanterns burned brightly despite the tall arched windows overlooking the snowy market square.</p>
+  <p>Everyone leaned forward attentively as the clerk unrolled the wide parchment scroll and cleared his throat softly to begin reading.</p>
+</section>
+<section id="act3">
+  <h1>Act III: The Bridge</h1>
+  <p>By dusk a cool silver river mist rose beneath the riveted iron arches and softened the distant echo of hurried footsteps along the stone embankment.</p>
+  <p>A single wooden violin carried a quiet melody from the shadowed riverbank until the final evening ferry pulled cleanly away from the quay.</p>
+</section>
+"""
+
+[[spine]]
+id = "epilogue"
+href = "epilogue.xhtml"
+body_xhtml = """
+<h1>Epilogue</h1>
+<p>Years later, weary travelers passing through the mountain valley still pointed out the old copper clocktower rising high above the cobbled market square.</p>
+<p>None of the dusty trade ledgers remained, yet the tune played beside the river lingered vividly in the shared memory of the old town.</p>
+"""
+
+[[nav]]
+title = "Act I: The Courtyard"
+href = "acts.xhtml#act1"
+
+[[nav]]
+title = "Act II: The Council Hall"
+href = "acts.xhtml#act2"
+
+[[nav]]
+title = "Act III: The Bridge"
+href = "acts.xhtml#act3"
+
+[[nav]]
+title = "Epilogue"
+href = "epilogue.xhtml"
+
+[expected]
+status = "ok"
+title = "Three Acts in One File"
+authors = ["Henrik Ibsen"]
+language = "en"
+has_cover = false
+
+[[expected.chapters]]
+title = "Act I: The Courtyard"
+href = "OEBPS/acts.xhtml#act1"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Act I: The Courtyard",
+  "Morning sunlight slanted across the worn cobblestones while the village baker arranged warm loaves in the timber window above the quiet arcade.",
+  "Two messengers paused beside the carved stone fountain to trade rumors about the arriving northern steamship and its heavy cargo.",
+]
+
+[[expected.chapters]]
+title = "Act II: The Council Hall"
+href = "OEBPS/acts.xhtml#act2"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Act II: The Council Hall",
+  "Inside the oak-panelled council chamber, brass lanterns burned brightly despite the tall arched windows overlooking the snowy market square.",
+  "Everyone leaned forward attentively as the clerk unrolled the wide parchment scroll and cleared his throat softly to begin reading.",
+]
+
+[[expected.chapters]]
+title = "Act III: The Bridge"
+href = "OEBPS/acts.xhtml#act3"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Act III: The Bridge",
+  "By dusk a cool silver river mist rose beneath the riveted iron arches and softened the distant echo of hurried footsteps along the stone embankment.",
+  "A single wooden violin carried a quiet melody from the shadowed riverbank until the final evening ferry pulled cleanly away from the quay.",
+]
+
+[[expected.chapters]]
+title = "Epilogue"
+href = "OEBPS/epilogue.xhtml"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Epilogue",
+  "Years later, weary travelers passing through the mountain valley still pointed out the old copper clocktower rising high above the cobbled market square.",
+  "None of the dusty trade ledgers remained, yet the tune played beside the river lingered vividly in the shared memory of the old town.",
+]
