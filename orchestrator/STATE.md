@@ -1,25 +1,25 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 13:16 (Asia/Colombo) · last entry: E-0039
+Last updated: 2026-11-13 13:17 (Asia/Colombo) · last entry: E-0040
 Current log file: `CONTEXT.md` (entries E-0001 onward)
 
 ## Where the project is
 - Phase 0: T00.1, T00.2, T00.3 merged; T00.3 [REVIEW] gate fully signed (E-0032, E-0036). T00.4 PR #5 in review round 1 (E-0039), CI green.
-- Phase 1: T01.1 PR #6 in review, round 1 (E-0038).
+- Phase 1: T01.1 PR #6 built; review deferred until after T00.4 merges and T01.1 rebases (E-0040).
 - `master` at `b2bfeb8`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: PR #5 T00.4 (https://github.com/Guna210/Skald/pull/5) — in review round 1, CI green. PR #6 T01.1 (https://github.com/Guna210/Skald/pull/6) — in review round 1; no CI until T00.4 merges.
+- Open PRs: PR #5 T00.4 (https://github.com/Guna210/Skald/pull/5) — in review round 1, CI green. PR #6 T01.1 (https://github.com/Guna210/Skald/pull/6) — waiting: rebase after T00.4 merges, then review (E-0040).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4).
-- In review: T00.4 (PR #5, round 1, E-0039); T01.1 (PR #6, round 1, E-0038).
+- In review: T00.4 (PR #5, round 1, E-0039).
+- Waiting: T01.1 (PR #6) — rebase prompt after T00.4 merges, then a new Reviewer prompt (E-0038 withdrawn, E-0040).
 - Merge order: T00.4 first, then T01.1 rebases and must show the core job green on both OSes (E-0038).
 - After T01.1: T01.2, T01.6, T02.1, T03.9 in parallel; T03.4 needs T01.1 + T00.3. After T00.4: T06.1 (app scaffold) can start.
 
 ## Waiting on the owner
-1. Paste the T01.1 Reviewer prompt into a fresh Claude Sonnet session (E-0038).
-2. Paste the T00.4 Reviewer prompt into another fresh Claude Sonnet session (E-0039).
+1. Paste the T00.4 Reviewer prompt into a fresh Claude Sonnet session (E-0039).
 3. Optional: run `.\scripts\setup.ps1` twice on the laptop (T00.4 CI covers it).
 
 ## Pending GPU runs
@@ -53,4 +53,4 @@ None.
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-Wait for the T00.4 and T01.1 handoffs. For each: verify base and CI on the PR, then Reviewer prompt.
+T00.4 verdict → if approved, owner merges PR #5 → rebase prompt to the T01.1 Builder → check CI on PR #6 → T01.1 Reviewer prompt (updated, with CI).

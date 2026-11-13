@@ -279,3 +279,8 @@ Concerns passed to the Reviewer:
 - core and worker jobs both run full setup and the script tests (duplication; Ponytail).
 - Both jobs save the same cache keys (harmless race?).
 Decision: Review by a fresh Claude Sonnet session (Builder was Gemini). Merge order unchanged: T00.4 first, then T01.1 rebases (E-0038).
+
+### E-0040 · 2026-11-13 13:17 (Asia/Colombo) · T00.4, T01.1 · DECISION
+Context: Owner asked whether to review T00.4 first and T01.1 afterwards, given the merge order.
+Decision: Yes, sequential. T00.4 review → merge; then a short rebase prompt to the T01.1 Builder (Appendix 3 rows conflict at the end of the table); then T01.1 is reviewed once, on the rebased branch with real CI on both OSes. The E-0038 T01.1 Reviewer prompt is withdrawn; an updated one will be issued after the rebase.
+Why: avoids a second re-check of the T01.1 rebase and lets its Reviewer see CI.
