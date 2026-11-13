@@ -1,25 +1,25 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 13:17 (Asia/Colombo) · last entry: E-0040
+Last updated: 2026-11-13 13:25 (Asia/Colombo) · last entry: E-0042
 Current log file: `CONTEXT.md` (entries E-0001 onward)
 
 ## Where the project is
-- Phase 0: T00.1, T00.2, T00.3 merged; T00.3 [REVIEW] gate fully signed (E-0032, E-0036). T00.4 PR #5 in review round 1 (E-0039), CI green.
+- Phase 0: T00.1, T00.2, T00.3 merged; T00.3 [REVIEW] gate fully signed (E-0032, E-0036). T00.4 PR #5 APPROVED round 1 with minors; fix round 2 before merge (E-0041, E-0042).
 - Phase 1: T01.1 PR #6 built; review deferred until after T00.4 merges and T01.1 rebases (E-0040).
 - `master` at `b2bfeb8`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: PR #5 T00.4 (https://github.com/Guna210/Skald/pull/5) — in review round 1, CI green. PR #6 T01.1 (https://github.com/Guna210/Skald/pull/6) — waiting: rebase after T00.4 merges, then review (E-0040).
+- Open PRs: PR #5 T00.4 (https://github.com/Guna210/Skald/pull/5) — fix round 2 in progress (E-0042). PR #6 T01.1 (https://github.com/Guna210/Skald/pull/6) — waiting: rebase after T00.4 merges, then review (E-0040).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4).
-- In review: T00.4 (PR #5, round 1, E-0039).
+- In fix round: T00.4 (PR #5, round 2: R1-1, R1-2, R1-3, R1-4, R1-6; E-0042), then a quick re-check by the same Reviewer.
 - Waiting: T01.1 (PR #6) — rebase prompt after T00.4 merges, then a new Reviewer prompt (E-0038 withdrawn, E-0040).
 - Merge order: T00.4 first, then T01.1 rebases and must show the core job green on both OSes (E-0038).
 - After T01.1: T01.2, T01.6, T02.1, T03.9 in parallel; T03.4 needs T01.1 + T00.3. After T00.4: T06.1 (app scaffold) can start.
 
 ## Waiting on the owner
-1. Paste the T00.4 Reviewer prompt into a fresh Claude Sonnet session (E-0039).
+1. Paste the T00.4 round-2 fix prompt into the T00.4 Builder session (E-0042).
 3. Optional: run `.\scripts\setup.ps1` twice on the laptop (T00.4 CI covers it).
 
 ## Pending GPU runs
@@ -47,6 +47,9 @@ None.
 - T00.4 review: CI logs should show "using mirror" for ffmpeg/uv/python (E-0036).
 - Mirror verification after upload: download all 8 deps-v1 assets from the cloud and compare with docs/spikes/deps-mirror.md; snapshots may be accepted on the uncompressed tar SHA-256 (E-0031).
 - T02.3 prompt: include deferred R1-1 (E-0011).
+- T06.1: setup.* will run `npm ci` inside the CI core/worker jobs once app/package-lock.json exists (no npm cache there) — decide then (E-0041).
+- T03.7: worker/pyproject.toml must land with ≥1 test, or CI pytest exits 5 (E-0041).
+- T03.5: CI `.cache/uv` key covers only deps.lock.json — add pack lockfiles (E-0041).
 - T09.1: exclude vendor/*/.tmp-*, .old-*, vendor/.downloads, and ffplay/doc/man (ffmpeg binaries 132–143 MB each; vendor/ffmpeg ~400 MB vs 600 MB limit) (E-0027).
 - uv mirror assets have no version in the name → a uv bump needs a new mirror tag (deps-v2) (E-0027). Mirror releases are marked Pre-release, never "latest" (E-0034).
 - T09.4: ffmpeg is LGPL-3.0-or-later (`--enable-version3`); ship the LGPL-3.0 text + source link (E-0024).

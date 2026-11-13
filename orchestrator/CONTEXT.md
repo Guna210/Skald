@@ -284,3 +284,19 @@ Decision: Review by a fresh Claude Sonnet session (Builder was Gemini). Merge or
 Context: Owner asked whether to review T00.4 first and T01.1 afterwards, given the merge order.
 Decision: Yes, sequential. T00.4 review → merge; then a short rebase prompt to the T01.1 Builder (Appendix 3 rows conflict at the end of the table); then T01.1 is reviewed once, on the rebased branch with real CI on both OSes. The E-0038 T01.1 Reviewer prompt is withdrawn; an updated one will be issued after the rebase.
 Why: avoids a second re-check of the T01.1 rebase and lets its Reviewer see CI.
+
+### E-0041 · 2026-11-13 13:25 (Asia/Colombo) · T00.4 · VERDICT
+Context: T00.4 Reviewer verdict, round 1 (fresh Claude Sonnet, pasted by the owner): APPROVED with 3 Minor + 3 Nit. Reviewer read the logs of both CI runs (shells confirmed: Windows PowerShell 5.1 and bash -e -o pipefail; GITHUB_TOKEN contents read), ran the core step exactly as in ci.yml against the T01.1 branch on Linux (ruff, format, mypy strict, pytest 3 passed), and emulated GitHub's powershell wrapper with pwsh 7.4.6.
+Findings and decisions:
+- R1-1 [Minor] Windows "setup twice" has no exit check between calls; a plain `exit 1` on the first run is masked if the second succeeds (confirmed by emulation; latent today, as setup.ps1's transient failures use Write-Error under Stop). FIX NOW.
+- R1-2 [Minor] actions checkout@v4 / setup-python@v5 / setup-node@v4 / cache@v4 run on deprecated Node 20 (warning in every job); newer majors exist (Reviewer: v7 for checkout/setup-python/setup-node, v6 for cache). FIX NOW: bump to the current majors after the Builder confirms them upstream; the warning must be gone.
+- R1-3 [Minor] Ponytail: worker job repeats the double setup and the script tests (scripts/tests 4× per event). FIX NOW: double setup + script tests only in the core job; worker job runs setup once per OS and no script tests. Optional bash-unification of the Linux/Windows step pairs: NOT now.
+- R1-4 [Nit] cache includes vendor/.downloads (179 MB of 742 MB on Linux). FIX NOW (one-line): cache vendor/ffmpeg, vendor/uv, vendor/python.
+- R1-5 [Nit] empty npm cache key warning while app/ is missing. NOT FIXING (goes away at T06.1).
+- R1-6 [Nit] cancel-in-progress also cancels master runs. FIX NOW (one-line): `cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}`.
+Why fix before merge: every later PR inherits ci.yml; each fix is a few lines; it's one round.
+Forward notes recorded: (a) at T06.1, setup will run `npm ci` in the core/worker jobs too (no npm cache there) — decide then; (b) worker/pyproject.toml must land with ≥1 test or pytest exits 5 (T03.7 has the contract suite); (c) .cache/uv is keyed only on deps.lock.json — revisit at T03.5; (d) `on: push` also runs on tag pushes — fine until T09.3.
+Re-check: the same Reviewer session, round 2, using the new CI run.
+
+### E-0042 · 2026-11-13 13:25 (Asia/Colombo) · T00.4 · FIX-PROMPT
+Decision: Issued the round-2 fix prompt to the T00.4 Builder: R1-1, R1-2, R1-3, R1-4, R1-6. Not fixing R1-5.
