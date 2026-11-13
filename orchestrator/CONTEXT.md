@@ -313,3 +313,10 @@ Decision: Told the owner to merge PR #5 (normal merge; CI green). Phase 0 comple
 
 ### E-0045 · 2026-11-13 13:36 (Asia/Colombo) · T01.1 · FIX-PROMPT
 Decision: Issued a rebase-only prompt to the T01.1 Builder (still round 1; no review has happened yet): rebase PR #6 onto master after PR #5 merges, resolve the Appendix 3 conflict by keeping both sides, force-with-lease push, and report the CI run with the core job actually running (ruff, format, mypy, pytest) green on both OSes, the E-0020 criterion. No other changes. Then the T01.1 Reviewer prompt (updated, with CI).
+
+### E-0046 · 2026-11-13 13:42 (Asia/Colombo) · T00.4 · MERGED
+Context: PR #5 merged into master as `ad52e4b` (normal merge). T00.4 ticked. **Phase 0 (Foundation) complete:** T00.1–T00.4 merged; deps-v1 mirror live; CI on every push and PR (windows-latest + ubuntu-latest).
+
+### E-0047 · 2026-11-13 13:42 (Asia/Colombo) · T01.1 · REVIEW-PROMPT
+Context: T01.1 rebase handoff (Antigravity / Gemini, pasted by the owner). Branch now one commit `33d12ab` on ad52e4b; same 8 files / +134 lines as before; Appendix 3 conflict resolved (master's 7 rows, then the 2 T01.1 rows). CI PR run 43391062801 (push run 43391055514): all 6 jobs success, checked via the Actions API; "Run core checks" steps succeeded on both OSes (Windows 3 s, Linux 2 s; the Builder reports ruff/format/mypy/pytest ran, "3 passed").
+Decision: T01.1 review now (fresh Claude Sonnet; Builder was Gemini). Supersedes the withdrawn E-0038 prompt; includes the same focus points plus confirming from the logs that the core checks ran, not skipped. Pins: the Reviewer confirms they're the latest on PyPI.
