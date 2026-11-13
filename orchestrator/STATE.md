@@ -8,7 +8,7 @@ Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 …
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 prompts issued (parallel). T01.4 / T01.6 available (not started).
+- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 building in parallel (E-0067).
 - `master` at `5a85aac`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
 - Open PRs: none yet (T01.4 and T01.6 Builders starting).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
