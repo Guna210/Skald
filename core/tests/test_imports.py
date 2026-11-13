@@ -41,10 +41,12 @@ def test_cli_version() -> None:
     assert proc.stderr == ""
 
 
+@pytest.mark.timeout(10)
 @pytest.mark.parametrize("arg", ["--versio", "--unknown", "extra"])
 def test_cli_unknown_or_abbreviated_arg_exits_2(arg: str) -> None:
     proc = subprocess.run(
         [sys.executable, "-m", "skald_core", arg],
+        stdin=subprocess.DEVNULL,
         capture_output=True,
         text=True,
         check=False,

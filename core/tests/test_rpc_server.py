@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import json
 import logging
+import math
 import os
 import subprocess
 import sys
@@ -52,6 +53,14 @@ def _read_json_lines(buf: io.BytesIO) -> list[dict[str, Any]]:
     return [json.loads(line) for line in raw.splitlines() if line]
 
 
+def _assert_protocol_error_shape(resp: dict[str, Any], code: int) -> None:
+    err = resp["error"]
+    assert err["code"] == code
+    assert set(err["data"].keys()) == {"kind", "details", "hint"}
+    assert err["data"]["kind"] == "internal"
+    assert err["data"]["hint"] is None
+
+
 def test_dispatch_with_pydantic_models() -> None:
     server, _ = _make_server()
 
@@ -90,7 +99,16 @@ def test_standard_error_parse_error() -> None:
     resp = server.handle_line("{not valid json")
     assert resp is not None
     assert resp["id"] is None
-    assert resp["error"]["code"] == PARSE_ERROR
+    _assert_protocol_error_shape(resp, PARSE_ERROR)
+
+
+def test_deeply_nested_json_returns_parse_error() -> None:
+    server, _ = _make_server()
+    deep = ("[" * 10000) + ("]" * 10000)
+    resp = server.handle_line(deep)
+    assert resp is not None
+    assert resp["id"] is None
+    _assert_protocol_error_shape(resp, PARSE_ERROR)
 
 
 def test_invalid_utf8_on_stdin_emits_parse_error_and_continues() -> None:
@@ -102,7 +120,7 @@ def test_invalid_utf8_on_stdin_emits_parse_error_and_continues() -> None:
     messages = _read_json_lines(stdout)
     assert len(messages) == 2
     assert messages[0]["id"] is None
-    assert messages[0]["error"]["code"] == PARSE_ERROR
+    _assert_protocol_error_shape(messages[0], PARSE_ERROR)
     assert messages[1] == {"jsonrpc": "2.0", "id": 7, "result": {"ok": True}}
 
 
@@ -125,7 +143,7 @@ def test_standard_error_invalid_request_and_no_batches(raw_line: str) -> None:
     server, _ = _make_server()
     resp = server.handle_line(raw_line)
     assert resp is not None
-    assert resp["error"]["code"] == INVALID_REQUEST
+    _assert_protocol_error_shape(resp, INVALID_REQUEST)
     if raw_line.startswith("["):
         assert resp["id"] is None
 
@@ -135,7 +153,7 @@ def test_standard_error_method_not_found() -> None:
     resp = server.handle_line('{"jsonrpc":"2.0","id":9,"method":"no.such.method"}')
     assert resp is not None
     assert resp["id"] == 9
-    assert resp["error"]["code"] == METHOD_NOT_FOUND
+    _assert_protocol_error_shape(resp, METHOD_NOT_FOUND)
 
 
 def test_standard_error_invalid_params_with_pydantic_details() -> None:
@@ -154,7 +172,7 @@ def test_standard_error_invalid_params_with_pydantic_details() -> None:
     )
     assert resp is not None
     assert resp["id"] == 2
-    assert resp["error"]["code"] == INVALID_PARAMS
+    _assert_protocol_error_shape(resp, INVALID_PARAMS)
     details = resp["error"]["data"]["details"]
     assert isinstance(details, list)
     assert len(details) >= 2
@@ -163,12 +181,25 @@ def test_standard_error_invalid_params_with_pydantic_details() -> None:
     assert ("count",) in locs
 
 
+def test_array_params_rejected_with_invalid_params() -> None:
+    server, _ = _make_server()
+    server.register("test.echo", lambda p: EchoResult(echoed=p.text, count=p.count), EchoParams)
+    server.register("test.ping", lambda: {"ok": True})
+
+    r1 = server.handle_line('{"jsonrpc":"2.0","id":1,"method":"test.echo","params":["hi",1]}')
+    r2 = server.handle_line('{"jsonrpc":"2.0","id":2,"method":"test.ping","params":[1,2]}')
+    assert r1 is not None
+    assert r2 is not None
+    _assert_protocol_error_shape(r1, INVALID_PARAMS)
+    _assert_protocol_error_shape(r2, INVALID_PARAMS)
+
+
 def test_standard_error_invalid_params_for_no_param_method() -> None:
     server, _ = _make_server()
     server.register("test.ping", lambda: {"ok": True})
     resp = server.handle_line('{"jsonrpc":"2.0","id":3,"method":"test.ping","params":{"x":1}}')
     assert resp is not None
-    assert resp["error"]["code"] == INVALID_PARAMS
+    _assert_protocol_error_shape(resp, INVALID_PARAMS)
     assert resp["error"]["data"]["details"]
 
 
@@ -182,8 +213,7 @@ def test_standard_error_internal_error() -> None:
     resp = server.handle_line('{"jsonrpc":"2.0","id":4,"method":"test.boom"}')
     assert resp is not None
     assert resp["id"] == 4
-    assert resp["error"]["code"] == INTERNAL_ERROR
-    assert resp["error"]["data"]["kind"] == "internal"
+    _assert_protocol_error_shape(resp, INTERNAL_ERROR)
     assert "unexpected failure" in resp["error"]["data"]["details"]
 
 
@@ -192,7 +222,82 @@ def test_standard_error_internal_error_on_bad_result_model() -> None:
     server.register("test.bad_result", lambda: {"wrong": "shape"}, None, EchoResult)
     resp = server.handle_line('{"jsonrpc":"2.0","id":5,"method":"test.bad_result"}')
     assert resp is not None
-    assert resp["error"]["code"] == INTERNAL_ERROR
+    _assert_protocol_error_shape(resp, INTERNAL_ERROR)
+
+
+def test_write_message_surrogate_in_method_name_survives_and_keeps_serving() -> None:
+    lines = [
+        '{"jsonrpc":"2.0","id":1,"method":"no\\ud800such"}',
+        '{"jsonrpc":"2.0","id":2,"method":"system.shutdown"}',
+    ]
+    server, stdout = _make_server(lines)
+    server.serve()
+
+    messages = _read_json_lines(stdout)
+    assert len(messages) == 2
+    assert messages[0]["id"] == 1
+    _assert_protocol_error_shape(messages[0], INTERNAL_ERROR)
+    assert messages[1] == {"jsonrpc": "2.0", "id": 2, "result": {"ok": True}}
+
+
+def test_write_message_surrogate_in_result_survives_and_keeps_serving() -> None:
+    lines = [
+        '{"jsonrpc":"2.0","id":1,"method":"test.surrogate"}',
+        '{"jsonrpc":"2.0","id":2,"method":"system.shutdown"}',
+    ]
+    server, stdout = _make_server(lines)
+    server.register("test.surrogate", lambda: {"text": "bad\ud800char"})
+    server.serve()
+
+    messages = _read_json_lines(stdout)
+    assert len(messages) == 2
+    assert messages[0]["id"] == 1
+    _assert_protocol_error_shape(messages[0], INTERNAL_ERROR)
+    assert messages[1] == {"jsonrpc": "2.0", "id": 2, "result": {"ok": True}}
+
+
+def test_write_message_nan_result_survives_and_keeps_serving() -> None:
+    lines = [
+        '{"jsonrpc":"2.0","id":1,"method":"test.nan"}',
+        '{"jsonrpc":"2.0","id":2,"method":"system.shutdown"}',
+    ]
+    server, stdout = _make_server(lines)
+    server.register("test.nan", lambda: {"value": math.nan})
+    server.serve()
+
+    raw_text = stdout.getvalue().decode("utf-8")
+    assert "NaN" not in raw_text
+    messages = [json.loads(line, parse_constant=_reject_constant) for line in raw_text.splitlines()]
+    assert len(messages) == 2
+    assert messages[0]["id"] == 1
+    _assert_protocol_error_shape(messages[0], INTERNAL_ERROR)
+    assert messages[1] == {"jsonrpc": "2.0", "id": 2, "result": {"ok": True}}
+
+
+def _reject_constant(val: str) -> Any:
+    raise ValueError(f"Non-standard JSON constant: {val}")
+
+
+def test_write_message_circular_result_survives_and_keeps_serving() -> None:
+    lines = [
+        '{"jsonrpc":"2.0","id":1,"method":"test.circular"}',
+        '{"jsonrpc":"2.0","id":2,"method":"system.shutdown"}',
+    ]
+    server, stdout = _make_server(lines)
+
+    def make_circular() -> dict[str, Any]:
+        d: dict[str, Any] = {}
+        d["self"] = d
+        return d
+
+    server.register("test.circular", make_circular)
+    server.serve()
+
+    messages = _read_json_lines(stdout)
+    assert len(messages) == 2
+    assert messages[0]["id"] == 1
+    _assert_protocol_error_shape(messages[0], INTERNAL_ERROR)
+    assert messages[1] == {"jsonrpc": "2.0", "id": 2, "result": {"ok": True}}
 
 
 def test_skald_error_mapping() -> None:
@@ -242,7 +347,7 @@ def test_notifications_receive_no_response_and_null_id_is_request() -> None:
     resp = server.handle_line('{"jsonrpc":"2.0","id":null,"method":"missing"}')
     assert resp is not None
     assert resp["id"] is None
-    assert resp["error"]["code"] == METHOD_NOT_FOUND
+    _assert_protocol_error_shape(resp, METHOD_NOT_FOUND)
 
 
 def test_notify_helper_and_thread_safe_writes() -> None:
@@ -302,6 +407,68 @@ def test_configure_logging_uses_skald_log_dir(
 
 
 @pytest.mark.timeout(10)
+def test_unwritable_log_dir_falls_back_to_stderr_and_keeps_serving(tmp_path: Path) -> None:
+    not_a_dir = tmp_path / "occupied_file"
+    not_a_dir.write_text("blocker", encoding="utf-8")
+    env = {**os.environ, "SKALD_LOG_DIR": str(not_a_dir)}
+
+    proc = subprocess.run(
+        [sys.executable, "-m", "skald_core"],
+        input=b'{"jsonrpc":"2.0","id":1,"method":"system.shutdown"}\n',
+        capture_output=True,
+        env=env,
+        check=False,
+    )
+    assert proc.returncode == 0
+    responses = [json.loads(line) for line in proc.stdout.decode("utf-8").splitlines() if line]
+    assert responses == [{"jsonrpc": "2.0", "id": 1, "result": {"ok": True}}]
+    stderr_text = proc.stderr.decode("utf-8")
+    assert "logging to stderr only" in stderr_text
+    assert "Traceback" not in stderr_text
+
+
+@pytest.mark.timeout(10)
+def test_subprocess_popen_flushes_response_before_stdin_eof(tmp_path: Path) -> None:
+    env = {**os.environ, "SKALD_LOG_DIR": str(tmp_path)}
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "skald_core"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env,
+    )
+    try:
+        assert proc.stdin is not None
+        assert proc.stdout is not None
+        assert proc.stderr is not None
+
+        proc.stdin.write(b'{"jsonrpc":"2.0","id":1,"method":"unknown.ping"}\n')
+        proc.stdin.flush()
+
+        first_line = proc.stdout.readline()
+        assert first_line.endswith(b"\n")
+        assert not first_line.endswith(b"\r\n")
+        first_msg = json.loads(first_line.decode("utf-8"))
+        assert first_msg["id"] == 1
+        _assert_protocol_error_shape(first_msg, METHOD_NOT_FOUND)
+
+        proc.stdin.write(b'{"jsonrpc":"2.0","id":2,"method":"system.shutdown"}\n')
+        proc.stdin.flush()
+
+        second_line = proc.stdout.readline()
+        second_msg = json.loads(second_line.decode("utf-8"))
+        assert second_msg == {"jsonrpc": "2.0", "id": 2, "result": {"ok": True}}
+
+        rc = proc.wait(timeout=5)
+        assert rc == 0
+        assert "Traceback" not in proc.stderr.read().decode("utf-8")
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
+
+
+@pytest.mark.timeout(10)
 def test_subprocess_main_errors_and_shutdown(tmp_path: Path) -> None:
     env = {**os.environ, "SKALD_LOG_DIR": str(tmp_path)}
     requests = [
@@ -324,9 +491,9 @@ def test_subprocess_main_errors_and_shutdown(tmp_path: Path) -> None:
 
     responses = [json.loads(line) for line in proc.stdout.decode("utf-8").splitlines() if line]
     assert [r["id"] for r in responses] == [None, None, 2, 3]
-    assert responses[0]["error"]["code"] == PARSE_ERROR
-    assert responses[1]["error"]["code"] == INVALID_REQUEST
-    assert responses[2]["error"]["code"] == METHOD_NOT_FOUND
+    _assert_protocol_error_shape(responses[0], PARSE_ERROR)
+    _assert_protocol_error_shape(responses[1], INVALID_REQUEST)
+    _assert_protocol_error_shape(responses[2], METHOD_NOT_FOUND)
     assert responses[3] == {"jsonrpc": "2.0", "id": 3, "result": {"ok": True}}
 
     log_file = tmp_path / "skald-core.log"
@@ -401,7 +568,7 @@ raise SystemExit(run_stdio_server(setup=setup))
     }
     assert messages[1] == {"jsonrpc": "2.0", "id": 1, "result": {"text": non_ascii}}
     assert messages[2]["id"] == 2
-    assert messages[2]["error"]["code"] == INVALID_PARAMS
+    _assert_protocol_error_shape(messages[2], INVALID_PARAMS)
     assert messages[2]["error"]["data"]["details"]
     assert messages[3] == {
         "jsonrpc": "2.0",

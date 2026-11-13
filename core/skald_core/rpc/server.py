@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import io
 import json
 import logging
 import logging.handlers
@@ -13,7 +12,7 @@ import threading
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO, Any, cast
+from typing import IO, Any
 
 from pydantic import BaseModel, ValidationError
 
@@ -90,62 +89,79 @@ def close_managed_logging() -> None:
                 handler.close()
 
 
-def configure_logging(log_dir: Path | None = None, level: int = logging.INFO) -> Path:
+def configure_logging(log_dir: Path | None = None, level: int = logging.INFO) -> Path | None:
     """Configure rotating file logging (in SKALD_LOG_DIR or temp dir) and stderr logging."""
     target_dir = _default_log_dir() if log_dir is None else log_dir
-    target_dir.mkdir(parents=True, exist_ok=True)
     log_file = target_dir / "skald-core.log"
 
     close_managed_logging()
 
     formatter = logging.Formatter(_LOG_FORMAT)
-    file_handler = logging.handlers.RotatingFileHandler(
-        log_file,
-        maxBytes=5 * 1024 * 1024,
-        backupCount=3,
-        encoding="utf-8",
-    )
-    file_handler.setFormatter(formatter)
-    setattr(file_handler, _MANAGED_HANDLER_ATTR, True)
-
     stderr_handler = logging.StreamHandler(sys.stderr)
     stderr_handler.setFormatter(formatter)
     setattr(stderr_handler, _MANAGED_HANDLER_ATTR, True)
 
     root = logging.getLogger()
     root.setLevel(level)
-    root.addHandler(file_handler)
     root.addHandler(stderr_handler)
+
+    try:
+        target_dir.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.handlers.RotatingFileHandler(
+            log_file,
+            maxBytes=5 * 1024 * 1024,
+            backupCount=3,
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        logger.warning(
+            "Cannot open log file in %s (%s); logging to stderr only",
+            target_dir,
+            exc,
+        )
+        return None
+
+    file_handler.setFormatter(formatter)
+    setattr(file_handler, _MANAGED_HANDLER_ATTR, True)
+    root.addHandler(file_handler)
     return log_file
-
-
-def _unwrap_stream(stream: IO[bytes] | IO[str]) -> tuple[IO[bytes] | IO[str], IO[bytes] | IO[str]]:
-    """Return (underlying_stream, owner_ref), using .buffer on TextIOBase when available."""
-    if isinstance(stream, io.TextIOBase) and hasattr(stream, "buffer"):
-        buf = stream.buffer
-        if buf is not None:
-            return buf, stream
-    return stream, stream
 
 
 def _error_response(
     req_id: JsonId,
     code: int,
     message: str,
-    data: dict[str, Any] | None = None,
+    *,
+    kind: str = "internal",
+    details: Any = None,
+    hint: str | None = None,
 ) -> dict[str, Any]:
-    error: dict[str, Any] = {"code": code, "message": message}
-    if data is not None:
-        error["data"] = data
-    return {"jsonrpc": "2.0", "id": req_id, "error": error}
+    return {
+        "jsonrpc": "2.0",
+        "id": req_id,
+        "error": {
+            "code": code,
+            "message": message,
+            "data": {
+                "kind": kind,
+                "details": details,
+                "hint": hint,
+            },
+        },
+    }
 
 
 def _is_valid_id(value: Any) -> bool:
     return not isinstance(value, bool) and isinstance(value, (str, int, float, type(None)))
 
 
-def _serialize_json(payload: dict[str, Any]) -> str:
-    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+def _serialize_json_bytes(payload: dict[str, Any]) -> bytes:
+    return json.dumps(
+        payload,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
 
 
 class RpcServer:
@@ -153,13 +169,11 @@ class RpcServer:
 
     def __init__(
         self,
-        stdin: IO[bytes] | IO[str] | None = None,
-        stdout: IO[bytes] | IO[str] | None = None,
+        stdin: IO[bytes] | None = None,
+        stdout: IO[bytes] | None = None,
     ) -> None:
-        raw_in: IO[bytes] | IO[str] = sys.stdin if stdin is None else stdin
-        raw_out: IO[bytes] | IO[str] = sys.stdout if stdout is None else stdout
-        self._stdin, self._stdin_owner = _unwrap_stream(raw_in)
-        self._stdout, self._stdout_owner = _unwrap_stream(raw_out)
+        self._stdin: IO[bytes] = sys.stdin.buffer if stdin is None else stdin
+        self._stdout: IO[bytes] = sys.stdout.buffer if stdout is None else stdout
         self._write_lock = threading.Lock()
         self._shutdown_event = threading.Event()
         self._methods: dict[str, _MethodEntry] = {}
@@ -188,30 +202,37 @@ class RpcServer:
         """Signal the server read loop to exit cleanly after the current message."""
         self._shutdown_event.set()
 
-    def _write_line(self, line: str) -> None:
+    def _write_bytes(self, data: bytes) -> None:
         with self._write_lock:
-            if isinstance(self._stdout, io.TextIOBase):
-                self._stdout.write(line + "\n")
-            else:
-                cast(IO[bytes], self._stdout).write((line + "\n").encode("utf-8"))
+            self._stdout.write(data + b"\n")
             self._stdout.flush()
 
     def _write_message(self, payload: dict[str, Any]) -> None:
         try:
-            encoded = _serialize_json(payload)
-        except TypeError as exc:
+            encoded = _serialize_json_bytes(payload)
+        except (TypeError, ValueError) as exc:
             logger.exception("Failed to serialize JSON-RPC payload")
             if "id" in payload:
                 fallback = _error_response(
                     payload["id"],
                     INTERNAL_ERROR,
                     "Internal error",
-                    {"kind": "internal", "details": str(exc), "hint": None},
+                    details=str(exc),
                 )
-                self._write_line(_serialize_json(fallback))
+                try:
+                    encoded = _serialize_json_bytes(fallback)
+                except (TypeError, ValueError):
+                    safe_fallback = _error_response(
+                        None,
+                        INTERNAL_ERROR,
+                        "Internal error",
+                        details="Unserializable response payload",
+                    )
+                    encoded = _serialize_json_bytes(safe_fallback)
+                self._write_bytes(encoded)
                 return
             raise
-        self._write_line(encoded)
+        self._write_bytes(encoded)
 
     def notify(
         self,
@@ -233,7 +254,7 @@ class RpcServer:
 
         try:
             msg = json.loads(raw_line)
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, RecursionError):
             return _error_response(None, PARSE_ERROR, "Parse error")
 
         if not isinstance(msg, dict):
@@ -273,12 +294,7 @@ class RpcServer:
                     logger.warning("Ignoring notification %r with invalid params", method)
                     return None
                 details = json.loads(exc.json(include_url=False))
-                return _error_response(
-                    req_id,
-                    INVALID_PARAMS,
-                    "Invalid params",
-                    {"details": details},
-                )
+                return _error_response(req_id, INVALID_PARAMS, "Invalid params", details=details)
         elif raw_params not in (None, {}):
             if not has_id:
                 logger.warning("Ignoring notification %r with unexpected params", method)
@@ -287,7 +303,7 @@ class RpcServer:
                 req_id,
                 INVALID_PARAMS,
                 "Invalid params",
-                {"details": [{"msg": "Method takes no parameters"}]},
+                details=[{"msg": "Method takes no parameters"}],
             )
 
         try:
@@ -304,12 +320,7 @@ class RpcServer:
             logger.exception("Unhandled error in RPC method %s", method)
             if not has_id:
                 return None
-            return _error_response(
-                req_id,
-                INTERNAL_ERROR,
-                "Internal error",
-                {"kind": "internal", "details": str(exc), "hint": None},
-            )
+            return _error_response(req_id, INTERNAL_ERROR, "Internal error", details=str(exc))
 
         if not has_id:
             return None
@@ -326,24 +337,15 @@ class RpcServer:
                 serialized = result
         except ValidationError as exc:
             logger.exception("Result validation failed for %s", method)
-            return _error_response(
-                req_id,
-                INTERNAL_ERROR,
-                "Internal error",
-                {"kind": "internal", "details": str(exc), "hint": None},
-            )
+            return _error_response(req_id, INTERNAL_ERROR, "Internal error", details=str(exc))
 
         return {"jsonrpc": "2.0", "id": req_id, "result": serialized}
 
     def _read_line(self) -> str | None:
         raw = self._stdin.readline()
-        if isinstance(raw, bytes):
-            if raw == b"":
-                return None
-            return raw.decode("utf-8")
-        if raw == "":
+        if raw == b"":
             return None
-        return raw
+        return raw.decode("utf-8")
 
     def serve(self) -> None:
         """Read JSON-RPC requests from stdin until EOF or shutdown."""
@@ -384,9 +386,10 @@ def notify(
 def run_stdio_server(setup: Callable[[RpcServer], None] | None = None) -> int:
     """Redirect stdout to stderr, configure logging, and run the JSON-RPC stdio loop."""
     real_stdout = sys.stdout
+    real_stdout_buffer = real_stdout.buffer
     sys.stdout = sys.stderr
     configure_logging()
-    server = RpcServer(stdin=sys.stdin, stdout=real_stdout)
+    server = RpcServer(stdin=sys.stdin.buffer, stdout=real_stdout_buffer)
     if setup is not None:
         setup(server)
     logger.info("Skald core JSON-RPC server started")
