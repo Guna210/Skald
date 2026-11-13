@@ -305,3 +305,8 @@ Decision: Issued the round-2 fix prompt to the T00.4 Builder: R1-1, R1-2, R1-3, 
 Context: T00.4 round-2 handoff (Antigravity / Gemini, pasted by the owner). Commit `a5529d8`, ci.yml only (+24/−28): cancel-in-progress not on master; actions → checkout@v7, setup-python@v7, setup-node@v7, cache@v6 (Builder confirmed v7.0.1 / v7.1.0 / v7.1.0 / v6.1.0 via gh api); vendor cache narrowed to vendor/{ffmpeg,uv,python} + .cache/uv; $LASTEXITCODE checks after each Windows setup call; worker job: setup once, no script tests. Diff matches the handoff exactly.
 CI (checked via the Actions API): push run 43389501302 success; PR run 43389506227 success, attempt 2 (the warm-cache rerun).
 Decision: Quick round-2 re-check by the same Sonnet Reviewer session (verify the 5 fixes and the run logs: no Node 20 warning, mirror/up-to-date lines, script tests only in core).
+
+### E-0044 · 2026-11-13 13:36 (Asia/Colombo) · T00.4 · VERDICT
+Context: T00.4 Reviewer verdict, round 2 (same Sonnet session, pasted by the owner): APPROVED, no findings. R1-1, R1-2, R1-3, R1-4, R1-6 verified fixed from the diff and the job logs: no Node 20 deprecation line in the logs read (annotations list not reachable by the Reviewer); Python 3.12.16/3.12.10, Node v24.22.2; script tests only in core, 10/10 on both OSes; warm Windows cache ~194 MB (was ~410 MB) with "up to date" ×3 and no downloads.
+Notes: cold runs see a harmless "Unable to reserve cache" info line when core and worker save the same key; setup-node@v7 has `package-manager-cache: true` by default, so T06.1 must confirm it doesn't clash with the workflow's own .cache/npm step.
+Decision: Told the owner to merge PR #5 (normal merge; CI green). Phase 0 complete once merged. Then T01.1 rebases (E-0040).

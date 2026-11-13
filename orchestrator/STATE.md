@@ -1,25 +1,25 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 13:31 (Asia/Colombo) · last entry: E-0043
+Last updated: 2026-11-13 13:36 (Asia/Colombo) · last entry: E-0044
 Current log file: `CONTEXT.md` (entries E-0001 onward)
 
 ## Where the project is
-- Phase 0: T00.1, T00.2, T00.3 merged; T00.3 [REVIEW] gate fully signed (E-0032, E-0036). T00.4 PR #5 APPROVED round 1 with minors; round 2 pushed (`a5529d8`, CI green), in re-check (E-0043).
+- Phase 0: T00.1, T00.2, T00.3 merged; T00.3 [REVIEW] gate fully signed (E-0032, E-0036). T00.4 PR #5 APPROVED round 1 with minors; APPROVED round 2 (E-0044), merge pending.
 - Phase 1: T01.1 PR #6 built; review deferred until after T00.4 merges and T01.1 rebases (E-0040).
 - `master` at `b2bfeb8`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: PR #5 T00.4 (https://github.com/Guna210/Skald/pull/5) — round 2 in re-check, CI green (E-0043). PR #6 T01.1 (https://github.com/Guna210/Skald/pull/6) — waiting: rebase after T00.4 merges, then review (E-0040).
+- Open PRs: PR #5 T00.4 (https://github.com/Guna210/Skald/pull/5) — APPROVED round 2, CI green, merge pending (E-0044). PR #6 T01.1 (https://github.com/Guna210/Skald/pull/6) — waiting: rebase after T00.4 merges, then review (E-0040).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4).
-- In review: T00.4 (PR #5, round 2 re-check by the same Reviewer, E-0043).
+- Approved, merge pending: T00.4 (PR #5, E-0044).
 - Waiting: T01.1 (PR #6) — rebase prompt after T00.4 merges, then a new Reviewer prompt (E-0038 withdrawn, E-0040).
 - Merge order: T00.4 first, then T01.1 rebases and must show the core job green on both OSes (E-0038).
 - After T01.1: T01.2, T01.6, T02.1, T03.9 in parallel; T03.4 needs T01.1 + T00.3. After T00.4: T06.1 (app scaffold) can start.
 
 ## Waiting on the owner
-1. Paste the T00.4 round-2 re-check prompt into the same T00.4 Reviewer session (E-0043).
+1. Merge PR #5 (normal merge), then paste the T01.1 rebase prompt into the T01.1 Builder session (E-0044, E-0045).
 3. Optional: run `.\scripts\setup.ps1` twice on the laptop (T00.4 CI covers it).
 
 ## Pending GPU runs
@@ -47,6 +47,7 @@ None.
 - T00.4 review: CI logs should show "using mirror" for ffmpeg/uv/python (E-0036).
 - Mirror verification after upload: download all 8 deps-v1 assets from the cloud and compare with docs/spikes/deps-mirror.md; snapshots may be accepted on the uncompressed tar SHA-256 (E-0031).
 - T02.3 prompt: include deferred R1-1 (E-0011).
+- T06.1: setup-node@v7 defaults `package-manager-cache: true` — confirm no clash with the .cache/npm cache step (E-0044).
 - T06.1: setup.* will run `npm ci` inside the CI core/worker jobs once app/package-lock.json exists (no npm cache there) — decide then (E-0041).
 - T03.7: worker/pyproject.toml must land with ≥1 test, or CI pytest exits 5 (E-0041).
 - T03.5: CI `.cache/uv` key covers only deps.lock.json — add pack lockfiles (E-0041).
