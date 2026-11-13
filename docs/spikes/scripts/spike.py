@@ -5,7 +5,7 @@ Standard library only. Run it with the dev venv Python after scripts/setup.* has
   python spike.py lock [--check]     regenerate (or verify) the sample locks for Linux and Windows
   python spike.py measure --work DIR [--packs cpu,cu12] [--other-volume DIR] [--only STEP,...]
 
-`measure` writes DIR/results.json (merged across runs) and prints it. Findings: docs/spikes/engine-packs.md.
+`measure` writes DIR/results.json (merged across runs) and prints it on one RESULTS_JSON line. Findings: docs/spikes/engine-packs.md.
 """
 
 import argparse
@@ -572,8 +572,7 @@ def measure(args):
         if kind == "cu12" and not only:  # free the disk: CUDA packs are several GB
             for p in (ctx.packs / ctx.name(kind), ctx.packs / ctx.name(kind, "-b")):
                 rm(p)
-    print("\n===== results.json =====")
-    print(ctx.results_file.read_text())
+    print("\nRESULTS_JSON " + json.dumps(ctx.results))
 
 
 def lock(args):

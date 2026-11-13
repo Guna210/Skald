@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   spike:
     name: spike (${{ matrix.os }})
@@ -34,15 +38,10 @@ jobs:
           node-version: "24"
 
       # ---------------- Linux ----------------
-      - name: Setup and machine facts (Linux)
+      - name: Setup (Linux)
         if: runner.os == 'Linux'
         shell: bash
-        run: |
-          ./scripts/setup.sh > setup.log 2>&1 || { tail -50 setup.log; exit 1; }
-          git config --get core.autocrlf || echo "core.autocrlf: unset"
-          df -hT / /mnt /dev/shm || true
-          findmnt -T "$HOME" || true
-          nproc; free -g | head -2
+        run: ./scripts/setup.sh > setup.log 2>&1 || { tail -50 setup.log; exit 1; }
 
       - name: Measure (Linux)
         if: runner.os == 'Linux'
@@ -62,20 +61,21 @@ jobs:
           $PY docs/spikes/scripts/spike.py measure --work "$WORK" --packs cu12
           cp "$WORK/results.json" results-linux.json
 
+      - name: Machine facts (Linux)
+        if: always() && runner.os == 'Linux'
+        shell: bash
+        run: |
+          echo "core.autocrlf: $(git config --get core.autocrlf || echo unset)"
+          df -hT / /mnt /dev/shm || true
+          nproc; free -g | head -2
+
       # ---------------- Windows ----------------
-      - name: Setup and machine facts (Windows)
+      - name: Setup (Windows)
         if: runner.os == 'Windows'
         shell: powershell
         run: |
           .\scripts\setup.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Write-Host "core.autocrlf: $(git config --get core.autocrlf)"
-          Get-Volume | Format-Table DriveLetter, FileSystemType, SizeRemaining, Size -AutoSize | Out-String | Write-Host
-          Write-Host "workspace: $env:GITHUB_WORKSPACE"
-          Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name LongPathsEnabled | Format-List LongPathsEnabled | Out-String | Write-Host
-          Get-MpComputerStatus | Format-List AMServiceEnabled, AntivirusEnabled, RealTimeProtectionEnabled, OnAccessProtectionEnabled, IsTamperProtected | Out-String | Write-Host
-          Get-MpPreference | Format-List DisableRealtimeMonitoring, ExclusionPath | Out-String | Write-Host
-          (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors
 
       - name: Measure (Windows)
         if: runner.os == 'Windows'
@@ -122,3 +122,15 @@ jobs:
           Run measure --work $work --only 'prune,clean'
           Run measure --work $work --packs cu12
           Copy-Item "$work\results.json" results-windows.json
+
+      - name: Machine facts (Windows)
+        if: always() && runner.os == 'Windows'
+        shell: powershell
+        run: |
+          Write-Host "core.autocrlf: $(git config --get core.autocrlf)"
+          Get-Volume | Format-Table DriveLetter, FileSystemType, SizeRemaining, Size -AutoSize | Out-String | Write-Host
+          Write-Host "workspace: $env:GITHUB_WORKSPACE"
+          Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name LongPathsEnabled | Format-List LongPathsEnabled | Out-String | Write-Host
+          Get-MpComputerStatus | Format-List AMServiceEnabled, AntivirusEnabled, RealTimeProtectionEnabled, OnAccessProtectionEnabled, IsTamperProtected | Out-String | Write-Host
+          Get-MpPreference | Format-List DisableRealtimeMonitoring, ExclusionPath | Out-String | Write-Host
+          (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors
