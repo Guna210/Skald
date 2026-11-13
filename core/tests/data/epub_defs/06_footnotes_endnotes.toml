@@ -1,0 +1,79 @@
+[meta]
+id = "06_footnotes_endnotes"
+description = "Footnotes and endnotes via epub:type noteref/footnote/endnote and role=doc-noteref"
+
+[epub]
+version = "3.0"
+identifier = "urn:uuid:11111111-1111-4111-8111-000000000006"
+title = "Annotated Tales"
+authors = ["Jane Austen"]
+language = "en"
+has_nav = true
+has_ncx = false
+cover_mode = "none"
+
+[[spine]]
+id = "ch1"
+href = "ch1.xhtml"
+body_xhtml = """
+<h1>Chapter 1: Footnotes</h1>
+<p>The manor stood above the meadow<a epub:type="noteref" href="#fn1">1</a> where cattle grazed peacefully through the long, golden summer afternoon.</p>
+<p>Her uncle kept an almanac beside the hearth<sup><a epub:type="noteref" href="#fn2">[2]</a></sup> and recorded every autumn frost and winter gale without fail.</p>
+<aside epub:type="footnote" id="fn1">
+  <p>Built in 1742 of local limestone.</p>
+</aside>
+<aside epub:type="footnote" id="fn2">
+  <p>Published annually in Bath.</p>
+</aside>
+"""
+
+[[spine]]
+id = "ch2"
+href = "ch2.xhtml"
+body_xhtml = """
+<h1>Chapter 2: Endnotes</h1>
+<p>When the carriage arrived at twilight<a role="doc-noteref" href="#en1">*</a> the wrought-iron lanterns along the gravel avenue had just been lit.</p>
+<p>Hot tea was served in the oak drawing room while November rain drummed steadily against the tall bay windows.</p>
+<aside epub:type="endnote" id="en1">
+  <p>Twilight fell around five o'clock in November.</p>
+</aside>
+"""
+
+[[nav]]
+title = "Chapter 1: Footnotes"
+href = "ch1.xhtml"
+
+[[nav]]
+title = "Chapter 2: Endnotes"
+href = "ch2.xhtml"
+
+[expected]
+status = "ok"
+title = "Annotated Tales"
+authors = ["Jane Austen"]
+language = "en"
+has_cover = false
+
+[[expected.chapters]]
+title = "Chapter 1: Footnotes"
+href = "OEBPS/ch1.xhtml"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Chapter 1: Footnotes",
+  "The manor stood above the meadow where cattle grazed peacefully through the long, golden summer afternoon.",
+  "Her uncle kept an almanac beside the hearth and recorded every autumn frost and winter gale without fail.",
+]
+
+[[expected.chapters]]
+title = "Chapter 2: Endnotes"
+href = "OEBPS/ch2.xhtml"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Chapter 2: Endnotes",
+  "When the carriage arrived at twilight the wrought-iron lanterns along the gravel avenue had just been lit.",
+  "Hot tea was served in the oak drawing room while November rain drummed steadily against the tall bay windows.",
+]

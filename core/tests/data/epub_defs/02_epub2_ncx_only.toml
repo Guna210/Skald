@@ -1,0 +1,72 @@
+[meta]
+id = "02_epub2_ncx_only"
+description = "EPUB 2.0 NCX-only navigation and EPUB 2 meta cover image"
+
+[epub]
+version = "2.0"
+identifier = "urn:uuid:11111111-1111-4111-8111-000000000002"
+title = "Clockwork Letters"
+authors = ["Mary Shelley"]
+language = "en-GB"
+has_nav = false
+has_ncx = true
+cover_mode = "epub2"
+cover_href = "images/cover.png"
+
+[[spine]]
+id = "ch1"
+href = "ch1.xhtml"
+body_xhtml = """
+<h1>First Letter</h1>
+<p>Yesterday afternoon the postman delivered a brass cylinder wrapped in oiled brown paper from Geneva.</p>
+<p>Inside lay three folded sheets written in neat iron-gall ink, dated nearly forty winters before my own birth.</p>
+"""
+
+[[spine]]
+id = "ch2"
+href = "ch2.xhtml"
+body_xhtml = """
+<h1>Second Letter</h1>
+<p>Do not wind the escapement until the moon clears the eastern spire, or the chimes will strike out of measure.</p>
+<p>My workshop still smells of cedar shavings and rosin whenever the evening rain taps against the leaded panes.</p>
+"""
+
+[[nav]]
+title = "I. The Brass Cylinder"
+href = "ch1.xhtml"
+
+[[nav]]
+title = "II. The Escapement"
+href = "ch2.xhtml"
+
+[expected]
+status = "ok"
+title = "Clockwork Letters"
+authors = ["Mary Shelley"]
+language = "en-GB"
+has_cover = true
+cover_href = "OEBPS/images/cover.png"
+
+[[expected.chapters]]
+title = "I. The Brass Cylinder"
+href = "OEBPS/ch1.xhtml"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "First Letter",
+  "Yesterday afternoon the postman delivered a brass cylinder wrapped in oiled brown paper from Geneva.",
+  "Inside lay three folded sheets written in neat iron-gall ink, dated nearly forty winters before my own birth.",
+]
+
+[[expected.chapters]]
+title = "II. The Escapement"
+href = "OEBPS/ch2.xhtml"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Second Letter",
+  "Do not wind the escapement until the moon clears the eastern spire, or the chimes will strike out of measure.",
+  "My workshop still smells of cedar shavings and rosin whenever the evening rain taps against the leaded panes.",
+]

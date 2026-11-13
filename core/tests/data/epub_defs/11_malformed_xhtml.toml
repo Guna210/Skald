@@ -1,0 +1,42 @@
+[meta]
+id = "11_malformed_xhtml"
+description = "Malformed XHTML content file -> rejected with epub_invalid"
+
+[epub]
+version = "3.0"
+identifier = "urn:uuid:11111111-1111-4111-8111-000000000011"
+title = "Broken Markup"
+authors = ["Unknown Scribe"]
+language = "en"
+has_nav = true
+has_ncx = false
+cover_mode = "none"
+
+[[spine]]
+id = "ch1"
+href = "ch1.xhtml"
+raw_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Broken Markup</title>
+</head>
+<body>
+  <h1>Chapter 1: Broken</h1>
+  <p>This paragraph opens a <b>bold tag and closes the outer tag first.</p></b>
+</body>
+</html>
+"""
+
+[[nav]]
+title = "Chapter 1: Broken"
+href = "ch1.xhtml"
+
+[expected]
+status = "epub_invalid"
+title = "Broken Markup"
+authors = ["Unknown Scribe"]
+language = "en"
+has_cover = false
+chapters = []

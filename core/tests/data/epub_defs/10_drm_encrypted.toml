@@ -1,0 +1,36 @@
+[meta]
+id = "10_drm_encrypted"
+description = "encryption.xml listing AES encryption on content document -> refused with epub_drm"
+
+[epub]
+version = "3.0"
+identifier = "urn:uuid:11111111-1111-4111-8111-000000000010"
+title = "Locked Volume"
+authors = ["Auguste Kerckhoffs"]
+language = "en"
+has_nav = true
+has_ncx = false
+cover_mode = "none"
+encryption_mode = "drm"
+encryption_target = "OEBPS/ch1.xhtml"
+
+[[spine]]
+id = "ch1"
+href = "ch1.xhtml"
+body_xhtml = """
+<h1>Chapter 1: Sealed</h1>
+<p>This volume marks a content file as AES-encrypted in META-INF/encryption.xml so the importer must refuse it as epub_drm.</p>
+<p>Skald never attempts to strip digital rights management and instead explains the refusal clearly to the reader.</p>
+"""
+
+[[nav]]
+title = "Chapter 1: Sealed"
+href = "ch1.xhtml"
+
+[expected]
+status = "epub_drm"
+title = "Locked Volume"
+authors = ["Auguste Kerckhoffs"]
+language = "en"
+has_cover = false
+chapters = []

@@ -1,0 +1,49 @@
+[meta]
+id = "09_font_obfuscation_ok"
+description = "encryption.xml listing only IDPF font obfuscation must NOT count as DRM"
+
+[epub]
+version = "3.0"
+identifier = "urn:uuid:11111111-1111-4111-8111-000000000009"
+title = "Obfuscated Font Only"
+authors = ["Johannes Gutenberg"]
+language = "en"
+has_nav = true
+has_ncx = false
+cover_mode = "none"
+include_font = true
+font_href = "fonts/dummy.woff"
+encryption_mode = "font_obfuscation"
+encryption_target = "OEBPS/fonts/dummy.woff"
+
+[[spine]]
+id = "ch1"
+href = "ch1.xhtml"
+body_xhtml = """
+<h1>Chapter 1: Movable Type</h1>
+<p>This book carries an encryption manifest solely to obfuscate an embedded font file under the standard IDPF embedding rule.</p>
+<p>Because the content documents themselves are unencrypted, Skald imports every chapter normally without raising a DRM error.</p>
+"""
+
+[[nav]]
+title = "Chapter 1: Movable Type"
+href = "ch1.xhtml"
+
+[expected]
+status = "ok"
+title = "Obfuscated Font Only"
+authors = ["Johannes Gutenberg"]
+language = "en"
+has_cover = false
+
+[[expected.chapters]]
+title = "Chapter 1: Movable Type"
+href = "OEBPS/ch1.xhtml"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Chapter 1: Movable Type",
+  "This book carries an encryption manifest solely to obfuscate an embedded font file under the standard IDPF embedding rule.",
+  "Because the content documents themselves are unencrypted, Skald imports every chapter normally without raising a DRM error.",
+]

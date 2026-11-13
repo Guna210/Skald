@@ -1,0 +1,114 @@
+[meta]
+id = "04_anchor_split"
+description = "Single spine XHTML file split into three chapters by navigation anchor targets"
+
+[epub]
+version = "3.0"
+identifier = "urn:uuid:11111111-1111-4111-8111-000000000004"
+title = "Three Acts in One File"
+authors = ["Henrik Ibsen"]
+language = "en"
+has_nav = true
+has_ncx = false
+cover_mode = "none"
+
+[[spine]]
+id = "acts"
+href = "acts.xhtml"
+body_xhtml = """
+<section id="act1">
+  <h1>Act I: The Courtyard</h1>
+  <p>Morning sunlight slanted across the cobblestones while the baker arranged warm loaves in the timber window.</p>
+  <p>Two messengers paused beside the stone fountain to trade rumors about the arriving steamship.</p>
+</section>
+<section id="act2">
+  <h1>Act II: The Council Hall</h1>
+  <p>Inside the oak-panelled chamber, lanterns burned brightly despite the high windows overlooking the square.</p>
+  <p>Everyone leaned forward as the clerk unrolled the parchment scroll and cleared his throat to begin.</p>
+</section>
+<section id="act3">
+  <h1>Act III: The Bridge</h1>
+  <p>By dusk a cool river mist rose beneath the iron arches and softened the distant echo of footsteps.</p>
+  <p>A single violin carried a quiet melody from the riverbank until the last ferry pulled away.</p>
+</section>
+"""
+
+[[spine]]
+id = "epilogue"
+href = "epilogue.xhtml"
+body_xhtml = """
+<h1>Epilogue</h1>
+<p>Years later, travelers passing through the valley still pointed out the old clocktower above the cobbled square.</p>
+<p>None of the ledgers remained, yet the tune played beside the river lingered in the memory of the town.</p>
+"""
+
+[[nav]]
+title = "Act I: The Courtyard"
+href = "acts.xhtml#act1"
+
+[[nav]]
+title = "Act II: The Council Hall"
+href = "acts.xhtml#act2"
+
+[[nav]]
+title = "Act III: The Bridge"
+href = "acts.xhtml#act3"
+
+[[nav]]
+title = "Epilogue"
+href = "epilogue.xhtml"
+
+[expected]
+status = "ok"
+title = "Three Acts in One File"
+authors = ["Henrik Ibsen"]
+language = "en"
+has_cover = false
+
+[[expected.chapters]]
+title = "Act I: The Courtyard"
+href = "OEBPS/acts.xhtml#act1"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Act I: The Courtyard",
+  "Morning sunlight slanted across the cobblestones while the baker arranged warm loaves in the timber window.",
+  "Two messengers paused beside the stone fountain to trade rumors about the arriving steamship.",
+]
+
+[[expected.chapters]]
+title = "Act II: The Council Hall"
+href = "OEBPS/acts.xhtml#act2"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Act II: The Council Hall",
+  "Inside the oak-panelled chamber, lanterns burned brightly despite the high windows overlooking the square.",
+  "Everyone leaned forward as the clerk unrolled the parchment scroll and cleared his throat to begin.",
+]
+
+[[expected.chapters]]
+title = "Act III: The Bridge"
+href = "OEBPS/acts.xhtml#act3"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Act III: The Bridge",
+  "By dusk a cool river mist rose beneath the iron arches and softened the distant echo of footsteps.",
+  "A single violin carried a quiet melody from the riverbank until the last ferry pulled away.",
+]
+
+[[expected.chapters]]
+title = "Epilogue"
+href = "OEBPS/epilogue.xhtml"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Epilogue",
+  "Years later, travelers passing through the valley still pointed out the old clocktower above the cobbled square.",
+  "None of the ledgers remained, yet the tune played beside the river lingered in the memory of the town.",
+]

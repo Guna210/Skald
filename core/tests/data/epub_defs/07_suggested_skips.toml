@@ -1,0 +1,188 @@
+[meta]
+id = "07_suggested_skips"
+description = "Suggested skip detection: cover, toc, copyright-page, index (via epub:type and landmarks), plus a <200-char item"
+
+[epub]
+version = "3.0"
+identifier = "urn:uuid:11111111-1111-4111-8111-000000000007"
+title = "Front and Back Matter"
+authors = ["George Eliot"]
+language = "en"
+has_nav = true
+has_ncx = false
+cover_mode = "none"
+
+[[spine]]
+id = "cover"
+href = "cover.xhtml"
+body_xhtml = """
+<section epub:type="cover">
+  <h1>Cover Page</h1>
+  <p>First Edition Paperback Cover. Illustrated with woodcut engravings from the London press and bound in navy cloth with gilt lettering across the spine and front board for library collections.</p>
+</section>
+"""
+
+[[spine]]
+id = "copyright"
+href = "copyright.xhtml"
+body_xhtml = """
+<section epub:type="copyright-page">
+  <h1>Copyright</h1>
+  <p>Published in 1922 by Albion House, London and Edinburgh. All typesetting, proofreading, and binding notes in this archival digital edition are preserved for bibliographic reference only.</p>
+</section>
+"""
+
+[[spine]]
+id = "toc_page"
+href = "toc.xhtml"
+body_xhtml = """
+<section epub:type="toc">
+  <h1>Contents</h1>
+  <p>Chapter 1: The Mill by the Stream — Dedication — Analytical Index of Proper Names, Geographic Locations, Historical Dates, and Architectural Terms Referenced Throughout the Narrative.</p>
+</section>
+"""
+
+[[spine]]
+id = "dedication"
+href = "dedication.xhtml"
+body_xhtml = """
+<h1>Dedication</h1>
+<p>For everyone who listens to stories by the fire.</p>
+"""
+
+[[spine]]
+id = "ch1"
+href = "ch1.xhtml"
+body_xhtml = """
+<h1>Chapter 1: The Mill by the Stream</h1>
+<p>Every spring the snowmelt swelled the river below the stone weir until the oak waterwheel turned all day and long into the quiet dusk.</p>
+<p>Children gathered along the wooden footbridge to watch willow leaves spin through the foam below the sluice gate.</p>
+"""
+
+[[spine]]
+id = "index_page"
+href = "index.xhtml"
+body_xhtml = """
+<section epub:type="index">
+  <h1>Index</h1>
+  <p>Albion House, 2; Footbridge, wooden, 14; Lanterns, harbour, 27; Millpond, winter ice, 31; Riverbank, willow trees, 45; Waterwheel, oak timber construction, 52; Weir, masonry repair, 68.</p>
+</section>
+"""
+
+[[nav]]
+title = "Cover"
+href = "cover.xhtml"
+
+[[nav]]
+title = "Copyright"
+href = "copyright.xhtml"
+
+[[nav]]
+title = "Contents"
+href = "toc.xhtml"
+
+[[nav]]
+title = "Dedication"
+href = "dedication.xhtml"
+
+[[nav]]
+title = "Chapter 1: The Mill by the Stream"
+href = "ch1.xhtml"
+
+[[nav]]
+title = "Index"
+href = "index.xhtml"
+
+[[landmarks]]
+type = "cover"
+title = "Cover"
+href = "cover.xhtml"
+
+[[landmarks]]
+type = "copyright-page"
+title = "Copyright"
+href = "copyright.xhtml"
+
+[[landmarks]]
+type = "toc"
+title = "Table of Contents"
+href = "toc.xhtml"
+
+[[landmarks]]
+type = "index"
+title = "Index"
+href = "index.xhtml"
+
+[expected]
+status = "ok"
+title = "Front and Back Matter"
+authors = ["George Eliot"]
+language = "en"
+has_cover = false
+
+[[expected.chapters]]
+title = "Cover"
+href = "OEBPS/cover.xhtml"
+linear = true
+suggested_skip = true
+skip_reasons = ["cover"]
+paragraphs = [
+  "Cover Page",
+  "First Edition Paperback Cover. Illustrated with woodcut engravings from the London press and bound in navy cloth with gilt lettering across the spine and front board for library collections.",
+]
+
+[[expected.chapters]]
+title = "Copyright"
+href = "OEBPS/copyright.xhtml"
+linear = true
+suggested_skip = true
+skip_reasons = ["copyright-page"]
+paragraphs = [
+  "Copyright",
+  "Published in 1922 by Albion House, London and Edinburgh. All typesetting, proofreading, and binding notes in this archival digital edition are preserved for bibliographic reference only.",
+]
+
+[[expected.chapters]]
+title = "Contents"
+href = "OEBPS/toc.xhtml"
+linear = true
+suggested_skip = true
+skip_reasons = ["toc"]
+paragraphs = [
+  "Contents",
+  "Chapter 1: The Mill by the Stream — Dedication — Analytical Index of Proper Names, Geographic Locations, Historical Dates, and Architectural Terms Referenced Throughout the Narrative.",
+]
+
+[[expected.chapters]]
+title = "Dedication"
+href = "OEBPS/dedication.xhtml"
+linear = true
+suggested_skip = true
+skip_reasons = ["short"]
+paragraphs = [
+  "Dedication",
+  "For everyone who listens to stories by the fire.",
+]
+
+[[expected.chapters]]
+title = "Chapter 1: The Mill by the Stream"
+href = "OEBPS/ch1.xhtml"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Chapter 1: The Mill by the Stream",
+  "Every spring the snowmelt swelled the river below the stone weir until the oak waterwheel turned all day and long into the quiet dusk.",
+  "Children gathered along the wooden footbridge to watch willow leaves spin through the foam below the sluice gate.",
+]
+
+[[expected.chapters]]
+title = "Index"
+href = "OEBPS/index.xhtml"
+linear = true
+suggested_skip = true
+skip_reasons = ["index"]
+paragraphs = [
+  "Index",
+  "Albion House, 2; Footbridge, wooden, 14; Lanterns, harbour, 27; Millpond, winter ice, 31; Riverbank, willow trees, 45; Waterwheel, oak timber construction, 52; Weir, masonry repair, 68.",
+]
