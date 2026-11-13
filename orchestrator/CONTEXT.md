@@ -345,3 +345,20 @@ CI checked via the API: push run 43393553332 and PR run 43393579216 both success
 Builder decisions: SkaldError lives in rpc/server.py; argparse replaced by exact argv matching; a `setup` callback on run_stdio_server for subprocess tests; managed logging handlers tagged, RotatingFileHandler 5 MiB × 3.
 Size note: ~880 lines vs size M (300–700); about half is tests.
 Decision: Review by a fresh Claude Sonnet session (Builder Gemini). Focus: stdout purity and the writer under threads; UTF-8/LF on Windows (binary buffers); the test-only `setup` hook in production code (Ponytail); error mapping; carry-overs a/b/c.
+
+### E-0052 · 2026-11-13 15:37 (Asia/Colombo) · T01.2 · VERDICT
+Context: T01.2 Reviewer verdict, round 1 (fresh Claude Sonnet, pasted by the owner): CHANGES REQUESTED — 1 Major, 4 Minor, 3 Nit. Acceptance criteria met; CI shows 31 passed on Windows and Linux, incl. the non-ASCII round trip; writer uses the binary buffers on every OS. Reviewer probed a live subprocess (ids, NaN, surrogates, circular, nesting, CRLF, BOM, broken pipe, 8 threads × 50 × 200 KB notifications intact) and ran mutation checks (lock and flush removals not caught by tests).
+Decisions (all fixed in round 2; each is small):
+- R1-1 [Major] writer crashes or emits non-JSON: lone surrogate echoed back → UnicodeEncodeError, process exits; NaN/Infinity written (invalid JSON for JSON.parse); circular result → ValueError not caught. FIX: serialize with allow_nan=False and encode to bytes inside the try; catch (TypeError, ValueError) → -32603 fallback (or -32601 for a bad method name); one test per case, and the server keeps serving.
+- R1-2 [Minor] no test fails without flush(). FIX: a Popen test that reads the response while stdin is still open, then shuts down (with timeout).
+- R1-3 [Minor] unused text-stream branches (would write CRLF + code page if ever used on Windows) and unused _stdin_owner/_stdout_owner. FIX: bytes-only RpcServer.
+- R1-4 [Minor] error `data` shape inconsistent with B8. DECISION (Orchestrator): every error object carries `data: { kind, details, hint }` (details/hint may be null). Protocol errors -32700, -32600, -32601, -32602, -32603 use kind `internal` (they mean a bug in the caller or the core, not a user situation); -32602 puts the Pydantic errors in details. Application errors (-32000) keep their SkaldError kind. FIX now, recorded in Appendix 3; T01.4's SkaldErrorData follows it.
+- R1-5 [Minor] unwritable log dir (or the shared default <tmp>/skald/logs owned by another user) kills startup. FIX: on OSError fall back to stderr-only logging with a warning on stderr.
+- R1-6 [Nit] deep nesting → RecursionError uncaught. FIX: treat as -32700.
+- R1-7 [Nit] params are by-name objects only. FIX: add to the T01.2 Appendix 3 row (arrays → -32602).
+- R1-8 [Nit] bad-argument CLI test has no timeout. FIX: timeout and/or stdin=DEVNULL.
+Reviewer note on stdout protection (spec-level, not a T01.2 defect): replacing sys.stdout catches only Python print(); os.write(1), sys.__stdout__ and child processes that inherit stdout still reach the real stream. DECISION: new rule recorded in Appendix 3 via this PR: "Subprocesses launched by the core or by workers never inherit stdout: always pass stdout= explicitly (a pipe, DEVNULL, or stderr)." Whether to add an fd-level redirect (os.dup/os.dup2) is evaluated in T03.7 for workers (where model libraries may print from C code) — standing note. Also: avoid import-time-printing libraries at the top of the entry path.
+Round 2 re-check: the same Reviewer session.
+
+### E-0053 · 2026-11-13 15:37 (Asia/Colombo) · T01.2 · FIX-PROMPT
+Decision: Issued the round-2 fix prompt to the T01.2 Builder: R1-1 … R1-8 and the stdout-inheritance rule row.
