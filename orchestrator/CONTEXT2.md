@@ -53,3 +53,21 @@ Follow-up: owner merges PR #8; then T02.2 becomes available.
 Context: E-0058 listed the tasks available after T01.2 merged as T01.4, T01.6, T03.9, T03.4, T06.1. T03.7 (worker protocol, skald_worker, fake adapter, contract suite; depends only on T01.2) was missing.
 Decision: T03.7 has been available since T01.2 merged (E-0058). Full list after PR #8 merges: T01.4, T01.6, T02.2, T03.4, T03.7, T03.9, T06.1; T01.3 after T01.4 (E-0056 sequencing; the spec only needs T01.2).
 Follow-up: none.
+
+### E-0065 · 2026-11-13 23:40 (Asia/Colombo) · T02.1 · MERGED
+Context: master now `5a85aac` = "Merge pull request #8 from Guna210/task/T02.1-epub-fixtures" (normal merge). T02.1 ticked; Appendix 3 has the TOML/ZIP_STORED rows and D1–D4.
+Decision: T02.2 is now available (prompt only on request, E-0057).
+Follow-up: none.
+
+### E-0066 · 2026-11-13 23:40 (Asia/Colombo) · T03.4 · OWNER-ACTION
+Context: Owner: "T03.4 … Note this one down as important as I'll be deferring it to the end of the week. So I'll ask what was the task marked important and you'll say it's this one".
+Decision: T03.4 (engine pack installer spike; [SPIKE][STRONG MODEL][REVIEW]) is THE task marked IMPORTANT, deferred by the owner to the end of the week (week of 2026-11-13). When the owner asks "what was the task marked important?", answer: T03.4. Kept at the top of STATE.md until it is started.
+Follow-up: offer T03.4 when the owner raises it at the end of the week.
+
+### E-0067 · 2026-11-13 23:40 (Asia/Colombo) · T01.4, T01.6 · TASK-ASSIGNED
+Context: Owner asked for the T01.4 and T01.6 prompts. Both based on master 5a85aac; run in parallel (independent files; both append Appendix 3 rows → whichever merges second rebases, keep both sides).
+Decision: Prompts issued with the E-0056 decisions plus two refinements:
+- T01.4 ffmpeg lookup: SKALD_FFMPEG (full path) first, else `$SKALD_VENDOR/ffmpeg/<win64|linux64>/<bin>`; the per-platform bin path (bin/ffmpeg.exe, bin/ffmpeg) is a small constant in the core, NOT read from scripts/deps.lock.json at runtime (the frozen app won't ship scripts/); a test asserts the constant equals deps.lock.json's "bin" for each platform. Missing or failing binary → null + logged warning. Subprocess: stdout=PIPE, stdin=DEVNULL, timeout. CI test: SKALD_VENDOR set by the test to <repo>/vendor; when env CI=="true" ffmpeg must be non-null and start with "ffmpeg version". Schema export round trip without new deps (written JSON == model_json_schema(); index.json lists every model). Carry-overs T01.2 R2-1 (drop PYTHONUNBUFFERED from the flush test's Popen env) and R2-2 (use or drop the unused _error_response kind/hint params and RpcServer stream defaults).
+- T01.6 retries: "connection errors" include timeouts (connect and read); 2 retries with backoff on those and 5xx, never on 4xx; final kinds: timeout → `timeout`, refused/DNS/proxy → `offline`, 404 → `http_not_found`, other 4xx/5xx → `http_error`. .part larger than size → delete and restart; .part == size → verify only. Size or SHA mismatch → delete .part, `checksum_mismatch`. Timeouts/backoff injectable so tests are fast. Tests use a local ThreadingHTTPServer on 127.0.0.1 with proxy env vars cleared (cloud sessions set HTTPS_PROXY). Don't disable trust_env (HTTPS_PROXY must be honoured). DownloadCancelled is a plain exception in net.py (not SkaldError). T01.6 doesn't touch rpc/ or schemas/.
+Builders: any agent, cloud; neither is [STRONG MODEL].
+Follow-up: two handoffs.

@@ -1,24 +1,28 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 23:20 (Asia/Colombo) · last entry: E-0064
+Last updated: 2026-11-13 23:40 (Asia/Colombo) · last entry: E-0067
 Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
+
+## ★ IMPORTANT (owner, E-0066)
+**T03.4 is the task marked IMPORTANT.** The owner deferred it to the end of the week (week of 2026-11-13). If the owner asks "what was the task marked important?" → answer **T03.4** (engine pack installer spike, [SPIKE][STRONG MODEL][REVIEW]). Keep this note until T03.4 starts.
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1, T01.2 merged. T02.1 APPROVED, waiting for the owner to merge PR #8. T01.4 / T01.6 available (not started).
-- `master` at `52fc2f9`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: #8 T02.1 (`task/T02.1-epub-fixtures`, APPROVED round 2 at 31ba2b8, CI green; owner to merge, E-0063).
+- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 prompts issued (parallel). T01.4 / T01.6 available (not started).
+- `master` at `5a85aac`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
+- Open PRs: none yet (T01.4 and T01.6 Builders starting).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
-- Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7).
-- Approved, to merge: T02.1 EPUB fixtures, PR #8 (E-0063).
-- Available, not started (prompt only when the owner asks; E-0057): T01.4 schemas + system.info, T01.6 HTTP helper (decisions drafted in E-0056), T03.4 [SPIKE][STRONG MODEL][REVIEW], T03.7 worker protocol (missed in E-0058, E-0064), T03.9 [SPIKE][REVIEW], T06.1. T02.2 once PR #8 merges.
+- Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7), T02.1 (PR #8).
+- Building (round 1, prompts issued E-0067): T01.4 schemas + system.info (`task/T01.4-schemas-system-info`), T01.6 HTTP helper (`task/T01.6-http-downloader`). Whichever merges second rebases (Appendix 3 rows).
+- Available, not started (prompt only when the owner asks; E-0057): T02.2 EPUB container/spine/nav, T03.4 ★IMPORTANT, deferred to end of week (E-0066), T03.7 worker protocol, T03.9 [SPIKE][REVIEW], T06.1.
 - T01.3 job manager becomes available after T01.4 merges (E-0056).
 
 ## Waiting on the owner
-1. Merge PR #8 (normal merge) and confirm (E-0063).
+1. Run the T01.4 and T01.6 Builders and send back their handoffs (E-0067).
+2. End of week: T03.4 (★IMPORTANT, E-0066).
 
 ## Pending GPU runs
 None.
@@ -27,7 +31,7 @@ None.
 None.
 
 ## Deferred findings
-- R2-1, R2-2 (T01.2, Nits) → include in the T01.4 prompt when it's issued (E-0055, E-0056).
+- R2-1, R2-2 (T01.2, Nits) → in the T01.4 prompt (issued E-0067); check they're done in its review.
 - T02.1 R2-1 (Nit): unused "font_obfuscation" alias + include_font/font_href fallback in make_epubs.py — trim when the file is next touched (E-0063).
 - T02.1 R2-2 (Nit) → T02.2 prompt: assert only status/error kind for epub_invalid (12) and epub_drm (10) fixtures (E-0063).
 - R1-1 (T00.1, Nit): docs/defaults.md C1.1 item 5 should say alt text / note bodies are skipped "by default". Fix in T02.3 (E-0011).
@@ -37,7 +41,7 @@ None.
 ## Decisions not yet written into SPEC.md
 - E-0049 T02.1: TOML defs + ZIP_STORED — recorded in PR #8's Appendix 3 rows (on master once #8 merges).
 - E-0061 D1–D4 — recorded in PR #8's Appendix 3 rows (on master once #8 merges).
-- E-0056 T01.4 / T01.6 decisions — recorded by those Builders once the tasks are started.
+- E-0056 + E-0067 T01.4 / T01.6 decisions — recorded by those Builders in their PRs (check in review).
 (All earlier decisions are on master: E-0020, E-0021, E-0032, E-0033, E-0048, E-0049 T01.2 rows, E-0052 rows.)
 
 ## Standing notes for prompts
@@ -61,7 +65,6 @@ None.
 - T03.7 prompt: evaluate an fd-level stdout redirect (os.dup/os.dup2) in workers; model libraries may print from C code (E-0052).
 - Every prompt that launches subprocesses (T01.3, T03.5, T03.8, T05.6…): never inherit stdout — pass stdout= explicitly (Appendix 3 rule from T01.2) (E-0052).
 - T01.3 prompt: use JobRef from T01.4's schemas; unknown job_id → -32602 kind internal; job.finished never throttled; cancel while paused unblocks checkpoint() and raises JobCancelled; subprocesses pass stdout explicitly (E-0056).
-- T01.4 / T01.6 prompts: reuse the decisions and carry-overs in E-0056 (CONTEXT.md); T01.4 = ErrorKind closed set, SkaldErrorData, no committed schema exports, ffmpeg lookup via SKALD_FFMPEG / SKALD_VENDOR + deps.lock.json bin; T01.6 = DownloadCancelled, Range 200→restart, retry rules, error-kind mapping.
 - T03.6 prompt: map net.DownloadCancelled → JobCancelled (E-0056).
 - T02.2/T02.3/T02.8 prompts: the spec's "YAML" fixture definitions are TOML files read with tomllib (E-0049).
 - pysbd 0.3.4 emits SyntaxWarning under 3.12 → any `filterwarnings = error` needs a scoped ignore (E-0048).
@@ -70,4 +73,4 @@ None.
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-Confirm the PR #8 merge, then list available tasks without prompts (E-0057).
+Process the T01.4 / T01.6 handoffs (verify PR + CI, Reviewer prompts; T01.4 reviewer should check R2-1/R2-2 carry-overs and the E-0067 ffmpeg rules).
