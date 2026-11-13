@@ -1,25 +1,26 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 13:42 (Asia/Colombo) · last entry: E-0047
+Last updated: 2026-11-13 13:51 (Asia/Colombo) · last entry: E-0049
 Current log file: `CONTEXT.md` (entries E-0001 onward)
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1 PR #6 rebased, CI green on both OSes, in review round 1 (E-0047).
+- Phase 1: T01.1 APPROVED (PR #6), merge pending (E-0048). T01.2 and T02.1 prompts issued (E-0049).
 - `master` at `ad52e4b`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: PR #6 T01.1 (https://github.com/Guna210/Skald/pull/6) — in review round 1, CI green.
+- Open PRs: PR #6 T01.1 (https://github.com/Guna210/Skald/pull/6) — APPROVED, CI green, merge pending.
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5).
-- In review: T01.1 (PR #6, round 1, E-0047).
-- Unlocked now by T00.4: T06.1 (Electron scaffold).
-- After T01.1: T01.2, T01.6, T02.1, T03.9 (and T03.4, needs T01.1 + T00.3) can run in parallel.
+- Approved, merge pending: T01.1 (PR #6).
+- Assigned (paste after PR #6 merges): T01.2 JSON-RPC server, T02.1 EPUB fixtures (E-0049).
+- Also ready, not yet assigned: T01.6, T03.9 [SPIKE][REVIEW], T03.4 [SPIKE][STRONG MODEL][REVIEW], T06.1.
 
 ## Waiting on the owner
-1. Paste the T01.1 Reviewer prompt into a fresh Claude Sonnet session (E-0047).
-2. Optional: run `.\scripts\setup.ps1` twice on the laptop (CI covers it).
+1. Merge PR #6 (normal merge) (E-0048).
+2. Paste the T01.2 and T02.1 prompts into two Builder sessions (E-0049). Say if you want more parallel tasks.
+3. Optional: run `.\scripts\setup.ps1` twice on the laptop (CI covers it).
 
 ## Pending GPU runs
 None.
@@ -33,6 +34,8 @@ None.
 - Open item: who creates `core/requirements.lock` (B3)? Not T01.1. Decide by T04.1/T09.1 (E-0020).
 
 ## Decisions not yet written into SPEC.md
+- E-0048 R1-1/R1-2/R1-3 carry-overs and E-0049 T01.2 decisions — the T01.2 Builder records them.
+- E-0049 T02.1: TOML fixture definitions (spec says YAML), ZIP_STORED — the T02.1 Builder records them.
 - E-0020 T01.1 clarifications — the T01.1 Builder records them.
 - E-0021 normal merge; E-0032 T00.3 [REVIEW] sign-off; E-0033 T00.4 decisions — the T00.4 Builder records them (and fixes CLAUDE.md lines 45 and 99).
 
@@ -52,8 +55,11 @@ None.
 - T03.5: CI `.cache/uv` key covers only deps.lock.json — add pack lockfiles (E-0041).
 - T09.1: exclude vendor/*/.tmp-*, .old-*, vendor/.downloads, and ffplay/doc/man (ffmpeg binaries 132–143 MB each; vendor/ffmpeg ~400 MB vs 600 MB limit) (E-0027).
 - uv mirror assets have no version in the name → a uv bump needs a new mirror tag (deps-v2) (E-0027). Mirror releases are marked Pre-release, never "latest" (E-0034).
+- T02.2/T02.3/T02.8 prompts: the spec's "YAML" fixture definitions are TOML files read with tomllib (E-0049).
+- pysbd 0.3.4 emits SyntaxWarning under 3.12 → any `filterwarnings = error` needs a scoped ignore (E-0048).
+- T09.1/T09.4: soundfile bundles libsndfile (LGPL-2.1) → ship its licence + source link (E-0048).
 - T09.4: ffmpeg is LGPL-3.0-or-later (`--enable-version3`); ship the LGPL-3.0 text + source link (E-0024).
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-T01.1 verdict → merge → offer Phase 1 tasks in parallel (T01.2, T01.6, T02.1, T03.9, T03.4) and T06.1.
+Owner merges PR #6 and runs T01.2 + T02.1. Offer T01.6 / T03.9 / T03.4 / T06.1 if the owner wants more in parallel.
