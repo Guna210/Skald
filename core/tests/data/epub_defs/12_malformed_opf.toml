@@ -1,0 +1,51 @@
+[meta]
+id = "12_malformed_opf"
+description = "Malformed structural OPF XML -> rejected with epub_invalid"
+
+[epub]
+version = "3.0"
+identifier = "urn:uuid:11111111-1111-4111-8111-000000000012"
+title = "Broken Package"
+authors = ["Unknown Binder"]
+language = "en"
+has_nav = true
+has_ncx = false
+cover_mode = "none"
+raw_opf = """<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="pub-id" xml:lang="en">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:identifier id="pub-id">urn:uuid:11111111-1111-4111-8111-000000000012</dc:identifier>
+    <dc:title>Broken Package
+    <dc:creator>Unknown Binder</dc:creator>
+    <dc:language>en</dc:language>
+    <meta property="dcterms:modified">2026-01-01T00:00:00Z</meta>
+  </metadata>
+  <manifest>
+    <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
+    <item id="ch1" href="ch1.xhtml" media-type="application/xhtml+xml"/>
+  </manifest>
+  <spine>
+    <itemref idref="ch1" linear="yes"/>
+  </spine>
+</package>
+"""
+
+[[spine]]
+id = "ch1"
+href = "ch1.xhtml"
+body_xhtml = """
+<h1>Chapter 1: Unreadable Package</h1>
+<p>Although this chapter XHTML is well-formed, the structural package document is broken XML and must fail import as epub_invalid.</p>
+"""
+
+[[nav]]
+title = "Chapter 1: Unreadable Package"
+href = "ch1.xhtml"
+
+[expected]
+status = "epub_invalid"
+title = "Broken Package"
+authors = ["Unknown Binder"]
+language = "en"
+has_cover = false
+chapters = []

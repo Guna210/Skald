@@ -1,6 +1,6 @@
 [meta]
 id = "07_suggested_skips"
-description = "Suggested skip detection: cover, toc, copyright-page, index (via epub:type and landmarks), plus a <200-char item"
+description = "Suggested skip detection: ~300-char items testing landmarks-only vs in-doc epub:type-only, cumulative skip_reasons, unmarked short, and 199/200-char boundary"
 
 [epub]
 version = "3.0"
@@ -12,33 +12,32 @@ has_nav = true
 has_ncx = false
 cover_mode = "none"
 
+# Marked ONLY via landmarks (no in-document epub:type)
 [[spine]]
 id = "cover"
 href = "cover.xhtml"
 body_xhtml = """
-<section epub:type="cover">
-  <h1>Cover Page</h1>
-  <p>First Edition Paperback Cover. Illustrated with woodcut engravings from the London press and bound in navy cloth with gilt lettering across the spine and front board for library collections.</p>
-</section>
+<h1>Cover Page</h1>
+<p>First Edition Paperback Cover. Illustrated with copperplate woodcut engravings from the London press, sewn cleanly on archival linen cords, and bound in deep navy buckram cloth with bright gilt lettering stamped across both spine and front board for university library collections everywhere.</p>
 """
 
+# Marked ONLY via landmarks (no in-document epub:type)
 [[spine]]
 id = "copyright"
 href = "copyright.xhtml"
 body_xhtml = """
-<section epub:type="copyright-page">
-  <h1>Copyright</h1>
-  <p>Published in 1922 by Albion House, London and Edinburgh. All typesetting, proofreading, and binding notes in this archival digital edition are preserved for bibliographic reference only.</p>
-</section>
+<h1>Copyright</h1>
+<p>Published in 1922 by Albion House Publishers, London and Edinburgh. All rights in typography, woodcut plate restoration, proofreading, and binding notes in this archival digital edition are expressly preserved for long-term bibliographic reference, scholarly citation, and classroom study only.</p>
 """
 
+# Marked ONLY via in-document epub:type (no landmarks entry)
 [[spine]]
 id = "toc_page"
 href = "toc.xhtml"
 body_xhtml = """
 <section epub:type="toc">
   <h1>Contents</h1>
-  <p>Chapter 1: The Mill by the Stream — Dedication — Analytical Index of Proper Names, Geographic Locations, Historical Dates, and Architectural Terms Referenced Throughout the Narrative.</p>
+  <p>Preliminary Dedication — Chapter 1: The Mill by the Stream — Short Colophon Notice — Exact Character Threshold Boundary Samples for Automated Importer Checks — Comprehensive Analytical Index of Proper Names, Geographic Locations, Historical Dates, and Architectural Terms Across the Book.</p>
 </section>
 """
 
@@ -50,6 +49,35 @@ body_xhtml = """
 <p>For everyone who listens to stories by the fire.</p>
 """
 
+# Cumulative reasons: both epub:type="copyright-page" and <200 chars -> ["copyright-page", "short"]
+[[spine]]
+id = "short_notice"
+href = "short_notice.xhtml"
+body_xhtml = """
+<section epub:type="copyright-page">
+  <h1>Colophon</h1>
+  <p>Set in Caslon type at Oxford in autumn.</p>
+</section>
+"""
+
+# Explicit boundary: exactly 199 characters (unmarked -> suggested_skip = true, ["short"])
+[[spine]]
+id = "boundary_199"
+href = "boundary_199.xhtml"
+body_xhtml = """
+<h1>Short Boundary</h1>
+<p>This unmarked note stops at one hundred ninety-nine characters so that automated checks confirm it sits right below the two hundred character threshold across every automated run here.</p>
+"""
+
+# Explicit boundary: exactly 200 characters (unmarked -> suggested_skip = false, [])
+[[spine]]
+id = "boundary_200"
+href = "boundary_200.xhtml"
+body_xhtml = """
+<h1>Exact Boundary</h1>
+<p>This unmarked note spans precisely two hundred characters so that automated checks verify items meeting the two hundred character threshold stay active and are not skipped by the rules.</p>
+"""
+
 [[spine]]
 id = "ch1"
 href = "ch1.xhtml"
@@ -59,13 +87,14 @@ body_xhtml = """
 <p>Children gathered along the wooden footbridge to watch willow leaves spin through the foam below the sluice gate.</p>
 """
 
+# Marked ONLY via in-document epub:type (no landmarks entry)
 [[spine]]
 id = "index_page"
 href = "index.xhtml"
 body_xhtml = """
 <section epub:type="index">
   <h1>Index</h1>
-  <p>Albion House, 2; Footbridge, wooden, 14; Lanterns, harbour, 27; Millpond, winter ice, 31; Riverbank, willow trees, 45; Waterwheel, oak timber construction, 52; Weir, masonry repair, 68.</p>
+  <p>Albion House Publishers, 2; Footbridge, wooden crossing, 14; Lanterns, stone harbour quay, 27; Millpond, winter river ice, 31; Riverbank, weeping willow trees, 45; Sluice gate, iron gearwork, 49; Waterwheel, oak timber construction, 52; Weir, masonry repair notes, 68.</p>
 </section>
 """
 
@@ -84,6 +113,18 @@ href = "toc.xhtml"
 [[nav]]
 title = "Dedication"
 href = "dedication.xhtml"
+
+[[nav]]
+title = "Colophon"
+href = "short_notice.xhtml"
+
+[[nav]]
+title = "Short Boundary"
+href = "boundary_199.xhtml"
+
+[[nav]]
+title = "Exact Boundary"
+href = "boundary_200.xhtml"
 
 [[nav]]
 title = "Chapter 1: The Mill by the Stream"
@@ -103,16 +144,6 @@ type = "copyright-page"
 title = "Copyright"
 href = "copyright.xhtml"
 
-[[landmarks]]
-type = "toc"
-title = "Table of Contents"
-href = "toc.xhtml"
-
-[[landmarks]]
-type = "index"
-title = "Index"
-href = "index.xhtml"
-
 [expected]
 status = "ok"
 title = "Front and Back Matter"
@@ -128,7 +159,7 @@ suggested_skip = true
 skip_reasons = ["cover"]
 paragraphs = [
   "Cover Page",
-  "First Edition Paperback Cover. Illustrated with woodcut engravings from the London press and bound in navy cloth with gilt lettering across the spine and front board for library collections.",
+  "First Edition Paperback Cover. Illustrated with copperplate woodcut engravings from the London press, sewn cleanly on archival linen cords, and bound in deep navy buckram cloth with bright gilt lettering stamped across both spine and front board for university library collections everywhere.",
 ]
 
 [[expected.chapters]]
@@ -139,7 +170,7 @@ suggested_skip = true
 skip_reasons = ["copyright-page"]
 paragraphs = [
   "Copyright",
-  "Published in 1922 by Albion House, London and Edinburgh. All typesetting, proofreading, and binding notes in this archival digital edition are preserved for bibliographic reference only.",
+  "Published in 1922 by Albion House Publishers, London and Edinburgh. All rights in typography, woodcut plate restoration, proofreading, and binding notes in this archival digital edition are expressly preserved for long-term bibliographic reference, scholarly citation, and classroom study only.",
 ]
 
 [[expected.chapters]]
@@ -150,7 +181,7 @@ suggested_skip = true
 skip_reasons = ["toc"]
 paragraphs = [
   "Contents",
-  "Chapter 1: The Mill by the Stream — Dedication — Analytical Index of Proper Names, Geographic Locations, Historical Dates, and Architectural Terms Referenced Throughout the Narrative.",
+  "Preliminary Dedication — Chapter 1: The Mill by the Stream — Short Colophon Notice — Exact Character Threshold Boundary Samples for Automated Importer Checks — Comprehensive Analytical Index of Proper Names, Geographic Locations, Historical Dates, and Architectural Terms Across the Book.",
 ]
 
 [[expected.chapters]]
@@ -162,6 +193,39 @@ skip_reasons = ["short"]
 paragraphs = [
   "Dedication",
   "For everyone who listens to stories by the fire.",
+]
+
+[[expected.chapters]]
+title = "Colophon"
+href = "OEBPS/short_notice.xhtml"
+linear = true
+suggested_skip = true
+skip_reasons = ["copyright-page", "short"]
+paragraphs = [
+  "Colophon",
+  "Set in Caslon type at Oxford in autumn.",
+]
+
+[[expected.chapters]]
+title = "Short Boundary"
+href = "OEBPS/boundary_199.xhtml"
+linear = true
+suggested_skip = true
+skip_reasons = ["short"]
+paragraphs = [
+  "Short Boundary",
+  "This unmarked note stops at one hundred ninety-nine characters so that automated checks confirm it sits right below the two hundred character threshold across every automated run here.",
+]
+
+[[expected.chapters]]
+title = "Exact Boundary"
+href = "OEBPS/boundary_200.xhtml"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Exact Boundary",
+  "This unmarked note spans precisely two hundred characters so that automated checks verify items meeting the two hundred character threshold stay active and are not skipped by the rules.",
 ]
 
 [[expected.chapters]]
@@ -184,5 +248,5 @@ suggested_skip = true
 skip_reasons = ["index"]
 paragraphs = [
   "Index",
-  "Albion House, 2; Footbridge, wooden, 14; Lanterns, harbour, 27; Millpond, winter ice, 31; Riverbank, willow trees, 45; Waterwheel, oak timber construction, 52; Weir, masonry repair, 68.",
+  "Albion House Publishers, 2; Footbridge, wooden crossing, 14; Lanterns, stone harbour quay, 27; Millpond, winter river ice, 31; Riverbank, weeping willow trees, 45; Sluice gate, iron gearwork, 49; Waterwheel, oak timber construction, 52; Weir, masonry repair notes, 68.",
 ]

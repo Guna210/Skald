@@ -18,8 +18,8 @@ id = "ch1"
 href = "ch1.xhtml"
 body_xhtml = """
 <h1>First Letter</h1>
-<p>Yesterday afternoon the postman delivered a brass cylinder wrapped in oiled brown paper from Geneva.</p>
-<p>Inside lay three folded sheets written in neat iron-gall ink, dated nearly forty winters before my own birth.</p>
+<p>Yesterday afternoon the mail coachman delivered a heavy brass cylinder wrapped in oiled brown paper and sealed with green wax from Geneva.</p>
+<p>Inside lay three folded linen sheets written in neat iron-gall ink, dated nearly forty winters before my own birth in our quiet valley.</p>
 """
 
 [[spine]]
@@ -27,8 +27,8 @@ id = "ch2"
 href = "ch2.xhtml"
 body_xhtml = """
 <h1>Second Letter</h1>
-<p>Do not wind the escapement until the moon clears the eastern spire, or the chimes will strike out of measure.</p>
-<p>My workshop still smells of cedar shavings and rosin whenever the evening rain taps against the leaded panes.</p>
+<p>Do not wind the copper escapement until the waning moon clears the eastern cathedral spire, or the silver chimes will strike completely out of measure.</p>
+<p>My upstairs workshop still smells faintly of fresh cedar shavings and violin rosin whenever the cold evening rain taps against the leaded panes.</p>
 """
 
 [[nav]]
@@ -55,8 +55,8 @@ suggested_skip = false
 skip_reasons = []
 paragraphs = [
   "First Letter",
-  "Yesterday afternoon the postman delivered a brass cylinder wrapped in oiled brown paper from Geneva.",
-  "Inside lay three folded sheets written in neat iron-gall ink, dated nearly forty winters before my own birth.",
+  "Yesterday afternoon the mail coachman delivered a heavy brass cylinder wrapped in oiled brown paper and sealed with green wax from Geneva.",
+  "Inside lay three folded linen sheets written in neat iron-gall ink, dated nearly forty winters before my own birth in our quiet valley.",
 ]
 
 [[expected.chapters]]
@@ -67,6 +67,6 @@ suggested_skip = false
 skip_reasons = []
 paragraphs = [
   "Second Letter",
-  "Do not wind the escapement until the moon clears the eastern spire, or the chimes will strike out of measure.",
-  "My workshop still smells of cedar shavings and rosin whenever the evening rain taps against the leaded panes.",
+  "Do not wind the copper escapement until the waning moon clears the eastern cathedral spire, or the silver chimes will strike completely out of measure.",
+  "My upstairs workshop still smells faintly of fresh cedar shavings and violin rosin whenever the evening rain taps against the leaded panes.",
 ]

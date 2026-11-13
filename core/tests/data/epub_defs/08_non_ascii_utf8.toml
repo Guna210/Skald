@@ -17,8 +17,8 @@ id = "ch1"
 href = "chapitre_éàü_01.xhtml"
 body_xhtml = """
 <h1>Chapitre 1 : À l’aube</h1>
-<p>Sur la terrasse du café, l’horloge de la gare sonna six heures — un timbre clair dans l’air frais du matin.</p>
-<p>« Avez-vous apporté les cahiers reliés ? » demanda Élodie en posant sa tasse de porcelaine blanche sur le marbre.</p>
+<p>Sur la terrasse du vieux café, l’horloge de la gare voisine sonna lentement six heures — un timbre clair dans l’air frais du matin d’hiver.</p>
+<p>« Avez-vous apporté les cahiers reliés en toile ? » demanda Élodie en posant sa tasse de porcelaine blanche sur le marbre poli.</p>
 """
 
 [[spine]]
@@ -26,8 +26,8 @@ id = "ch2"
 href = "kapitel_über_α.xhtml"
 body_xhtml = """
 <h1>Chapitre 2 : L’étoile α</h1>
-<p>Dans l’observatoire voisin, l’astronome nota la déclinaison de l’étoile α sur une feuille quadrillée avec soin.</p>
-<p>Les volets s’ouvrirent vers l’ouest où s’effaçaient déjà les dernières lueurs argentées de la nuit d’hiver.</p>
+<p>Dans l’observatoire voisin, l’astronome nota la déclinaison précise de l’étoile α sur une large feuille quadrillée avec beaucoup de soin.</p>
+<p>Les volets de bois s’ouvrirent vers l’ouest où s’effaçaient déjà les dernières lueurs argentées de la longue nuit d’hiver.</p>
 """
 
 [[nav]]
@@ -53,8 +53,8 @@ suggested_skip = false
 skip_reasons = []
 paragraphs = [
   "Chapitre 1 : À l’aube",
-  "Sur la terrasse du café, l’horloge de la gare sonna six heures — un timbre clair dans l’air frais du matin.",
-  "« Avez-vous apporté les cahiers reliés ? » demanda Élodie en posant sa tasse de porcelaine blanche sur le marbre.",
+  "Sur la terrasse du vieux café, l’horloge de la gare voisine sonna lentement six heures — un timbre clair dans l’air frais du matin d’hiver.",
+  "« Avez-vous apporté les cahiers reliés en toile ? » demanda Élodie en posant sa tasse de porcelaine blanche sur le marbre poli.",
 ]
 
 [[expected.chapters]]
@@ -65,6 +65,6 @@ suggested_skip = false
 skip_reasons = []
 paragraphs = [
   "Chapitre 2 : L’étoile α",
-  "Dans l’observatoire voisin, l’astronome nota la déclinaison de l’étoile α sur une feuille quadrillée avec soin.",
-  "Les volets s’ouvrirent vers l’ouest où s’effaçaient déjà les dernières lueurs argentées de la nuit d’hiver.",
+  "Dans l’observatoire voisin, l’astronome nota la déclinaison précise de l’étoile α sur une large feuille quadrillée avec beaucoup de soin.",
+  "Les volets de bois s’ouvrirent vers l’ouest où s’effaçaient déjà les dernières lueurs argentées de la longue nuit d’hiver.",
 ]

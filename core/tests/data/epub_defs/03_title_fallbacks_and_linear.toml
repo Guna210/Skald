@@ -18,8 +18,8 @@ id = "ch_b"
 href = "ch_b.xhtml"
 linear = true
 body_xhtml = """
-<p>Although this file appears second in the manifest, the OPF spine places it first in reading order for the listener.</p>
-<p>Its title comes directly from the EPUB 3 navigation document rather than any heading inside the chapter file.</p>
+<p>Although this file appears second in the manifest list, the OPF spine deliberately places it first in reading order for the listener opening the book.</p>
+<p>Its chapter title comes directly from the EPUB 3 navigation document rather than relying on any heading element inside the XHTML file itself.</p>
 """
 
 [[spine]]
@@ -37,8 +37,8 @@ id = "ch_c"
 href = "ch_c.xhtml"
 linear = true
 body_xhtml = """
-<p>This third spine item has neither a navigation entry nor any heading element inside the document body.</p>
-<p>Therefore the title fallback chain assigns it the numbered label Chapter 3 based on its position in the reading order.</p>
+<p>This third spine item contains neither an entry in the navigation table nor any heading element anywhere inside the document body.</p>
+<p>Therefore the title fallback chain assigns it the numbered label Chapter 3 based strictly on its position in the linear reading order.</p>
 """
 
 [[spine]]
@@ -47,8 +47,8 @@ href = "appendix.xhtml"
 linear = false
 body_xhtml = """
 <h1>Technical Appendix</h1>
-<p>This auxiliary reference table is marked linear equals no in the OPF spine, so it is excluded by default during import.</p>
-<p>A reader can still choose to include non-linear items later if they want every supplemental note narrated aloud.</p>
+<p>This auxiliary reference section is marked linear equals no in the OPF spine, so it is excluded by default during import under reading-order rules.</p>
+<p>A listener can still choose to include non-linear items manually later if they want every supplemental note narrated aloud in full.</p>
 """
 
 [[nav]]
@@ -73,8 +73,8 @@ linear = true
 suggested_skip = false
 skip_reasons = []
 paragraphs = [
-  "Although this file appears second in the manifest, the OPF spine places it first in reading order for the listener.",
-  "Its title comes directly from the EPUB 3 navigation document rather than any heading inside the chapter file.",
+  "Although this file appears second in the manifest list, the OPF spine deliberately places it first in reading order for the listener opening the book.",
+  "Its chapter title comes directly from the EPUB 3 navigation document rather than relying on any heading element inside the XHTML file itself.",
 ]
 
 [[expected.chapters]]
@@ -96,18 +96,18 @@ linear = true
 suggested_skip = false
 skip_reasons = []
 paragraphs = [
-  "This third spine item has neither a navigation entry nor any heading element inside the document body.",
-  "Therefore the title fallback chain assigns it the numbered label Chapter 3 based on its position in the reading order.",
+  "This third spine item contains neither an entry in the navigation table nor any heading element anywhere inside the document body.",
+  "Therefore the title fallback chain assigns it the numbered label Chapter 3 based strictly on its position in the linear reading order.",
 ]
 
 [[expected.chapters]]
 title = "Technical Appendix"
 href = "OEBPS/appendix.xhtml"
 linear = false
-suggested_skip = true
-skip_reasons = ["non-linear"]
+suggested_skip = false
+skip_reasons = []
 paragraphs = [
   "Technical Appendix",
-  "This auxiliary reference table is marked linear equals no in the OPF spine, so it is excluded by default during import.",
-  "A reader can still choose to include non-linear items later if they want every supplemental note narrated aloud.",
+  "This auxiliary reference section is marked linear equals no in the OPF spine, so it is excluded by default during import under reading-order rules.",
+  "A listener can still choose to include non-linear items manually later if they want every supplemental note narrated aloud in full.",
 ]

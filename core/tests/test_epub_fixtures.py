@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import re
 import tomllib
 import zipfile
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +19,57 @@ SOURCES_MD = DATA_DIR / "SOURCES.md"
 MAKE_EPUBS_PATH = DATA_DIR / "make_epubs.py"
 
 UTF8_FILENAME_FLAG = 0x800
+SKIP_REASON_ORDER = ("cover", "toc", "copyright-page", "index", "short")
+
+
+class _BodyTextExtractor(HTMLParser):
+    """Extract normalized D2 text from ``<body>`` or an anchor element."""
+
+    def __init__(self, target_id: str | None) -> None:
+        super().__init__(convert_charrefs=True)
+        self._target_id = target_id
+        self._capture_depth = 0 if target_id is not None else -1
+        self._in_body = False
+        self._skip_depth = 0
+        self.chunks: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        local = tag.lower().rsplit(":", 1)[-1]
+        if self._target_id is None:
+            if local == "body":
+                self._in_body = True
+        elif self._capture_depth > 0:
+            self._capture_depth += 1
+        elif dict(attrs).get("id") == self._target_id:
+            self._capture_depth = 1
+        if local in {"script", "style"}:
+            self._skip_depth += 1
+
+    def handle_endtag(self, tag: str) -> None:
+        local = tag.lower().rsplit(":", 1)[-1]
+        if local in {"script", "style"} and self._skip_depth > 0:
+            self._skip_depth -= 1
+        if self._target_id is None:
+            if local == "body":
+                self._in_body = False
+        elif self._capture_depth > 0:
+            self._capture_depth -= 1
+
+    def handle_data(self, data: str) -> None:
+        capturing = self._in_body if self._target_id is None else self._capture_depth > 0
+        if capturing and self._skip_depth == 0:
+            self.chunks.append(data)
+
+
+def _d2_char_count(epub_path: Path, chapter_href: str) -> int:
+    doc_href, _, fragment = chapter_href.partition("#")
+    with zipfile.ZipFile(epub_path, "r") as zf:
+        xhtml = zf.read(doc_href).decode("utf-8")
+    extractor = _BodyTextExtractor(fragment or None)
+    extractor.feed(xhtml)
+    extractor.close()
+    normalized = re.sub(r"\s+", " ", "".join(extractor.chunks)).strip()
+    return len(normalized)
 
 
 def _load_make_epubs() -> Any:
@@ -30,6 +83,12 @@ def _load_make_epubs() -> Any:
 def test_at_least_ten_definitions_exist() -> None:
     defs = sorted(EPUB_DEFS_DIR.glob("*.toml"))
     assert len(defs) >= 10
+
+
+def test_no_orphan_epubs() -> None:
+    def_stems = {path.stem for path in EPUB_DEFS_DIR.glob("*.toml")}
+    epub_stems = {path.stem for path in EPUB_OUT_DIR.glob("*.epub")}
+    assert epub_stems == def_stems
 
 
 def test_regeneration_is_byte_identical(tmp_path: Path) -> None:
@@ -110,20 +169,81 @@ def test_definitions_have_explicit_expectations() -> None:
         assert isinstance(exp["language"], str) and exp["language"]
         assert isinstance(exp["has_cover"], bool)
         if exp["status"] == "ok":
+            epub_path = EPUB_OUT_DIR / f"{def_path.stem}.epub"
             chapters = exp["chapters"]
             assert chapters
             for ch in chapters:
                 assert ch["paragraphs"]
-                text_len = sum(len(p) for p in ch["paragraphs"])
-                if not ch["suggested_skip"]:
-                    assert text_len >= 200, (
-                        f"{def_path.name} chapter {ch['title']!r} has <200 chars "
-                        f"({text_len}) but suggested_skip=false"
+                char_len = _d2_char_count(epub_path, ch["href"])
+                reasons = ch["skip_reasons"]
+                assert [r for r in SKIP_REASON_ORDER if r in reasons] == reasons
+                if ch["href"].endswith("boundary_199.xhtml"):
+                    assert char_len == 199
+                    assert ch["suggested_skip"] is True
+                    assert reasons == ["short"]
+                elif ch["href"].endswith("boundary_200.xhtml"):
+                    assert char_len == 200
+                    assert ch["suggested_skip"] is False
+                    assert reasons == []
+                elif not ch["suggested_skip"]:
+                    assert char_len >= 250, (
+                        f"{def_path.name} chapter {ch['title']!r} has <250 chars "
+                        f"({char_len}) under D2 rule"
                     )
+                if char_len < 200:
+                    assert ch["suggested_skip"] is True
+                    assert "short" in reasons
+
+
+def test_font_obfuscation_fixture_lists_both_algorithms() -> None:
+    epub_path = EPUB_OUT_DIR / "09_font_obfuscation_ok.epub"
+    with zipfile.ZipFile(epub_path, "r") as zf:
+        enc_xml = zf.read("META-INF/encryption.xml").decode("utf-8")
+    assert "http://www.idpf.org/2008/embedding" in enc_xml
+    assert "http://ns.adobe.com/pdf/enc#RC" in enc_xml
+
+
+def test_epub3_with_ncx_has_differing_titles() -> None:
+    with (EPUB_DEFS_DIR / "01_epub3_basic.toml").open("rb") as fh:
+        spec = tomllib.load(fh)
+    epub_path = EPUB_OUT_DIR / "01_epub3_basic.epub"
+    with zipfile.ZipFile(epub_path, "r") as zf:
+        nav_xml = zf.read("OEBPS/nav.xhtml").decode("utf-8")
+        ncx_xml = zf.read("OEBPS/toc.ncx").decode("utf-8")
+    for ch, ncx_entry in zip(spec["expected"]["chapters"], spec["ncx"], strict=True):
+        assert ch["title"] in nav_xml
+        assert ncx_entry["title"] in ncx_xml
+        assert ch["title"] != ncx_entry["title"]
+
+
+def test_suggested_skips_clean_mechanisms() -> None:
+    epub_path = EPUB_OUT_DIR / "07_suggested_skips.epub"
+    with zipfile.ZipFile(epub_path, "r") as zf:
+        nav_xml = zf.read("OEBPS/nav.xhtml").decode("utf-8")
+        cover_xml = zf.read("OEBPS/cover.xhtml").decode("utf-8")
+        copyright_xml = zf.read("OEBPS/copyright.xhtml").decode("utf-8")
+        toc_xml = zf.read("OEBPS/toc.xhtml").decode("utf-8")
+        index_xml = zf.read("OEBPS/index.xhtml").decode("utf-8")
+
+    # cover and copyright-page marked ONLY via landmarks
+    assert 'epub:type="cover"' in nav_xml and 'epub:type="cover"' not in cover_xml
+    assert 'epub:type="copyright-page"' in nav_xml
+    assert 'epub:type="copyright-page"' not in copyright_xml
+    # toc and index marked ONLY via in-document epub:type (not in landmarks)
+    assert 'href="toc.xhtml"' in nav_xml
+    assert 'epub:type="toc" href="toc.xhtml"' not in nav_xml
+    assert 'epub:type="toc"' in toc_xml
+    assert 'epub:type="index"' not in nav_xml
+    assert 'epub:type="index"' in index_xml
 
 
 def test_public_domain_hashes_and_gutenberg_notice() -> None:
     sources_text = SOURCES_MD.read_text(encoding="utf-8")
+    assert "Ebook #43" in sources_text
+    assert "Ebook #46" in sources_text
+    assert "Project Gutenberg License (section 1.E)" in sources_text
+    assert "never shipped in Skald installers or releases" in sources_text
+
     epubs = sorted(PUBLIC_DOMAIN_DIR.glob("*.epub"))
     assert len(epubs) == 2
 

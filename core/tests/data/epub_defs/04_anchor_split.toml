@@ -18,18 +18,18 @@ href = "acts.xhtml"
 body_xhtml = """
 <section id="act1">
   <h1>Act I: The Courtyard</h1>
-  <p>Morning sunlight slanted across the cobblestones while the baker arranged warm loaves in the timber window.</p>
-  <p>Two messengers paused beside the stone fountain to trade rumors about the arriving steamship.</p>
+  <p>Morning sunlight slanted across the worn cobblestones while the village baker arranged warm loaves in the timber window above the quiet arcade.</p>
+  <p>Two messengers paused beside the carved stone fountain to trade rumors about the arriving northern steamship and its heavy cargo.</p>
 </section>
 <section id="act2">
   <h1>Act II: The Council Hall</h1>
-  <p>Inside the oak-panelled chamber, lanterns burned brightly despite the high windows overlooking the square.</p>
-  <p>Everyone leaned forward as the clerk unrolled the parchment scroll and cleared his throat to begin.</p>
+  <p>Inside the oak-panelled council chamber, brass lanterns burned brightly despite the tall arched windows overlooking the snowy market square.</p>
+  <p>Everyone leaned forward attentively as the clerk unrolled the wide parchment scroll and cleared his throat softly to begin reading.</p>
 </section>
 <section id="act3">
   <h1>Act III: The Bridge</h1>
-  <p>By dusk a cool river mist rose beneath the iron arches and softened the distant echo of footsteps.</p>
-  <p>A single violin carried a quiet melody from the riverbank until the last ferry pulled away.</p>
+  <p>By dusk a cool silver river mist rose beneath the riveted iron arches and softened the distant echo of hurried footsteps along the stone embankment.</p>
+  <p>A single wooden violin carried a quiet melody from the shadowed riverbank until the final evening ferry pulled cleanly away from the quay.</p>
 </section>
 """
 
@@ -38,8 +38,8 @@ id = "epilogue"
 href = "epilogue.xhtml"
 body_xhtml = """
 <h1>Epilogue</h1>
-<p>Years later, travelers passing through the valley still pointed out the old clocktower above the cobbled square.</p>
-<p>None of the ledgers remained, yet the tune played beside the river lingered in the memory of the town.</p>
+<p>Years later, weary travelers passing through the mountain valley still pointed out the old copper clocktower rising high above the cobbled market square.</p>
+<p>None of the dusty trade ledgers remained, yet the tune played beside the river lingered vividly in the shared memory of the old town.</p>
 """
 
 [[nav]]
@@ -73,8 +73,8 @@ suggested_skip = false
 skip_reasons = []
 paragraphs = [
   "Act I: The Courtyard",
-  "Morning sunlight slanted across the cobblestones while the baker arranged warm loaves in the timber window.",
-  "Two messengers paused beside the stone fountain to trade rumors about the arriving steamship.",
+  "Morning sunlight slanted across the worn cobblestones while the village baker arranged warm loaves in the timber window above the quiet arcade.",
+  "Two messengers paused beside the carved stone fountain to trade rumors about the arriving northern steamship and its heavy cargo.",
 ]
 
 [[expected.chapters]]
@@ -85,8 +85,8 @@ suggested_skip = false
 skip_reasons = []
 paragraphs = [
   "Act II: The Council Hall",
-  "Inside the oak-panelled chamber, lanterns burned brightly despite the high windows overlooking the square.",
-  "Everyone leaned forward as the clerk unrolled the parchment scroll and cleared his throat to begin.",
+  "Inside the oak-panelled council chamber, brass lanterns burned brightly despite the tall arched windows overlooking the snowy market square.",
+  "Everyone leaned forward attentively as the clerk unrolled the wide parchment scroll and cleared his throat softly to begin reading.",
 ]
 
 [[expected.chapters]]
@@ -97,8 +97,8 @@ suggested_skip = false
 skip_reasons = []
 paragraphs = [
   "Act III: The Bridge",
-  "By dusk a cool river mist rose beneath the iron arches and softened the distant echo of footsteps.",
-  "A single violin carried a quiet melody from the riverbank until the last ferry pulled away.",
+  "By dusk a cool silver river mist rose beneath the riveted iron arches and softened the distant echo of hurried footsteps along the stone embankment.",
+  "A single wooden violin carried a quiet melody from the shadowed riverbank until the final evening ferry pulled cleanly away from the quay.",
 ]
 
 [[expected.chapters]]
@@ -109,6 +109,6 @@ suggested_skip = false
 skip_reasons = []
 paragraphs = [
   "Epilogue",
-  "Years later, travelers passing through the valley still pointed out the old clocktower above the cobbled square.",
-  "None of the ledgers remained, yet the tune played beside the river lingered in the memory of the town.",
+  "Years later, weary travelers passing through the mountain valley still pointed out the old copper clocktower rising high above the cobbled market square.",
+  "None of the dusty trade ledgers remained, yet the tune played beside the river lingered vividly in the shared memory of the old town.",
 ]

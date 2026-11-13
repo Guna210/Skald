@@ -70,25 +70,37 @@ def _container_xml(opf_path: str = "OEBPS/content.opf") -> bytes:
     return xml.encode("utf-8")
 
 
-def _encryption_xml(mode: str, target_uri: str) -> bytes:
-    if mode == "font_obfuscation":
-        algorithm = "http://www.idpf.org/2008/embedding"
-    elif mode == "drm":
-        algorithm = "http://www.w3.org/2001/04/xmlenc#aes128-cbc"
-    else:
-        raise ValueError(f"Unknown encryption_mode: {mode!r}")
+_ENCRYPTION_ALGORITHMS = {
+    "font_obfuscation": "http://www.idpf.org/2008/embedding",
+    "idpf_font": "http://www.idpf.org/2008/embedding",
+    "adobe_font": "http://ns.adobe.com/pdf/enc#RC",
+    "drm": "http://www.w3.org/2001/04/xmlenc#aes128-cbc",
+}
+
+
+def _encryption_xml(entries: list[dict[str, str]]) -> bytes:
+    blocks = []
+    for entry in entries:
+        mode = str(entry["mode"])
+        if mode not in _ENCRYPTION_ALGORITHMS:
+            raise ValueError(f"Unknown encryption mode: {mode!r}")
+        algorithm = _ENCRYPTION_ALGORITHMS[mode]
+        target_uri = str(entry["target"])
+        blocks.append(
+            "  <enc:EncryptedData>\n"
+            f'    <enc:EncryptionMethod Algorithm="{escape(algorithm)}"/>\n'
+            "    <enc:CipherData>\n"
+            f'      <enc:CipherReference URI="{escape(target_uri)}"/>\n'
+            "    </enc:CipherData>\n"
+            "  </enc:EncryptedData>"
+        )
 
     xml = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<encryption xmlns="urn:oasis:names:tc:opendocument:xmlns:container"\n'
         '            xmlns:enc="http://www.w3.org/2001/04/xmlenc#">\n'
-        "  <enc:EncryptedData>\n"
-        f'    <enc:EncryptionMethod Algorithm="{escape(algorithm)}"/>\n'
-        "    <enc:CipherData>\n"
-        f'      <enc:CipherReference URI="{escape(target_uri)}"/>\n'
-        "    </enc:CipherData>\n"
-        "  </enc:EncryptedData>\n"
-        "</encryption>\n"
+        + "\n".join(blocks)
+        + "\n</encryption>\n"
     )
     return xml.encode("utf-8")
 
@@ -99,10 +111,8 @@ def _render_xhtml(
     language: str,
     title: str,
     body_xhtml: str,
-    body_attrs: str = "",
     head_extra: str = "",
 ) -> bytes:
-    attr_suffix = f" {body_attrs.strip()}" if body_attrs.strip() else ""
     lang_esc = escape(language)
     title_esc = escape(title)
     body_indented = body_xhtml.strip()
@@ -117,7 +127,7 @@ def _render_xhtml(
             "<head>\n"
             f"  <title>{title_esc}</title>{head_suffix}\n"
             "</head>\n"
-            f"<body{attr_suffix}>\n"
+            "<body>\n"
             f"{body_indented}\n"
             "</body>\n"
             "</html>\n"
@@ -133,7 +143,7 @@ def _render_xhtml(
             '  <meta charset="utf-8"/>\n'
             f"  <title>{title_esc}</title>{head_suffix}\n"
             "</head>\n"
-            f"<body{attr_suffix}>\n"
+            "<body>\n"
             f"{body_indented}\n"
             "</body>\n"
             "</html>\n"
@@ -295,7 +305,9 @@ def build_epub_bytes(spec: dict[str, Any]) -> bytes:
     epub_cfg: dict[str, Any] = spec["epub"]
     spine_items: list[dict[str, Any]] = list(spec.get("spine", []))
     nav_entries: list[dict[str, Any]] = list(spec.get("nav", []))
+    ncx_entries: list[dict[str, Any]] = list(spec.get("ncx", nav_entries))
     landmarks: list[dict[str, Any]] = list(spec.get("landmarks", []))
+    encryption_entries: list[dict[str, str]] = list(spec.get("encryption", []))
 
     version = str(epub_cfg["version"])
     language = str(epub_cfg["language"])
@@ -307,9 +319,12 @@ def build_epub_bytes(spec: dict[str, Any]) -> bytes:
     cover_href = str(epub_cfg.get("cover_href", "images/cover.png"))
     encryption_mode = str(epub_cfg.get("encryption_mode", "none"))
     encryption_target = str(epub_cfg.get("encryption_target", ""))
+    if not encryption_entries and encryption_mode != "none":
+        encryption_entries = [{"mode": encryption_mode, "target": encryption_target}]
     include_sample_image = bool(epub_cfg.get("include_sample_image", False))
-    include_font = bool(epub_cfg.get("include_font", False))
-    font_href = str(epub_cfg.get("font_href", "fonts/dummy.woff"))
+    font_hrefs: list[str] = [str(h) for h in epub_cfg.get("font_hrefs", [])]
+    if not font_hrefs and bool(epub_cfg.get("include_font", False)):
+        font_hrefs = [str(epub_cfg.get("font_href", "fonts/dummy.woff"))]
     manifest_order: list[str] | None = epub_cfg.get("manifest_order")
 
     manifest_items: list[tuple[str, str, str, str | None]] = []
@@ -322,8 +337,8 @@ def build_epub_bytes(spec: dict[str, Any]) -> bytes:
         manifest_items.append(("cover-img", cover_href, "image/png", props))
     if include_sample_image:
         manifest_items.append(("sample-img", "images/diagram.png", "image/png", None))
-    if include_font:
-        manifest_items.append(("font-dummy", font_href, "font/woff", None))
+    for idx, fhref in enumerate(font_hrefs):
+        manifest_items.append((f"font-{idx}", fhref, "font/woff", None))
 
     xhtml_items: list[tuple[str, str, bytes]] = []
     for item in spine_items:
@@ -339,7 +354,6 @@ def build_epub_bytes(spec: dict[str, Any]) -> bytes:
                 language=language,
                 title=str(item.get("doc_title", title)),
                 body_xhtml=str(item["body_xhtml"]),
-                body_attrs=str(item.get("body_attrs", "")),
                 head_extra=str(item.get("head_extra", "")),
             )
         xhtml_items.append((item_id, href, content))
@@ -350,26 +364,28 @@ def build_epub_bytes(spec: dict[str, Any]) -> bytes:
         remaining = [entry for entry in manifest_items if entry[0] not in set(manifest_order)]
         manifest_items = ordered + remaining
 
+    opf_bytes = (
+        str(epub_cfg["raw_opf"]).encode("utf-8")
+        if "raw_opf" in epub_cfg
+        else _render_opf(
+            epub_cfg=epub_cfg,
+            manifest_items=manifest_items,
+            spine_items=spine_items,
+        )
+    )
+
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
         # EPUB spec requires mimetype to be first, uncompressed, with no extra field.
         _add_entry(zf, "mimetype", b"application/epub+zip")
         _add_entry(zf, "META-INF/container.xml", _container_xml("OEBPS/content.opf"))
-        if encryption_mode != "none":
+        if encryption_entries:
             _add_entry(
                 zf,
                 "META-INF/encryption.xml",
-                _encryption_xml(encryption_mode, encryption_target),
+                _encryption_xml(encryption_entries),
             )
-        _add_entry(
-            zf,
-            "OEBPS/content.opf",
-            _render_opf(
-                epub_cfg=epub_cfg,
-                manifest_items=manifest_items,
-                spine_items=spine_items,
-            ),
-        )
+        _add_entry(zf, "OEBPS/content.opf", opf_bytes)
         if has_nav:
             _add_entry(
                 zf,
@@ -388,15 +404,15 @@ def build_epub_bytes(spec: dict[str, Any]) -> bytes:
                 _render_ncx(
                     identifier=identifier,
                     title=title,
-                    nav_entries=nav_entries,
+                    nav_entries=ncx_entries,
                 ),
             )
         if cover_mode in {"epub3", "epub2"}:
             _add_entry(zf, f"OEBPS/{cover_href}", _tiny_png_bytes())
         if include_sample_image:
             _add_entry(zf, "OEBPS/images/diagram.png", _tiny_png_bytes())
-        if include_font:
-            _add_entry(zf, f"OEBPS/{font_href}", _dummy_woff_bytes())
+        for fhref in sorted(font_hrefs):
+            _add_entry(zf, f"OEBPS/{fhref}", _dummy_woff_bytes())
         for _, href, content in sorted(xhtml_items, key=lambda row: row[1]):
             _add_entry(zf, f"OEBPS/{href}", content)
 

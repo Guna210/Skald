@@ -1,6 +1,6 @@
 [meta]
 id = "01_epub3_basic"
-description = "EPUB 3 with nav, multiple authors, EPUB 3 cover-image property, and three chapters"
+description = "EPUB 3 with nav and NCX (differing titles -> nav wins), multiple authors, EPUB 3 cover-image property, and three chapters"
 
 [epub]
 version = "3.0"
@@ -9,7 +9,7 @@ title = "The North Wind"
 authors = ["Ada Lovelace", "Charles Babbage"]
 language = "en"
 has_nav = true
-has_ncx = false
+has_ncx = true
 cover_mode = "epub3"
 cover_href = "images/cover.png"
 
@@ -18,8 +18,8 @@ id = "ch1"
 href = "ch1.xhtml"
 body_xhtml = """
 <h1>Chapter 1: Departure</h1>
-<p>The harbor bell rang three times before the sails caught the cold northern breeze along the granite quay.</p>
-<p>Clara tightened her woollen scarf and watched the lantern on the pier shrink into a steady amber spark across the dark water.</p>
+<p>The harbor bell rang three times before the sails caught the cold northern breeze along the granite quay and carried our timber schooner past the stone breakwater.</p>
+<p>Clara tightened her woollen scarf and watched the brass lantern on the pier shrink into a steady amber spark across the dark winter water.</p>
 """
 
 [[spine]]
@@ -27,8 +27,8 @@ id = "ch2"
 href = "ch2.xhtml"
 body_xhtml = """
 <h1>Chapter 2: Open Sea</h1>
-<p>By noon the coastline had vanished behind a bank of silver mist, leaving only the rhythmic creak of timber and rope.</p>
-<p>Every watch brought fresh constellations overhead, charted carefully in pencil inside the captain's weathered leather logbook.</p>
+<p>By noon the rocky coastline had vanished behind a thick bank of silver mist, leaving only the rhythmic creak of timber and tarred hemp rope in the rigging.</p>
+<p>Every watch brought fresh constellations overhead, charted carefully in pencil inside the captain's weathered leather logbook beside the compass binnacle.</p>
 """
 
 [[spine]]
@@ -36,8 +36,8 @@ id = "ch3"
 href = "ch3.xhtml"
 body_xhtml = """
 <h1>Chapter 3: Landfall</h1>
-<p>At daybreak a line of snowy ridges broke the horizon, gleaming pale rose above the quiet fjord.</p>
-<p>Rowboats were lowered into the glassy inlet while gulls wheeled and cried above the wooden boathouses along the shore.</p>
+<p>At daybreak a jagged line of snowy ridges broke the pale horizon, gleaming soft rose above the quiet northern fjord and the sheltered harbour anchorage.</p>
+<p>Rowboats were lowered swiftly into the glassy green inlet while white gulls wheeled and cried above the cedar boathouses along the rocky shore.</p>
 """
 
 [[nav]]
@@ -50,6 +50,18 @@ href = "ch2.xhtml"
 
 [[nav]]
 title = "Chapter 3: Landfall"
+href = "ch3.xhtml"
+
+[[ncx]]
+title = "NCX Fallback One: Leaving Port"
+href = "ch1.xhtml"
+
+[[ncx]]
+title = "NCX Fallback Two: Blue Water"
+href = "ch2.xhtml"
+
+[[ncx]]
+title = "NCX Fallback Three: Fjord Anchorage"
 href = "ch3.xhtml"
 
 [expected]
@@ -68,8 +80,8 @@ suggested_skip = false
 skip_reasons = []
 paragraphs = [
   "Chapter 1: Departure",
-  "The harbor bell rang three times before the sails caught the cold northern breeze along the granite quay.",
-  "Clara tightened her woollen scarf and watched the lantern on the pier shrink into a steady amber spark across the dark water.",
+  "The harbor bell rang three times before the sails caught the cold northern breeze along the granite quay and carried our timber schooner past the stone breakwater.",
+  "Clara tightened her woollen scarf and watched the brass lantern on the pier shrink into a steady amber spark across the dark winter water.",
 ]
 
 [[expected.chapters]]
@@ -80,8 +92,8 @@ suggested_skip = false
 skip_reasons = []
 paragraphs = [
   "Chapter 2: Open Sea",
-  "By noon the coastline had vanished behind a bank of silver mist, leaving only the rhythmic creak of timber and rope.",
-  "Every watch brought fresh constellations overhead, charted carefully in pencil inside the captain's weathered leather logbook.",
+  "By noon the rocky coastline had vanished behind a thick bank of silver mist, leaving only the rhythmic creak of timber and tarred hemp rope in the rigging.",
+  "Every watch brought fresh constellations overhead, charted carefully in pencil inside the captain's weathered leather logbook beside the compass binnacle.",
 ]
 
 [[expected.chapters]]
@@ -92,6 +104,6 @@ suggested_skip = false
 skip_reasons = []
 paragraphs = [
   "Chapter 3: Landfall",
-  "At daybreak a line of snowy ridges broke the horizon, gleaming pale rose above the quiet fjord.",
-  "Rowboats were lowered into the glassy inlet while gulls wheeled and cried above the wooden boathouses along the shore.",
+  "At daybreak a jagged line of snowy ridges broke the pale horizon, gleaming soft rose above the quiet northern fjord and the sheltered harbour anchorage.",
+  "Rowboats were lowered swiftly into the glassy green inlet while white gulls wheeled and cried above the cedar boathouses along the rocky shore.",
 ]

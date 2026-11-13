@@ -1,6 +1,6 @@
 [meta]
 id = "11_malformed_xhtml"
-description = "Malformed XHTML content file -> rejected with epub_invalid"
+description = "Malformed content XHTML recovered via lxml XMLParser(recover=True) with step-7 flags -> imports ok with warning"
 
 [epub]
 version = "3.0"
@@ -23,20 +23,32 @@ raw_xml = """<?xml version="1.0" encoding="UTF-8"?>
   <title>Broken Markup</title>
 </head>
 <body>
-  <h1>Chapter 1: Broken</h1>
-  <p>This paragraph opens a <b>bold tag and closes the outer tag first.</p></b>
+  <h1>Chapter 1: Broken Ledger</h1>
+  <p>When the archivist opened the leather ledger by candlelight, he noticed an unclosed <b>bold annotation near the edge of the first folio.</p></b>
+  <p>Even so, the second paragraph remained completely legible across every surviving page of the quiet northern winter chronicle.</p>
 </body>
 </html>
 """
 
 [[nav]]
-title = "Chapter 1: Broken"
+title = "Chapter 1: Broken Ledger"
 href = "ch1.xhtml"
 
 [expected]
-status = "epub_invalid"
+status = "ok"
 title = "Broken Markup"
 authors = ["Unknown Scribe"]
 language = "en"
 has_cover = false
-chapters = []
+
+[[expected.chapters]]
+title = "Chapter 1: Broken Ledger"
+href = "OEBPS/ch1.xhtml"
+linear = true
+suggested_skip = false
+skip_reasons = []
+paragraphs = [
+  "Chapter 1: Broken Ledger",
+  "When the archivist opened the leather ledger by candlelight, he noticed an unclosed bold annotation near the edge of the first folio.",
+  "Even so, the second paragraph remained completely legible across every surviving page of the quiet northern winter chronicle.",
+]

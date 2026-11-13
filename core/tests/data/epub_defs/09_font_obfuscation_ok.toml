@@ -1,6 +1,6 @@
 [meta]
 id = "09_font_obfuscation_ok"
-description = "encryption.xml listing only IDPF font obfuscation must NOT count as DRM"
+description = "encryption.xml listing both IDPF and Adobe font obfuscation algorithms must NOT count as DRM"
 
 [epub]
 version = "3.0"
@@ -11,17 +11,22 @@ language = "en"
 has_nav = true
 has_ncx = false
 cover_mode = "none"
-include_font = true
-font_href = "fonts/dummy.woff"
-encryption_mode = "font_obfuscation"
-encryption_target = "OEBPS/fonts/dummy.woff"
+font_hrefs = ["fonts/idpf.woff", "fonts/adobe.woff"]
+
+[[encryption]]
+mode = "idpf_font"
+target = "OEBPS/fonts/idpf.woff"
+
+[[encryption]]
+mode = "adobe_font"
+target = "OEBPS/fonts/adobe.woff"
 
 [[spine]]
 id = "ch1"
 href = "ch1.xhtml"
 body_xhtml = """
 <h1>Chapter 1: Movable Type</h1>
-<p>This book carries an encryption manifest solely to obfuscate an embedded font file under the standard IDPF embedding rule.</p>
+<p>This book carries an encryption manifest solely to obfuscate embedded font files using both the IDPF and Adobe font-obfuscation schemes.</p>
 <p>Because the content documents themselves are unencrypted, Skald imports every chapter normally without raising a DRM error.</p>
 """
 
@@ -44,6 +49,6 @@ suggested_skip = false
 skip_reasons = []
 paragraphs = [
   "Chapter 1: Movable Type",
-  "This book carries an encryption manifest solely to obfuscate an embedded font file under the standard IDPF embedding rule.",
+  "This book carries an encryption manifest solely to obfuscate embedded font files using both the IDPF and Adobe font-obfuscation schemes.",
   "Because the content documents themselves are unencrypted, Skald imports every chapter normally without raising a DRM error.",
 ]
