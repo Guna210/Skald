@@ -1,25 +1,25 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 13:51 (Asia/Colombo) · last entry: E-0049
+Last updated: 2026-11-13 14:29 (Asia/Colombo) · last entry: E-0051
 Current log file: `CONTEXT.md` (entries E-0001 onward)
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1 APPROVED (PR #6), merge pending (E-0048). T01.2 and T02.1 prompts issued (E-0049).
-- `master` at `ad52e4b`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: PR #6 T01.1 (https://github.com/Guna210/Skald/pull/6) — APPROVED, CI green, merge pending.
+- Phase 1: T01.1 merged (E-0050). T01.2 PR #7 in review round 1 (E-0051). T02.1 building (branch pushed, no handoff yet).
+- `master` at `e3327d8`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
+- Open PRs: PR #7 T01.2 (https://github.com/Guna210/Skald/pull/7) — in review round 1, CI green.
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
-- Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5).
-- Approved, merge pending: T01.1 (PR #6).
-- Assigned (paste after PR #6 merges): T01.2 JSON-RPC server, T02.1 EPUB fixtures (E-0049).
+- Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6).
+- In review: T01.2 (PR #7, round 1, E-0051).
+- Building: T02.1 EPUB fixtures (E-0049).
 - Also ready, not yet assigned: T01.6, T03.9 [SPIKE][REVIEW], T03.4 [SPIKE][STRONG MODEL][REVIEW], T06.1.
 
 ## Waiting on the owner
-1. Merge PR #6 (normal merge) (E-0048).
-2. Paste the T01.2 and T02.1 prompts into two Builder sessions (E-0049). Say if you want more parallel tasks.
+1. Paste the T01.2 Reviewer prompt into a fresh Claude Sonnet session (E-0051).
+2. Bring the T02.1 handoff. Say if you want more parallel tasks.
 3. Optional: run `.\scripts\setup.ps1` twice on the laptop (CI covers it).
 
 ## Pending GPU runs
