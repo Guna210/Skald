@@ -1,24 +1,24 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 21:05 (Asia/Colombo) · last entry: E-0059
+Last updated: 2026-11-13 21:50 (Asia/Colombo) · last entry: E-0060
 Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1, T01.2 merged. T02.1 handed off (PR #8), rebasing before review. T01.4 / T01.6 available (not started).
+- Phase 1: T01.1, T01.2 merged. T02.1 in review (PR #8, rebased). T01.4 / T01.6 available (not started).
 - `master` at `52fc2f9`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: #8 T02.1 (`task/T02.1-epub-fixtures`, conflicts with master in SPEC.md Appendix 3 → rebase sent, E-0059).
+- Open PRs: #8 T02.1 (`task/T02.1-epub-fixtures`, rebased onto 52fc2f9 at 19ece48, CI green; in review, E-0060).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7).
-- In progress: T02.1 EPUB fixtures, PR #8, round 1, rebase-only prompt sent; review after (E-0059).
+- In review: T02.1 EPUB fixtures, PR #8, round 1, Reviewer = fresh Claude Opus (E-0060).
 - Available, not started (prompt only when the owner asks; E-0057): T01.4 schemas + system.info, T01.6 HTTP helper (decisions drafted in E-0056), T03.9 [SPIKE][REVIEW], T03.4 [SPIKE][STRONG MODEL][REVIEW], T06.1.
 - T01.3 job manager becomes available after T01.4 merges (E-0056).
 
 ## Waiting on the owner
-1. Paste the rebase prompt to the T02.1 Builder and send back its reply (E-0059).
+1. Run the T02.1 Reviewer (fresh Claude Opus) and send back its verdict (E-0060).
 
 ## Pending GPU runs
 None.
@@ -51,6 +51,7 @@ None.
 - T06.1: setup.* will run `npm ci` inside the CI core/worker jobs once app/package-lock.json exists (no npm cache there) — decide then (E-0041).
 - T03.7: worker/pyproject.toml must land with ≥1 test, or CI pytest exits 5 (E-0041).
 - T03.5: CI `.cache/uv` key covers only deps.lock.json — add pack lockfiles (E-0041).
+- T09.1: test fixtures (core/tests/data, incl. Gutenberg EPUBs) are never packaged (E-0060).
 - T09.1: exclude vendor/*/.tmp-*, .old-*, vendor/.downloads, and ffplay/doc/man (ffmpeg binaries 132–143 MB each; vendor/ffmpeg ~400 MB vs 600 MB limit) (E-0027).
 - uv mirror assets have no version in the name → a uv bump needs a new mirror tag (deps-v2) (E-0027). Mirror releases are marked Pre-release, never "latest" (E-0034).
 - T03.7 prompt: evaluate an fd-level stdout redirect (os.dup/os.dup2) in workers; model libraries may print from C code (E-0052).
@@ -65,4 +66,4 @@ None.
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-After the T02.1 rebase reply: verify the rebased branch and CI, then a Reviewer prompt (fresh Sonnet; focus in E-0059). After merge, list available tasks without prompts (E-0057).
+Process the T02.1 verdict. After merge, list available tasks without prompts (E-0057).
