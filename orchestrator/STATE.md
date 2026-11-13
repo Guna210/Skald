@@ -1,24 +1,24 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 22:30 (Asia/Colombo) · last entry: E-0061
+Last updated: 2026-11-13 22:55 (Asia/Colombo) · last entry: E-0062
 Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1, T01.2 merged. T02.1 round 2 fixes (PR #8). T01.4 / T01.6 available (not started).
+- Phase 1: T01.1, T01.2 merged. T02.1 round-2 re-review (PR #8). T01.4 / T01.6 available (not started).
 - `master` at `52fc2f9`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: #8 T02.1 (`task/T02.1-epub-fixtures`, R1 CHANGES REQUESTED, round-2 fix prompt sent, E-0061).
+- Open PRs: #8 T02.1 (`task/T02.1-epub-fixtures`, round-2 fixes at 31ba2b8, CI green; re-review, E-0062).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7).
-- In progress: T02.1 EPUB fixtures, PR #8, round 2 fixes (all R1-1…R1-8 + .gitattributes; spec decisions D1–D4 in E-0061). Re-review by the same Opus Reviewer session.
+- In review: T02.1 EPUB fixtures, PR #8, round 2 (fixes for R1-1…R1-8 + .gitattributes + D1–D4 rows at 31ba2b8). Same Opus Reviewer session (E-0062).
 - Available, not started (prompt only when the owner asks; E-0057): T01.4 schemas + system.info, T01.6 HTTP helper (decisions drafted in E-0056), T03.9 [SPIKE][REVIEW], T03.4 [SPIKE][STRONG MODEL][REVIEW], T06.1.
 - T01.3 job manager becomes available after T01.4 merges (E-0056).
 
 ## Waiting on the owner
-1. Paste the round-2 fix prompt to the T02.1 Builder; send back its handoff (E-0061).
+1. Paste the round-2 review prompt into the same Opus Reviewer session; send back its verdict (E-0062).
 
 ## Pending GPU runs
 None.
@@ -34,7 +34,7 @@ None.
 
 ## Decisions not yet written into SPEC.md
 - E-0049 T02.1: TOML defs + ZIP_STORED — recorded in PR #8's Appendix 3 rows (on master once #8 merges).
-- E-0061 D1–D4 (malformed XHTML recovery vs epub_invalid; rule-4 character count; cumulative skip_reasons; linear="no" not a skip) — T02.1 Builder records them in round 2.
+- E-0061 D1–D4 — recorded in PR #8's Appendix 3 rows (on master once #8 merges).
 - E-0056 T01.4 / T01.6 decisions — recorded by those Builders once the tasks are started.
 (All earlier decisions are on master: E-0020, E-0021, E-0032, E-0033, E-0048, E-0049 T01.2 rows, E-0052 rows.)
 
@@ -68,4 +68,4 @@ None.
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-Process the T02.1 round-2 handoff → re-review (same Opus Reviewer). After merge, list available tasks without prompts (E-0057).
+Process the T02.1 round-2 verdict. After merge, list available tasks without prompts (E-0057).
