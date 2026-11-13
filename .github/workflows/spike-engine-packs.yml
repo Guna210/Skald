@@ -1,0 +1,124 @@
+# TEMPORARY - spike T03.4 only. Deleted in the last commit of the task branch; must never reach master.
+# Runs docs/spikes/scripts/spike.py on Windows and Linux runners to collect the numbers in docs/spikes/engine-packs.md.
+name: Spike T03.4 engine packs
+
+on:
+  push:
+    branches:
+      - "task/T03.4-*"
+
+permissions:
+  contents: read
+
+jobs:
+  spike:
+    name: spike (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      # ---------------- Linux ----------------
+      - name: Setup and machine facts (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          ./scripts/setup.sh > setup.log 2>&1 || { tail -50 setup.log; exit 1; }
+          git config --get core.autocrlf || echo "core.autocrlf: unset"
+          df -hT / /mnt /dev/shm || true
+          findmnt -T "$HOME" || true
+          nproc; free -g | head -2
+
+      - name: Measure (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY=core/.venv/bin/python
+          WORK="$HOME/sk"
+          OTHER=/mnt/sk-other
+          sudo mkdir -p "$OTHER" && sudo chown "$USER" "$OTHER"
+          if [ "$(stat -c %d /mnt)" = "$(stat -c %d "$HOME")" ]; then OTHER=/dev/shm/sk-other; mkdir -p "$OTHER"; fi
+          echo "work=$WORK other=$OTHER"; findmnt -T "$OTHER" || true
+          $PY docs/spikes/scripts/spike.py lock --check
+          $PY docs/spikes/scripts/spike.py measure --work "$WORK" --other-volume "$OTHER" \
+            --only cold,warm,bytecode,tamper,move,deep,xvol,relocate,py311,proxy,tls,av
+          $PY docs/spikes/scripts/spike.py measure --work "$WORK" --only prune,clean
+          $PY docs/spikes/scripts/spike.py measure --work "$WORK" --packs cu12
+          cp "$WORK/results.json" results-linux.json
+
+      # ---------------- Windows ----------------
+      - name: Setup and machine facts (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          .\scripts\setup.ps1 > setup.log 2>&1
+          if ($LASTEXITCODE -ne 0) { Get-Content setup.log -Tail 50; exit $LASTEXITCODE }
+          Write-Host "core.autocrlf: $(git config --get core.autocrlf)"
+          Get-Volume | Format-Table DriveLetter, FileSystemType, SizeRemaining, Size -AutoSize | Out-String | Write-Host
+          Write-Host "workspace: $env:GITHUB_WORKSPACE"
+          Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name LongPathsEnabled | Format-List LongPathsEnabled | Out-String | Write-Host
+          Get-MpComputerStatus | Format-List AMServiceEnabled, AntivirusEnabled, RealTimeProtectionEnabled, OnAccessProtectionEnabled, IsTamperProtected | Out-String | Write-Host
+          Get-MpPreference | Format-List DisableRealtimeMonitoring, ExclusionPath | Out-String | Write-Host
+          (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors
+
+      - name: Measure (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          function Run { & core\.venv\Scripts\python.exe docs\spikes\scripts\spike.py @args; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }
+          $work = 'C:\sk'
+          $other = 'D:\sk-other'
+          if (-not (Test-Path 'D:\')) {
+            # No second drive on this runner image: make a small NTFS volume from a VHD.
+            "create vdisk file=C:\sk-other.vhdx maximum=8000 type=expandable`r`nattach vdisk`r`ncreate partition primary`r`nformat fs=ntfs quick`r`nassign letter=V" | Out-File -Encoding ascii C:\dp.txt
+            diskpart /s C:\dp.txt | Write-Host
+            $other = 'V:\sk-other'
+          }
+          New-Item -ItemType Directory -Force $other | Out-Null
+          Write-Host "work=$work other=$other"
+
+          Run lock --check
+          $env:SPIKE_LABEL = ''
+          Run measure --work $work --other-volume $other --only 'cold,warm,bytecode,tamper,move,deep,xvol,relocate,py311,proxy,tls,av'
+
+          # Antivirus: repeat the warm install with Defender real-time scanning switched off, then restore it.
+          $before = (Get-MpPreference).DisableRealtimeMonitoring
+          Set-MpPreference -DisableRealtimeMonitoring $true
+          Start-Sleep -Seconds 5
+          Write-Host "RealTimeProtectionEnabled now: $((Get-MpComputerStatus).RealTimeProtectionEnabled)"
+          $env:SPIKE_LABEL = '-defender-realtime-off'
+          Run measure --work $work --only av
+          Set-MpPreference -DisableRealtimeMonitoring $before
+          Start-Sleep -Seconds 5
+          $env:SPIKE_LABEL = '-defender-restored'
+          Run measure --work $work --only av
+
+          # Long paths: repeat the deep-folder install with the OS long-path switch flipped, then restore it.
+          $key = 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem'
+          $orig = (Get-ItemProperty $key -Name LongPathsEnabled).LongPathsEnabled
+          $flipped = 1 - $orig
+          Set-ItemProperty $key -Name LongPathsEnabled -Value $flipped
+          $env:SPIKE_LABEL = "-longpaths-$flipped"
+          Run measure --work $work --only deep
+          Set-ItemProperty $key -Name LongPathsEnabled -Value $orig
+          $env:SPIKE_LABEL = ''
+
+          Run measure --work $work --only 'prune,clean'
+          Run measure --work $work --packs cu12
+          Copy-Item "$work\results.json" results-windows.json
