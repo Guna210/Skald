@@ -95,28 +95,35 @@ jobs:
 
           Run lock --check
           $env:SPIKE_LABEL = ''
-          Run measure --work $work --other-volume $other --only 'cold,warm,bytecode,tamper,move,deep,xvol,relocate,py311,proxy,tls,av'
+          Run measure --work $work --other-volume $other --only 'cold,warm,bytecode,tamper,move,deep,xvol,relocate,py311,proxy,tls'
 
-          # Antivirus: repeat the warm install with Defender real-time scanning switched off, then restore it.
-          $before = (Get-MpPreference).DisableRealtimeMonitoring
-          Set-MpPreference -DisableRealtimeMonitoring $true
-          Start-Sleep -Seconds 5
-          Write-Host "RealTimeProtectionEnabled now: $((Get-MpComputerStatus).RealTimeProtectionEnabled)"
-          $env:SPIKE_LABEL = '-defender-realtime-off'
-          Run measure --work $work --only av
-          Set-MpPreference -DisableRealtimeMonitoring $before
-          Start-Sleep -Seconds 5
-          $env:SPIKE_LABEL = '-defender-restored'
-          Run measure --work $work --only av
-
-          # Long paths: repeat the deep-folder install with the OS long-path switch flipped, then restore it.
+          # Long paths. First run above: root ~200 chars with the runner's setting. Now: python.exe itself past 260,
+          # then both again with the OS long-path switch flipped; restore it afterwards.
           $key = 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem'
           $orig = (Get-ItemProperty $key -Name LongPathsEnabled).LongPathsEnabled
+          $env:SPIKE_DEEP_LEN = '245'; $env:SPIKE_LABEL = "-longpaths-$orig-root245"
+          Run measure --work $work --only deep
           $flipped = 1 - $orig
           Set-ItemProperty $key -Name LongPathsEnabled -Value $flipped
-          $env:SPIKE_LABEL = "-longpaths-$flipped"
+          $env:SPIKE_DEEP_LEN = '200'; $env:SPIKE_LABEL = "-longpaths-$flipped-root200"
+          Run measure --work $work --only deep
+          $env:SPIKE_DEEP_LEN = '245'; $env:SPIKE_LABEL = "-longpaths-$flipped-root245"
           Run measure --work $work --only deep
           Set-ItemProperty $key -Name LongPathsEnabled -Value $orig
+          $env:SPIKE_DEEP_LEN = ''
+
+          # Antivirus. The runner image ships with Defender real-time scanning off and C:\ and D:\ excluded.
+          # Measure that state, then switch scanning on (if the image allows it), measure again, and restore.
+          $env:SPIKE_LABEL = 'Defender real-time scanning off (runner default)'
+          Run measure --work $work --only av
+          Remove-MpPreference -ExclusionPath 'C:\', 'D:\'
+          Set-MpPreference -DisableRealtimeMonitoring $false
+          Start-Sleep -Seconds 20
+          $rt = (Get-MpComputerStatus).RealTimeProtectionEnabled
+          $env:SPIKE_LABEL = "Defender real-time scanning switched on (RealTimeProtectionEnabled=$rt)"
+          Run measure --work $work --only av
+          Set-MpPreference -DisableRealtimeMonitoring $true
+          Add-MpPreference -ExclusionPath 'C:\', 'D:\'
           $env:SPIKE_LABEL = ''
 
           Run measure --work $work --only 'prune,clean'

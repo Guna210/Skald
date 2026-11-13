@@ -72,12 +72,16 @@ def run(cmd, env, ok=True):
     cmd = [str(c) for c in cmd]
     print("+", " ".join(cmd), flush=True)
     t0 = time.perf_counter()
-    p = subprocess.run(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
+    try:
+        p = subprocess.run(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
+        rc, out = p.returncode, p.stdout
+    except OSError as e:  # the executable could not be started at all
+        rc, out = -1, f"could not start: {e}"
     secs = round(time.perf_counter() - t0, 2)
-    print(p.stdout[-3000:], f"[{secs}s rc={p.returncode}]", flush=True)
-    if ok and p.returncode != 0:
+    print(out[-3000:], f"[{secs}s rc={rc}]", flush=True)
+    if ok and rc != 0:
         sys.exit(f"command failed: {cmd}")
-    return secs, p.returncode, p.stdout
+    return secs, rc, out
 
 
 def tail(out, n=6):
@@ -308,13 +312,15 @@ def step_move(ctx, kind):
 
 
 def step_deep(ctx, kind):
-    """Windows long paths: install a pack under a root deep enough that files pass 260 characters."""
+    """Windows long paths: install a pack under a deep root. SPIKE_DEEP_LEN sets the root length: around 200 keeps
+    python.exe under 260 characters while many files pass it; around 245 pushes python.exe itself past 260."""
     root = ctx.work
-    while len(str(root)) < 190:
+    while len(str(root)) + 30 < int(os.environ.get("SPIKE_DEEP_LEN", "200")) - 40:
         root = root / ("d" * 40)
+    root = root / ("e" * max(1, int(os.environ.get("SPIKE_DEEP_LEN", "200")) - len(str(root)) - 31))
     pack = root / ctx.name(kind)
     pack.parent.mkdir(parents=True, exist_ok=True)
-    r = {"pack_root_len": len(str(pack))}
+    r = {"pack_root_len": len(str(pack)), "pack_python_len": len(str(pack_python(pack)))}
     t_venv, rc, out = run([UV, "venv", "--python", PY, "--no-project", pack], ctx.env, ok=False)
     if rc == 0:
         t_sync, rc, out = run(
@@ -328,6 +334,7 @@ def step_deep(ctx, kind):
         r["longest_full_path"] = len(str(pack)) + 1 + longest_paths(pack, 1)[0]["len"]
         r["check"] = ctx.check(pack, ok=False)
     rm(ctx.work / ("d" * 40))
+    rm(ctx.work / str(root.relative_to(ctx.work)).split(os.sep)[0])
     ctx.save(f"deep_{kind}{os.environ.get('SPIKE_LABEL', '')}", r)
 
 
@@ -378,7 +385,7 @@ def step_relocate(ctx, kind):
 def step_prune(ctx, kind):
     """Remove = delete the pack, then `uv cache prune`. Does prune free the removed packs' wheels?"""
     cache, pack = ctx.work / "uv-cache", ctx.packs / ctx.name(kind)
-    cache_only = lambda: usage(pack, cache)[0] - usage(pack)[0]  # noqa: E731  bytes no pack links to
+    cache_only = lambda: usage(pack, cache)[0] - usage(pack)[0]  # bytes no pack links to
     before, only_before, free0 = usage(cache), cache_only(), free(ctx.work)
     secs, _, out = run([UV, "cache", "prune"], ctx.env)
     after = usage(cache)
@@ -446,7 +453,7 @@ def step_py311(ctx, kind, env=None, key="py311"):
     r["pyvenv_cfg"] = (pack / "pyvenv.cfg").read_text().splitlines()
     lock311 = ctx.work / "lock-py311.txt"
     run(compile_cmd(kind, OS_NAME, lock311, "3.11"), env)
-    lines = lambda p: {ln for ln in p.read_text().splitlines() if "==" in ln}  # noqa: E731
+    lines = lambda p: {ln for ln in p.read_text().splitlines() if "==" in ln}
     r["pins_differing_from_py312_lock"] = sorted(lines(lock311) ^ lines(lock_path(kind)))
     t_venv, t_sync, out = ctx.install(kind, pack, env=env, python="3.11", venv_args=["--managed-python", "--allow-existing"], lock=lock311)
     r["sync_s"] = t_sync
@@ -473,7 +480,7 @@ def step_proxy(ctx, kind):
         pack = ctx.packs / ctx.name(kind, "-p")
         t_venv, t_sync, out = ctx.install(kind, pack, env=env)
         r = {"cold_sync_s": t_sync, "sync_output": tail(out, 3), "check": ctx.check(pack)}
-        hosts = lambda: sorted({ln.split()[1] for ln in log.read_text().splitlines()})  # noqa: E731
+        hosts = lambda: sorted({ln.split()[1] for ln in log.read_text().splitlines()})
         r["hosts_pack_install"] = hosts()
         step_py311(ctx, kind, env=env, key="py311_via_proxy")
         r["hosts_with_python_download"] = hosts()
@@ -537,14 +544,18 @@ def step_clean(ctx, kind):
 
 
 def step_av(ctx, kind):
-    """One warm install + first import, timed; the workflow runs it with Defender real-time scanning on and off."""
-    pack = ctx.packs / ctx.name(kind, "-av")
-    t_venv, t_sync, _ = ctx.install(kind, pack)
+    """A cold install into its own cache plus the first import, timed; the workflow runs it with Defender
+    real-time scanning off and on (label in SPIKE_LABEL)."""
+    pack, cache = ctx.packs / ctx.name(kind, "-av"), ctx.work / "uv-cache-av"
+    t_venv, t_sync, out = ctx.install(kind, pack, env=dict(ctx.env, UV_CACHE_DIR=str(cache)))
     check = ctx.check(pack)
     rm(pack)
-    runs = ctx.results.get("av", [])
-    row = {"label": os.environ.get("SPIKE_LABEL", ""), "warm_sync_s": t_sync, "first_import_s": check["import_s"]}
-    ctx.save("av", [*runs, row])
+    rm(cache)
+    row = {
+        "label": os.environ.get("SPIKE_LABEL", ""), "cold_sync_s": t_sync, "first_import_s": check["import_s"],
+        "uv_phases": [ln for ln in out.splitlines() if ln.startswith(("Prepared", "Installed"))],
+    }  # fmt: skip
+    ctx.save("av", [*ctx.results.get("av", []), row])
 
 
 CPU_STEPS = ["cold", "warm", "bytecode", "tamper", "move", "deep", "xvol", "relocate", "py311", "proxy", "tls", "av",
