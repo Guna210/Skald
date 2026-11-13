@@ -1,24 +1,24 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 22:55 (Asia/Colombo) · last entry: E-0062
+Last updated: 2026-11-13 23:20 (Asia/Colombo) · last entry: E-0064
 Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1, T01.2 merged. T02.1 round-2 re-review (PR #8). T01.4 / T01.6 available (not started).
+- Phase 1: T01.1, T01.2 merged. T02.1 APPROVED, waiting for the owner to merge PR #8. T01.4 / T01.6 available (not started).
 - `master` at `52fc2f9`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: #8 T02.1 (`task/T02.1-epub-fixtures`, round-2 fixes at 31ba2b8, CI green; re-review, E-0062).
+- Open PRs: #8 T02.1 (`task/T02.1-epub-fixtures`, APPROVED round 2 at 31ba2b8, CI green; owner to merge, E-0063).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7).
-- In review: T02.1 EPUB fixtures, PR #8, round 2 (fixes for R1-1…R1-8 + .gitattributes + D1–D4 rows at 31ba2b8). Same Opus Reviewer session (E-0062).
-- Available, not started (prompt only when the owner asks; E-0057): T01.4 schemas + system.info, T01.6 HTTP helper (decisions drafted in E-0056), T03.9 [SPIKE][REVIEW], T03.4 [SPIKE][STRONG MODEL][REVIEW], T06.1.
+- Approved, to merge: T02.1 EPUB fixtures, PR #8 (E-0063).
+- Available, not started (prompt only when the owner asks; E-0057): T01.4 schemas + system.info, T01.6 HTTP helper (decisions drafted in E-0056), T03.4 [SPIKE][STRONG MODEL][REVIEW], T03.7 worker protocol (missed in E-0058, E-0064), T03.9 [SPIKE][REVIEW], T06.1. T02.2 once PR #8 merges.
 - T01.3 job manager becomes available after T01.4 merges (E-0056).
 
 ## Waiting on the owner
-1. Paste the round-2 review prompt into the same Opus Reviewer session; send back its verdict (E-0062).
+1. Merge PR #8 (normal merge) and confirm (E-0063).
 
 ## Pending GPU runs
 None.
@@ -28,6 +28,8 @@ None.
 
 ## Deferred findings
 - R2-1, R2-2 (T01.2, Nits) → include in the T01.4 prompt when it's issued (E-0055, E-0056).
+- T02.1 R2-1 (Nit): unused "font_obfuscation" alias + include_font/font_href fallback in make_epubs.py — trim when the file is next touched (E-0063).
+- T02.1 R2-2 (Nit) → T02.2 prompt: assert only status/error kind for epub_invalid (12) and epub_drm (10) fixtures (E-0063).
 - R1-1 (T00.1, Nit): docs/defaults.md C1.1 item 5 should say alt text / note bodies are skipped "by default". Fix in T02.3 (E-0011).
 - R5-2 (T00.3, Nit): redundant exception classes in fetch_deps.py except lists — trim when the file is next touched (E-0031).
 - Open item: who creates `core/requirements.lock` (B3)? Not T01.1. Decide by T04.1/T09.1 (E-0020).
@@ -68,4 +70,4 @@ None.
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-Process the T02.1 round-2 verdict. After merge, list available tasks without prompts (E-0057).
+Confirm the PR #8 merge, then list available tasks without prompts (E-0057).

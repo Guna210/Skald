@@ -42,3 +42,14 @@ Context: T02.1 round-2 handoff (Antigravity / Gemini). Verified: PR #8 head `31b
 Builder decisions: uniform chapter schema (explicit suggested_skip=false, skip_reasons=[] on the linear=false appendix); extra short_notice item (copyright-page + short → cumulative) and boundary_199/boundary_200 items in 07.
 Decision: Round-2 re-review by the same Opus Reviewer session. EPUBCheck accepted as the "independent reader" (no desktop-reader owner check needed).
 Follow-up: VERDICT.
+
+### E-0063 · 2026-11-13 23:20 (Asia/Colombo) · T02.1 · VERDICT
+Context: Reviewer (same Opus session) round 2 on PR #8 @31ba2b8: APPROVED. ruff/format/mypy clean; pytest 50 passed; 12 EPUBs regenerate byte-identical; independent lxml script: all XML well-formed except the intended ones, D2 counts agree (cover 303, copyright 304, toc 297, index 274, colophon 48 → [copyright-page, short], dedication 59 → [short], boundary 199/200 exact, lowest normal chapter 258), 11 recovers to the 3 expected paragraphs (284), 12's OPF is the only broken file; 09 = IDPF + Adobe on fonts only; 10 unchanged; 01 NCX titles differ, nav wins; Gutenberg SHA-256 unchanged; .gitattributes present; Appendix 3 D1–D4 match. All R1 findings fixed; Builder's uniform-schema choice accepted. Scope 31 files, ~510 KB binaries.
+Findings: R2-1 [Nit] make_epubs.py:73/:325 unused "font_obfuscation" alias and include_font/font_href fallback; R2-2 [Nit] 12's expected block lists title/authors/language though the OPF can't be parsed.
+Decision: Merge (normal merge; CI green at 31ba2b8, run 43453604405). R2-1 → defer: trim when make_epubs.py is next touched (T02.2/T02.3/T02.8 if they add fixtures). R2-2 → T02.2 prompt: for epub_invalid (12) and epub_drm (10) fixtures assert only status/error kind.
+Follow-up: owner merges PR #8; then T02.2 becomes available.
+
+### E-0064 · 2026-11-13 23:20 (Asia/Colombo) · — · CORRECTION
+Context: E-0058 listed the tasks available after T01.2 merged as T01.4, T01.6, T03.9, T03.4, T06.1. T03.7 (worker protocol, skald_worker, fake adapter, contract suite; depends only on T01.2) was missing.
+Decision: T03.7 has been available since T01.2 merged (E-0058). Full list after PR #8 merges: T01.4, T01.6, T02.2, T03.4, T03.7, T03.9, T06.1; T01.3 after T01.4 (E-0056 sequencing; the spec only needs T01.2).
+Follow-up: none.
