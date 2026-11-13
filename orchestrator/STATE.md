@@ -1,24 +1,24 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 20:37 (Asia/Colombo) · last entry: E-0058
+Last updated: 2026-11-13 21:05 (Asia/Colombo) · last entry: E-0059
 Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1, T01.2 merged. T02.1 built, handoff coming next. T01.4 / T01.6 available (not started).
+- Phase 1: T01.1, T01.2 merged. T02.1 handed off (PR #8), rebasing before review. T01.4 / T01.6 available (not started).
 - `master` at `52fc2f9`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: T02.1's PR (not yet seen; handoff coming).
+- Open PRs: #8 T02.1 (`task/T02.1-epub-fixtures`, conflicts with master in SPEC.md Appendix 3 → rebase sent, E-0059).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7).
-- Built, handoff coming: T02.1 EPUB fixtures (E-0049).
+- In progress: T02.1 EPUB fixtures, PR #8, round 1, rebase-only prompt sent; review after (E-0059).
 - Available, not started (prompt only when the owner asks; E-0057): T01.4 schemas + system.info, T01.6 HTTP helper (decisions drafted in E-0056), T03.9 [SPIKE][REVIEW], T03.4 [SPIKE][STRONG MODEL][REVIEW], T06.1.
 - T01.3 job manager becomes available after T01.4 merges (E-0056).
 
 ## Waiting on the owner
-1. Send the T02.1 handoff (E-0057).
+1. Paste the rebase prompt to the T02.1 Builder and send back its reply (E-0059).
 
 ## Pending GPU runs
 None.
@@ -33,7 +33,7 @@ None.
 - Open item: who creates `core/requirements.lock` (B3)? Not T01.1. Decide by T04.1/T09.1 (E-0020).
 
 ## Decisions not yet written into SPEC.md
-- E-0049 T02.1: TOML fixture definitions (spec says YAML), ZIP_STORED — the T02.1 Builder records them (check in its PR).
+- E-0049 T02.1: TOML defs + ZIP_STORED — recorded in PR #8's Appendix 3 rows (on master once #8 merges).
 - E-0056 T01.4 / T01.6 decisions — recorded by those Builders once the tasks are started.
 (All earlier decisions are on master: E-0020, E-0021, E-0032, E-0033, E-0048, E-0049 T01.2 rows, E-0052 rows.)
 
@@ -65,4 +65,4 @@ None.
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-Process the T02.1 handoff (verify its PR and CI, then a Reviewer prompt). Then list the available tasks without prompts (E-0057).
+After the T02.1 rebase reply: verify the rebased branch and CI, then a Reviewer prompt (fresh Sonnet; focus in E-0059). After merge, list available tasks without prompts (E-0057).
