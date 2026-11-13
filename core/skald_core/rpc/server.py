@@ -16,6 +16,9 @@ from typing import IO, Any
 
 from pydantic import BaseModel, ValidationError
 
+from skald_core.rpc.system import get_system_info
+from skald_core.schemas import ErrorKind, SystemInfo
+
 PARSE_ERROR = -32700
 INVALID_REQUEST = -32600
 METHOD_NOT_FOUND = -32601
@@ -40,13 +43,13 @@ class SkaldError(Exception):
 
     def __init__(
         self,
-        kind: str,
+        kind: ErrorKind,
         message: str,
         details: Any = None,
         hint: str | None = None,
     ) -> None:
         super().__init__(message)
-        self.kind = kind
+        self.kind: ErrorKind = kind
         self.message = message
         self.details = details
         self.hint = hint
@@ -132,9 +135,7 @@ def _error_response(
     code: int,
     message: str,
     *,
-    kind: str = "internal",
     details: Any = None,
-    hint: str | None = None,
 ) -> dict[str, Any]:
     return {
         "jsonrpc": "2.0",
@@ -143,9 +144,9 @@ def _error_response(
             "code": code,
             "message": message,
             "data": {
-                "kind": kind,
+                "kind": "internal",
                 "details": details,
-                "hint": hint,
+                "hint": None,
             },
         },
     }
@@ -169,15 +170,16 @@ class RpcServer:
 
     def __init__(
         self,
-        stdin: IO[bytes] | None = None,
-        stdout: IO[bytes] | None = None,
+        stdin: IO[bytes],
+        stdout: IO[bytes],
     ) -> None:
-        self._stdin: IO[bytes] = sys.stdin.buffer if stdin is None else stdin
-        self._stdout: IO[bytes] = sys.stdout.buffer if stdout is None else stdout
+        self._stdin = stdin
+        self._stdout = stdout
         self._write_lock = threading.Lock()
         self._shutdown_event = threading.Event()
         self._methods: dict[str, _MethodEntry] = {}
 
+        self.register("system.info", get_system_info, result_model=SystemInfo)
         self.register("system.shutdown", self._handle_shutdown)
 
     def _handle_shutdown(self) -> dict[str, bool]:
