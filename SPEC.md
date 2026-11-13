@@ -605,7 +605,7 @@ Agents tick `[x]` when a task is done.
 **Phase 0 — Foundation**
 - [x] T00.1 Repository scaffolding
 - [x] T00.2 Development setup scripts with project-local caches
-- [ ] T00.3 Pinned binaries (ffmpeg, uv, Python) with checksums and mirror [REVIEW]
+- [x] T00.3 Pinned binaries (ffmpeg, uv, Python) with checksums and mirror [REVIEW]
 - [ ] T00.4 CI skeleton (Windows + Linux)
 
 **Phase 1 — Core engine**
@@ -1445,6 +1445,10 @@ Answers from the Orchestrator (or owner) that clarify or change this spec are re
 | 2026-11-12 | T00.1 | Which LICENSE text exactly? | The official text from https://www.apache.org/licenses/LICENSE-2.0.txt, byte-for-byte, except that the appendix placeholder line `Copyright [yyyy] [name of copyright owner]` is replaced by `Copyright 2026 Skald contributors`. | Orchestrator |
 | 2026-11-12 | T00.2 | Should the repo ship an `.npmrc` to keep npm's cache in `.cache/npm`? | No. npm reads a project `.npmrc` only from the nearest folder with `package.json`, and a relative `cache=` path resolves against the current directory (from the repo root with `--prefix app` it lands outside the repo); no `.npmrc`-only form avoids that. The `npm_config_cache` variable exported by `scripts/dev-env.*` is the only mechanism: source dev-env before any npm command (the setup scripts do). `.npmrc` was removed from B3 and C4.2. | Orchestrator |
 | 2026-11-12 | T00.2 | Which Python executable should `scripts/setup.ps1` use on Windows? | On Windows, `setup.ps1` accepts Python 3.12 found as `python` or through the `py -3.12` launcher, and uses whichever it found to create `core/.venv`. | Orchestrator |
+| 2026-11-12 | T00.3 | Which test framework should `scripts/tests/test_fetch_deps.py` use before T01.1 adds pytest? | Use the standard library's `unittest` (`TestCase` classes and `unittest.mock` for patched downloads), so it runs with `python -m unittest discover -s scripts/tests` today and under `pytest` later (and in T00.4 CI). | Orchestrator |
+| 2026-11-12 | T00.3 | Which license applies to the pinned BtbN/FFmpeg-Builds `lgpl` build (`--enable-version3`)? | The pinned BtbN/FFmpeg-Builds lgpl build is configured with `--enable-version3`, so its license is `LGPL-3.0-or-later`. Allowed: ffmpeg runs only as a separate executable (D10, D12); the notices (T09.4) must ship the LGPL-3.0 text and the source link. The BtbN project now lives at `github.com/FFmpeg-Builds/FFmpeg-Builds` (same project, moved to an organisation). | Orchestrator |
+| 2026-11-12 | T00.3 | What must the `deps-v1` mirror release include for license compliance and reproducibility? | The `deps-v1` mirror release carries a description with each tool's licence and source location (by commit SHA), `uv`'s MIT notice, and attaches the FFmpeg source and FFmpeg-Builds build-script snapshots for the mirrored commit, so the LGPL-3.0 source stays available after upstream deletes its builds. | Orchestrator |
+| 2026-11-12 | T00.3 | What extra fields does `scripts/deps.lock.json` carry beyond the basic archive metadata? | `scripts/deps.lock.json` includes `"bin"` (path of the tool's executable inside the extracted archive) and `"version_args"` (arguments that print its version). | Orchestrator |
 
 ## Appendix 4 — Claude Code cloud environment
 
