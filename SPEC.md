@@ -606,7 +606,7 @@ Agents tick `[x]` when a task is done.
 - [x] T00.1 Repository scaffolding
 - [x] T00.2 Development setup scripts with project-local caches
 - [x] T00.3 Pinned binaries (ffmpeg, uv, Python) with checksums and mirror [REVIEW]
-- [ ] T00.4 CI skeleton (Windows + Linux)
+- [x] T00.4 CI skeleton (Windows + Linux)
 
 **Phase 1 — Core engine**
 - [ ] T01.1 Core package skeleton and dependency pins
@@ -1449,6 +1449,13 @@ Answers from the Orchestrator (or owner) that clarify or change this spec are re
 | 2026-11-12 | T00.3 | Which license applies to the pinned BtbN/FFmpeg-Builds `lgpl` build (`--enable-version3`)? | The pinned BtbN/FFmpeg-Builds lgpl build is configured with `--enable-version3`, so its license is `LGPL-3.0-or-later`. Allowed: ffmpeg runs only as a separate executable (D10, D12); the notices (T09.4) must ship the LGPL-3.0 text and the source link. The BtbN project now lives at `github.com/FFmpeg-Builds/FFmpeg-Builds` (same project, moved to an organisation). | Orchestrator |
 | 2026-11-12 | T00.3 | What must the `deps-v1` mirror release include for license compliance and reproducibility? | The `deps-v1` mirror release carries a description with each tool's licence and source location (by commit SHA), `uv`'s MIT notice, and attaches the FFmpeg source and FFmpeg-Builds build-script snapshots for the mirrored commit, so the LGPL-3.0 source stays available after upstream deletes its builds. | Orchestrator |
 | 2026-11-12 | T00.3 | What extra fields does `scripts/deps.lock.json` carry beyond the basic archive metadata? | `scripts/deps.lock.json` includes `"bin"` (path of the tool's executable inside the extracted archive) and `"version_args"` (arguments that print its version). | Orchestrator |
+| 2026-11-13 | T00.3 | [REVIEW] sign-off | `scripts/deps.lock.json` approved on 2026-11-13. All 6 SHA-256 values verified from the source URLs by the Orchestrator and against upstream checksum files by the Reviewer. The owner created the `deps-v1` mirror release on 2026-11-13 (Pre-release, 8 assets per `docs/spikes/deps-mirror.md`); the Orchestrator verified every asset's name and SHA-256 from the mirror. | Orchestrator |
+| 2026-11-13 | — | How should PRs be merged into `master`? | PRs are merged with a normal merge ("Create a merge commit"), not squash. Updated `CLAUDE.md`. | Owner |
+| 2026-11-13 | T00.4 | Should CI run `scripts/tests` and lint `scripts/`? | Every CI run also runs `python -m unittest discover -s scripts/tests -v` with the venv Python on both OSes, even while `core/` is missing. CI does not lint `scripts/`. | Orchestrator |
+| 2026-11-13 | T00.4 | Which shell and how many setup runs should CI use on Windows vs Linux? | On `windows-latest`, run `scripts/setup.ps1` twice under Windows PowerShell 5.1 (`shell: powershell`, not `pwsh`) to prove idempotence and that `fetch_deps.py` is a no-op on the second run. On `ubuntu-latest`, run `scripts/setup.sh` once. | Orchestrator |
+| 2026-11-13 | T00.4 | How should CI cache pip, uv, and `vendor/`? | Cache `.cache/pip`, `.cache/uv`, and `vendor/` with `actions/cache`, keyed on the lockfiles/manifests that exist (`scripts/deps.lock.json` now; `core/pyproject.toml`, `worker/pyproject.toml`, `app/package-lock.json` when present via `hashFiles`). Do not use `setup-python`'s built-in `cache: pip`. | Orchestrator |
+| 2026-11-13 | T00.4 | How should `concurrency.group` be keyed? | Include `github.event_name` as well as the branch so `push` and `pull_request` runs for the same branch do not cancel each other; only superseded runs of the same kind are cancelled. | Orchestrator |
+| 2026-11-13 | T00.4 | What workflow permissions and actions are allowed? | `permissions: contents: read` at workflow level; only official `actions/*` actions. | Orchestrator |
 
 ## Appendix 4 — Claude Code cloud environment
 
