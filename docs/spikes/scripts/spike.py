@@ -62,8 +62,8 @@ def base_env(work=None):
     env = {k: v for k, v in os.environ.items() if not k.startswith("UV_")}
     env.update(UV_NO_CONFIG="1", UV_NO_PROGRESS="1", UV_PYTHON_DOWNLOADS="never", UV_LINK_MODE="hardlink")
     env.update(UV_SYSTEM_CERTS="1")  # trust the OS certificate store (corporate proxies); see step_tls
-    if work:
-        env.update(UV_CACHE_DIR=str(work / "uv-cache"), UV_PYTHON_INSTALL_DIR=str(work / "python"))
+    work = work or REPO / ".cache" / "devdata" / "spike-lock"  # never uv's default folders in the user's home
+    env.update(UV_CACHE_DIR=str(work / "uv-cache"), UV_PYTHON_INSTALL_DIR=str(work / "python"))
     return env
 
 

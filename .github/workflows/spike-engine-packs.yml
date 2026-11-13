@@ -67,8 +67,8 @@ jobs:
         if: runner.os == 'Windows'
         shell: powershell
         run: |
-          .\scripts\setup.ps1 > setup.log 2>&1
-          if ($LASTEXITCODE -ne 0) { Get-Content setup.log -Tail 50; exit $LASTEXITCODE }
+          .\scripts\setup.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Write-Host "core.autocrlf: $(git config --get core.autocrlf)"
           Get-Volume | Format-Table DriveLetter, FileSystemType, SizeRemaining, Size -AutoSize | Out-String | Write-Host
           Write-Host "workspace: $env:GITHUB_WORKSPACE"

@@ -1,0 +1,528 @@
+{
+  "machine": {
+    "os": "linux",
+    "platform": "linux",
+    "uv": "uv 0.13.8 (x86_64-unknown-linux-gnu)",
+    "cpus": 4,
+    "vendored_python": "Python 3.12.16",
+    "locks": {
+      "cpu": {
+        "sha256_raw_8": "acf54e6a",
+        "sha256_lf_8": "acf54e6a",
+        "has_crlf": false
+      },
+      "cu12": {
+        "sha256_raw_8": "2a7479b1",
+        "sha256_lf_8": "2a7479b1",
+        "has_crlf": false
+      }
+    }
+  },
+  "cold_cpu": {
+    "pack": "torch-cpu-linux-cpu-acf54e6a",
+    "lock": {
+      "sha256_raw_8": "acf54e6a",
+      "sha256_lf_8": "acf54e6a",
+      "has_crlf": false
+    },
+    "venv_s": 0.08,
+    "sync_s": 6.49,
+    "sync_output": [
+      " + setuptools==84.2.1",
+      " + sympy==1.14.0",
+      " + torch==2.14.1+cpu",
+      " + typing-extensions==4.16.0"
+    ],
+    "dummy_wheel_offline_s": 0.02,
+    "check": {
+      "python": "3.12.16",
+      "prefix": "/home/user/Skald/.cache/devdata/spike/packs/torch-cpu-linux-cpu-acf54e6a",
+      "torch": "2.14.1+cpu",
+      "numpy": "2.5.4",
+      "dummy_wheel": "0.0.1",
+      "import_s": 2.91,
+      "cuda_built": false,
+      "cuda_version": null,
+      "cuda_available": false,
+      "cuda_arch_list": [],
+      "cudnn": null
+    },
+    "second_import_s": 1.01,
+    "free_space_delta_mb": 868.1,
+    "pack_mb": 831.0,
+    "pack_files": 16955,
+    "cache_added_mb": 816.2,
+    "pack_plus_cache_unique_mb": 835.2,
+    "biggest_file": {
+      "path": "lib/python3.12/site-packages/torch/lib/libtorch_cpu.so",
+      "mb": 438.2,
+      "nlink": 2
+    },
+    "longest_paths": [
+      {
+        "len": 148,
+        "path": "lib/python3.12/site-packages/torch/include/ATen/native/transformers/cuda/mem_eff_attention/iterators/predicated_tile_access_iterator_residual_last.h"
+      },
+      {
+        "len": 147,
+        "path": "lib/python3.12/site-packages/torch-2.14.1+cpu.dist-info/licenses/third_party/tensorpipe/third_party/googletest/googlemock/scripts/generator/LICENSE"
+      },
+      {
+        "len": 146,
+        "path": "lib/python3.12/site-packages/torch/include/ATen/ops/_fake_quantize_per_tensor_affine_cachemask_tensor_qparams_compositeexplicitautograd_dispatch.h"
+      }
+    ]
+  },
+  "warm_cpu": {
+    "venv_s": 0.01,
+    "sync_s": 0.31,
+    "sync_output": [
+      " + sympy==1.14.0",
+      " + torch==2.14.1+cpu",
+      " + typing-extensions==4.16.0"
+    ],
+    "free_space_delta_mb": 7.3,
+    "second_pack_alone_mb": 813.6,
+    "both_packs_unique_mb": 832.7,
+    "both_packs_plus_cache_unique_mb": 836.9,
+    "biggest_file_in_first_pack": {
+      "path": "lib/python3.12/site-packages/torch/lib/libtorch_cpu.so",
+      "mb": 438.2,
+      "nlink": 3
+    }
+  },
+  "bytecode_cpu": {
+    "compileall_s": 16.15,
+    "rc": 0,
+    "errors": [],
+    "added_mb": 127.0,
+    "longest_paths": [
+      {
+        "len": 148,
+        "path": "lib/python3.12/site-packages/torch/include/ATen/native/transformers/cuda/mem_eff_attention/iterators/predicated_tile_access_iterator_residual_last.h"
+      },
+      {
+        "len": 147,
+        "path": "lib/python3.12/site-packages/torch-2.14.1+cpu.dist-info/licenses/third_party/tensorpipe/third_party/googletest/googlemock/scripts/generator/LICENSE"
+      },
+      {
+        "len": 146,
+        "path": "lib/python3.12/site-packages/torch/include/ATen/ops/_fake_quantize_per_tensor_affine_cachemask_tensor_qparams_compositeexplicitautograd_dispatch.h"
+      }
+    ],
+    "import_s_after": 1.06
+  },
+  "tamper": {
+    "warm_cache": {
+      "rc": 1,
+      "s": 0.07,
+      "output": [
+        "Resolved 11 packages in 3ms",
+        "error: Failed to download `networkx==3.7`",
+        "  cause: Hash mismatch for `networkx==3.7`",
+        "         Expected:",
+        "           sha256:e3fd2c13a7814cee3746340d8d7f8598a67f16a58bf47fb7f8793fab6f0db2c1",
+        "           sha256:fd77a511bd90f39f3d016351345b52cf5319b813bdca01de3f755d3ddb73fa7b",
+        "         Computed:",
+        "           sha256:e3fd2c13a7814cee3746340d8d7f8598a67f16a58bf47fb7f8793fab6efca1b0"
+      ],
+      "files_installed": 17
+    },
+    "cold_cache": {
+      "rc": 1,
+      "s": 0.62,
+      "output": [
+        "           sha256:f291bcf42ae98eb5107edb162c3c998b4a89648fd8e99ed4cbd127052a3899de",
+        "           sha256:f61efe1d2fe0de16158a5fe1d1cf3c14bdb6aecd54d8938fd26512c526d20735",
+        "           sha256:f68edfc67aabac33708941f26f22a7b8e9f81429bc0cf249fcf7d66b24b09e2a",
+        "           sha256:fa95848c929b6a75f6848d3c9793e59db365ee436776e57db835cdbfa8acba88",
+        "           sha256:fd9f8797427910198f95bced71ddfed61130d7e349213bfb8466c9c99f3d57b9",
+        "           sha256:fdb4ca07ab75ffadab4a8b135ad59cdbb3156b99310f3d565370da75b26e7ce4",
+        "         Computed:",
+        "           sha256:8e124f974786f831d6043728e38296969d3579db8896fe004682f5758e613581"
+      ],
+      "files_installed": 17
+    }
+  },
+  "move_cpu": {
+    "entry_point_before_move": "ok",
+    "plain_venv_moved": {
+      "check": {
+        "python": "3.12.16",
+        "prefix": "/home/user/Skald/.cache/devdata/spike/moved/torch-cpu-linux-cpu-acf54e6a-b",
+        "torch": "2.14.1+cpu",
+        "numpy": "2.5.4",
+        "dummy_wheel": null,
+        "import_s": 1.14,
+        "cuda_built": false,
+        "cuda_version": null,
+        "cuda_available": false,
+        "cuda_arch_list": [],
+        "cudnn": null
+      },
+      "entry_point": "failed: [Errno 2] No such file or directory: '/home/user/Skald/.cache/devdata/spike/moved/torch-cpu-linux-cpu-acf54e6a-b/bin/f2py'"
+    },
+    "relocatable_venv_moved": {
+      "check": {
+        "python": "3.12.16",
+        "prefix": "/home/user/Skald/.cache/devdata/spike/moved/torch-cpu-linux-cpu-acf54e6a-c",
+        "torch": "2.14.1+cpu",
+        "numpy": "2.5.4",
+        "dummy_wheel": null,
+        "import_s": 2.64,
+        "cuda_built": false,
+        "cuda_version": null,
+        "cuda_available": false,
+        "cuda_arch_list": [],
+        "cudnn": null
+      },
+      "entry_point": "ok"
+    },
+    "pyvenv_cfg_relocatable": [
+      "home = /home/user/Skald/vendor/python/linux64/bin",
+      "implementation = CPython",
+      "uv = 0.13.8",
+      "version_info = 3.12.16",
+      "include-system-site-packages = false",
+      "relocatable = true"
+    ],
+    "base_python_before": [
+      "ok /home/user/Skald/.cache/devdata/spike/pybase1"
+    ],
+    "base_python_moved": [
+      "failed: [Errno 2] No such file or directory: '/home/user/Skald/.cache/devdata/spike/packs/basemove/bin/python'"
+    ],
+    "rehome_with_allow_existing": {
+      "s": 0.07,
+      "rc": 0,
+      "after": [
+        "ok /home/user/Skald/.cache/devdata/spike/pybase2"
+      ]
+    }
+  },
+  "deep_cpu": {
+    "pack_root_len": 230,
+    "install_rc": 0,
+    "install_output": [
+      " + numpy==2.5.4",
+      " + setuptools==84.2.1",
+      " + sympy==1.14.0",
+      " + torch==2.14.1+cpu",
+      " + typing-extensions==4.16.0"
+    ],
+    "longest_full_path": 379,
+    "check": {
+      "python": "3.12.16",
+      "prefix": "/home/user/Skald/.cache/devdata/spike/dddddddddddddddddddddddddddddddddddddddd/dddddddddddddddddddddddddddddddddddddddd/dddddddddddddddddddddddddddddddddddddddd/dddddddddddddddddddddddddddddddddddddddd/torch-cpu-linux-cpu-acf54e6a",
+      "torch": "2.14.1+cpu",
+      "numpy": "2.5.4",
+      "dummy_wheel": null,
+      "import_s": 3.15,
+      "cuda_built": false,
+      "cuda_version": null,
+      "cuda_available": false,
+      "cuda_arch_list": [],
+      "cudnn": null
+    }
+  },
+  "xvol": {
+    "cold_sync_s": 13.38,
+    "sync_output": [
+      " + networkx==3.7",
+      " + numpy==2.5.4",
+      " + setuptools==84.2.1",
+      " + sympy==1.14.0",
+      " + torch==2.14.1+cpu",
+      " + typing-extensions==4.16.0"
+    ],
+    "packs_volume_delta_mb": 858.1,
+    "cache_volume_delta_mb": 855.3,
+    "biggest_file": {
+      "path": "lib/python3.12/site-packages/torch/lib/libtorch_cpu.so",
+      "mb": 438.2,
+      "nlink": 1
+    },
+    "second_pack_sync_s": 2.04,
+    "second_pack_delta_mb": 858.1,
+    "second_output": [
+      " + setuptools==84.2.1",
+      " + sympy==1.14.0",
+      " + torch==2.14.1+cpu",
+      " + typing-extensions==4.16.0"
+    ]
+  },
+  "relocate": {
+    "cache_copy_s": 0.93,
+    "cache_mb": 816.2,
+    "offline_rebuild_s": 0.15,
+    "sync_output": [
+      " + torch==2.14.1+cpu",
+      " + typing-extensions==4.16.0"
+    ],
+    "rebuild_free_space_delta_mb": 1.9,
+    "biggest_file": {
+      "path": "lib/python3.12/site-packages/torch/lib/libtorch_cpu.so",
+      "mb": 438.2,
+      "nlink": 2
+    },
+    "check": {
+      "python": "3.12.16",
+      "prefix": "/dev/shm/sk-other/packs/torch-cpu-linux-cpu-acf54e6a",
+      "torch": "2.14.1+cpu",
+      "numpy": "2.5.4",
+      "dummy_wheel": null,
+      "import_s": 2.56,
+      "cuda_built": false,
+      "cuda_version": null,
+      "cuda_available": false,
+      "cuda_arch_list": [],
+      "cudnn": null
+    }
+  },
+  "py311": {
+    "downloads_never": {
+      "rc": 2,
+      "output": [
+        "error: No interpreter found for Python 3.11 in managed installations",
+        "hint: A managed Python download is available for Python 3.11, but Python downloads are set to 'never'"
+      ]
+    },
+    "download_url": "https://releases.astral.sh/github/python-build-standalone/releases/download/20261110/cpython-3.11.18%2B20261110-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+    "tampered_mirror": {
+      "rc": 2,
+      "output": [
+        "Expected:",
+        "3288c54cea3db350052019b3f8b558dd8a3da8afa6fda573f5fd2bcb37635b4a",
+        "Computed:",
+        "1815c659e4e4a9c78332c26b1e436231a56f9740f1d965837edf2a45279eb140"
+      ]
+    },
+    "venv_with_download_s": 2.16,
+    "log_lines": [
+      "DEBUG Downloading `https://releases.astral.sh/github/python-build-standalone/releases/download/20261110/cpython-3.11.18%2B20261110-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz`",
+      "WARN Failed to fetch `cpython-3.11.18-linux-x86_64-gnu` from `https://releases.astral.sh/github/python-build-standalone/releases/download/20261110/cpython-3.11.18%2B20261110-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz` (Failed to download `https://releases.astral.sh/github/python-build-standalone/releases/download/20261110/cpython-3.11.18%2B20261110-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz`); falling back to `https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.11.18%2B20261110-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz`",
+      "DEBUG Downloading `https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.11.18%2B20261110-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz`",
+      "Downloading cpython-3.11.18-linux-x86_64-gnu (download) (29.4MiB)",
+      " Downloaded cpython-3.11.18-linux-x86_64-gnu (download)"
+    ],
+    "install_dir_entries": [
+      ".gitignore",
+      ".lock",
+      ".temp",
+      "cpython-3.11-linux-x86_64-gnu",
+      "cpython-3.11.18-linux-x86_64-gnu"
+    ],
+    "install_dir_mb": 82.9,
+    "free_space_delta_mb": 94.3,
+    "pyvenv_cfg": [
+      "home = /home/user/Skald/.cache/devdata/spike/python/cpython-3.11-linux-x86_64-gnu/bin",
+      "implementation = CPython",
+      "uv = 0.13.8",
+      "version_info = 3.11",
+      "include-system-site-packages = false"
+    ],
+    "pins_differing_from_py312_lock": [
+      "networkx==3.6.1 \\",
+      "networkx==3.7 \\",
+      "numpy==2.4.6 \\",
+      "numpy==2.5.4 \\"
+    ],
+    "sync_s": 10.33,
+    "check": {
+      "python": "3.11.18",
+      "prefix": "/home/user/Skald/.cache/devdata/spike/packs/torch-cpu-linux-cpu-acf54e6a-py311",
+      "torch": "2.14.1+cpu",
+      "numpy": "2.4.6",
+      "dummy_wheel": null,
+      "import_s": 2.95,
+      "cuda_built": false,
+      "cuda_version": null,
+      "cuda_available": false,
+      "cuda_arch_list": [],
+      "cudnn": null
+    }
+  },
+  "proxy": {
+    "skipped": "this machine is already behind a proxy; see the tls step"
+  },
+  "tls": {
+    "default (bundled webpki roots)": {
+      "rc": 2,
+      "s": 0.22,
+      "output": [
+        "error: Failed to fetch: https://pypi.org/simple/numpy/",
+        "  cause: error sending request for url (https://pypi.org/simple/numpy/)",
+        "  cause: client error (Connect)",
+        "  cause: invalid peer certificate: UnknownIssuer",
+        "hint: Consider enabling use of system TLS certificates with the `--system-certs` command-line flag"
+      ]
+    },
+    "SSL_CERT_FILE=<proxy CA bundle>": {
+      "rc": 0,
+      "s": 1.44,
+      "output": []
+    },
+    "UV_SYSTEM_CERTS=1 (OS trust store)": {
+      "rc": 0,
+      "s": 1.46,
+      "output": []
+    },
+    "--system-certs flag": {
+      "rc": 0,
+      "s": 1.27,
+      "output": []
+    },
+    "--native-tls flag (old name)": {
+      "rc": 0,
+      "s": 2.19,
+      "output": []
+    },
+    "no proxy variable at all (direct connection is blocked here)": {
+      "rc": 2,
+      "s": 11.29,
+      "output": [
+        "  cause: error sending request for url (https://download-r2.pytorch.org/whl/cpu/torch-2.14.1%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl.metadata)",
+        "  cause: client error (Connect)",
+        "  cause: dns error",
+        "  cause: error resolving DNS",
+        "  cause: failed to lookup address information: Name or service not known"
+      ]
+    }
+  },
+  "av": [
+    {
+      "label": "",
+      "warm_sync_s": 0.23,
+      "first_import_s": 2.79
+    }
+  ],
+  "prune": {
+    "prune_s": 0.01,
+    "output": [
+      "Pruning cache at: .cache/devdata/spike/uv-cache",
+      "No unused entries found"
+    ],
+    "cache_mb_before": 1596.0,
+    "cache_mb_after": 1596.0,
+    "cache_not_linked_from_a_pack_mb_before": 784.1,
+    "cache_not_linked_from_a_pack_mb_after": 784.1,
+    "free_space_gained_mb": -0.0
+  },
+  "clean": {
+    "clean_s": 1.53,
+    "output": [
+      "Clearing cache at: .cache/devdata/spike/uv-cache",
+      "Removed 30215 files (781.0MiB)"
+    ],
+    "free_space_gained_mb": 828.8,
+    "cache_not_linked_from_a_pack_mb_before": 784.1,
+    "pack_still_works": true,
+    "biggest_file": {
+      "path": "lib/python3.12/site-packages/torch/lib/libtorch_cpu.so",
+      "mb": 438.2,
+      "nlink": 1
+    }
+  },
+  "cold_cu12": {
+    "pack": "torch-cu12-linux-cu12-2a7479b1",
+    "lock": {
+      "sha256_raw_8": "2a7479b1",
+      "sha256_lf_8": "2a7479b1",
+      "has_crlf": false
+    },
+    "venv_s": 0.06,
+    "sync_s": 337.8,
+    "sync_output": [
+      " + sympy==1.14.0",
+      " + torch==2.14.1+cu126",
+      " + triton==3.8.0",
+      " + typing-extensions==4.16.0"
+    ],
+    "dummy_wheel_offline_s": 0.02,
+    "check": {
+      "python": "3.12.16",
+      "prefix": "/home/user/Skald/.cache/devdata/spike/packs/torch-cu12-linux-cu12-2a7479b1",
+      "torch": "2.14.1+cu126",
+      "numpy": "2.5.4",
+      "dummy_wheel": "0.0.1",
+      "import_s": 3.38,
+      "cuda_built": true,
+      "cuda_version": "12.6",
+      "cuda_available": false,
+      "cuda_arch_list": [
+        "sm_50",
+        "sm_60",
+        "sm_70",
+        "sm_75",
+        "sm_80",
+        "sm_86",
+        "sm_90"
+      ],
+      "cudnn": 91002
+    },
+    "second_import_s": 1.3,
+    "free_space_delta_mb": 6669.4,
+    "pack_mb": 6627.7,
+    "pack_files": 17942,
+    "cache_added_mb": 6613.1,
+    "pack_plus_cache_unique_mb": 6632.4,
+    "biggest_file": {
+      "path": "lib/python3.12/site-packages/torch/lib/libtorch_cuda.so",
+      "mb": 1037.5,
+      "nlink": 2
+    },
+    "longest_paths": [
+      {
+        "len": 149,
+        "path": "lib/python3.12/site-packages/torch-2.14.1+cu126.dist-info/licenses/third_party/tensorpipe/third_party/googletest/googlemock/scripts/generator/LICENSE"
+      },
+      {
+        "len": 148,
+        "path": "lib/python3.12/site-packages/torch/include/ATen/native/transformers/cuda/mem_eff_attention/iterators/predicated_tile_access_iterator_residual_last.h"
+      },
+      {
+        "len": 147,
+        "path": "lib/python3.12/site-packages/torch-2.14.1+cu126.dist-info/licenses/third_party/protobuf/third_party/googletest/googlemock/scripts/generator/LICENSE"
+      }
+    ]
+  },
+  "warm_cu12": {
+    "venv_s": 0.01,
+    "sync_s": 0.73,
+    "sync_output": [
+      " + torch==2.14.1+cu126",
+      " + triton==3.8.0",
+      " + typing-extensions==4.16.0"
+    ],
+    "free_space_delta_mb": 8.3,
+    "second_pack_alone_mb": 6610.2,
+    "both_packs_unique_mb": 6629.5,
+    "both_packs_plus_cache_unique_mb": 6634.2,
+    "biggest_file_in_first_pack": {
+      "path": "lib/python3.12/site-packages/torch/lib/libtorch_cuda.so",
+      "mb": 1037.5,
+      "nlink": 3
+    }
+  },
+  "bytecode_cu12": {
+    "compileall_s": 15.66,
+    "rc": 0,
+    "errors": [],
+    "added_mb": 129.2,
+    "longest_paths": [
+      {
+        "len": 149,
+        "path": "lib/python3.12/site-packages/torch-2.14.1+cu126.dist-info/licenses/third_party/tensorpipe/third_party/googletest/googlemock/scripts/generator/LICENSE"
+      },
+      {
+        "len": 148,
+        "path": "lib/python3.12/site-packages/torch/include/ATen/native/transformers/cuda/mem_eff_attention/iterators/predicated_tile_access_iterator_residual_last.h"
+      },
+      {
+        "len": 147,
+        "path": "lib/python3.12/site-packages/torch-2.14.1+cu126.dist-info/licenses/third_party/protobuf/third_party/googletest/googlemock/scripts/generator/LICENSE"
+      }
+    ],
+    "import_s_after": 1.42
+  }
+}
