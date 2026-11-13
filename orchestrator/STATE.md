@@ -1,14 +1,14 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 23:40 (Asia/Colombo) · last entry: E-0067
+Last updated: 2026-11-13 23:55 (Asia/Colombo) · last entry: E-0068
 Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
-**T03.4 is the task marked IMPORTANT.** The owner deferred it to the end of the week (week of 2026-11-13). If the owner asks "what was the task marked important?" → answer **T03.4** (engine pack installer spike, [SPIKE][STRONG MODEL][REVIEW]). Keep this note until T03.4 starts.
+**T03.4 is the task marked IMPORTANT.** If the owner asks "what was the task marked important?" → answer **T03.4** (engine pack spike, [SPIKE][STRONG MODEL][REVIEW]). Owner first deferred it to the end of the week, then asked for the prompt the same night (E-0068); being run on Claude Code cloud (Opus). Keep this note until T03.4 is merged.
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 building in parallel (E-0067).
+- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 building in parallel (E-0067). T03.4 (★) building (E-0068).
 - `master` at `5a85aac`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
 - Open PRs: none yet (T01.4 and T01.6 Builders starting).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
@@ -17,12 +17,13 @@ Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 …
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7), T02.1 (PR #8).
 - Building (round 1, prompts issued E-0067): T01.4 schemas + system.info (`task/T01.4-schemas-system-info`), T01.6 HTTP helper (`task/T01.6-http-downloader`). Whichever merges second rebases (Appendix 3 rows).
-- Available, not started (prompt only when the owner asks; E-0057): T02.2 EPUB container/spine/nav, T03.4 ★IMPORTANT, deferred to end of week (E-0066), T03.7 worker protocol, T03.9 [SPIKE][REVIEW], T06.1.
+- Building (round 1, E-0068): T03.4 ★IMPORTANT engine-pack spike (`task/T03.4-engine-pack-spike`), Claude Code cloud, Opus. [REVIEW] gate = Orchestrator reviews the findings doc; then adjust T03.5.
+- Available, not started (prompt only when the owner asks; E-0057): T02.2 EPUB container/spine/nav, T03.7 worker protocol, T03.9 [SPIKE][REVIEW], T06.1.
 - T01.3 job manager becomes available after T01.4 merges (E-0056).
 
 ## Waiting on the owner
 1. Run the T01.4 and T01.6 Builders and send back their handoffs (E-0067).
-2. End of week: T03.4 (★IMPORTANT, E-0066).
+2. Run the T03.4 Builder (Claude Code cloud, Opus) and send back its handoff (E-0068).
 
 ## Pending GPU runs
 None.
@@ -59,6 +60,7 @@ None.
 - T06.1: setup.* will run `npm ci` inside the CI core/worker jobs once app/package-lock.json exists (no npm cache there) — decide then (E-0041).
 - T03.7: worker/pyproject.toml must land with ≥1 test, or CI pytest exits 5 (E-0041).
 - T03.5: CI `.cache/uv` key covers only deps.lock.json — add pack lockfiles (E-0041).
+- T03.5 prompt: build it from docs/spikes/engine-packs.md (T03.4); check the spike workflow was deleted before T03.4 merged (E-0068).
 - T09.1: test fixtures (core/tests/data, incl. Gutenberg EPUBs) are never packaged (E-0060).
 - T09.1: exclude vendor/*/.tmp-*, .old-*, vendor/.downloads, and ffplay/doc/man (ffmpeg binaries 132–143 MB each; vendor/ffmpeg ~400 MB vs 600 MB limit) (E-0027).
 - uv mirror assets have no version in the name → a uv bump needs a new mirror tag (deps-v2) (E-0027). Mirror releases are marked Pre-release, never "latest" (E-0034).
