@@ -1,26 +1,24 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 20:35 (Asia/Colombo) · last entry: E-0057
-Current log file: `CONTEXT.md` (entries E-0001 onward)
+Last updated: 2026-11-13 20:37 (Asia/Colombo) · last entry: E-0058
+Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1 merged. T01.2 APPROVED (PR #7), owner merging now. T02.1 built, handoff coming next. T01.4 / T01.6 available (not started).
-- `master` at `e3327d8`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: PR #7 T01.2 (https://github.com/Guna210/Skald/pull/7) — APPROVED, CI green, merge pending.
+- Phase 1: T01.1, T01.2 merged. T02.1 built, handoff coming next. T01.4 / T01.6 available (not started).
+- `master` at `52fc2f9`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
+- Open PRs: T02.1's PR (not yet seen; handoff coming).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
-- Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6).
-- Approved, merge pending: T01.2 (PR #7).
+- Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7).
 - Built, handoff coming: T02.1 EPUB fixtures (E-0049).
 - Available, not started (prompt only when the owner asks; E-0057): T01.4 schemas + system.info, T01.6 HTTP helper (decisions drafted in E-0056), T03.9 [SPIKE][REVIEW], T03.4 [SPIKE][STRONG MODEL][REVIEW], T06.1.
 - T01.3 job manager becomes available after T01.4 merges (E-0056).
 
 ## Waiting on the owner
-1. Merge PR #7 (normal merge) (E-0055).
-2. Send the T02.1 handoff (E-0057).
+1. Send the T02.1 handoff (E-0057).
 
 ## Pending GPU runs
 None.
@@ -29,16 +27,15 @@ None.
 None.
 
 ## Deferred findings
-- R2-1, R2-2 (T01.2, Nits) → included in the T01.4 prompt (E-0055).
+- R2-1, R2-2 (T01.2, Nits) → include in the T01.4 prompt when it's issued (E-0055, E-0056).
 - R1-1 (T00.1, Nit): docs/defaults.md C1.1 item 5 should say alt text / note bodies are skipped "by default". Fix in T02.3 (E-0011).
 - R5-2 (T00.3, Nit): redundant exception classes in fetch_deps.py except lists — trim when the file is next touched (E-0031).
 - Open item: who creates `core/requirements.lock` (B3)? Not T01.1. Decide by T04.1/T09.1 (E-0020).
 
 ## Decisions not yet written into SPEC.md
-- E-0048 R1-1/R1-2/R1-3 carry-overs and E-0049 T01.2 decisions — the T01.2 Builder records them.
-- E-0049 T02.1: TOML fixture definitions (spec says YAML), ZIP_STORED — the T02.1 Builder records them.
-- E-0020 T01.1 clarifications — the T01.1 Builder records them.
-- E-0021 normal merge; E-0032 T00.3 [REVIEW] sign-off; E-0033 T00.4 decisions — the T00.4 Builder records them (and fixes CLAUDE.md lines 45 and 99).
+- E-0049 T02.1: TOML fixture definitions (spec says YAML), ZIP_STORED — the T02.1 Builder records them (check in its PR).
+- E-0056 T01.4 / T01.6 decisions — recorded by those Builders once the tasks are started.
+(All earlier decisions are on master: E-0020, E-0021, E-0032, E-0033, E-0048, E-0049 T01.2 rows, E-0052 rows.)
 
 ## Standing notes for prompts
 - **Owner rule (E-0057): after a task completes, only list the available tasks; give a Builder prompt only when the owner asks.** Review/fix/rebase prompts for in-flight work are still given normally.
@@ -48,8 +45,7 @@ None.
 - Handoffs and verdicts may arrive as cross-session messages or not at all; verify against the PR before acting (E-0009, E-0030).
 - Every Builder prompt that runs npm/pip: source `scripts/dev-env.*` first; there is no `.npmrc` (E-0016).
 - fetch_deps.py is run with the venv Python (`core/.venv`), never bare `python3` (E-0027 R4-5).
-- T00.4 review: CI logs should show "using mirror" for ffmpeg/uv/python (E-0036).
-- Mirror verification after upload: download all 8 deps-v1 assets from the cloud and compare with docs/spikes/deps-mirror.md; snapshots may be accepted on the uncompressed tar SHA-256 (E-0031).
+- Future mirror uploads (deps-v2…): verify every asset from the cloud against the doc (method in E-0031/E-0036).
 - T02.3 prompt: include deferred R1-1 (E-0011).
 - T06.1: setup-node@v7 defaults `package-manager-cache: true` — confirm no clash with the .cache/npm cache step (E-0044).
 - T06.1: setup.* will run `npm ci` inside the CI core/worker jobs once app/package-lock.json exists (no npm cache there) — decide then (E-0041).
@@ -60,6 +56,7 @@ None.
 - T03.7 prompt: evaluate an fd-level stdout redirect (os.dup/os.dup2) in workers; model libraries may print from C code (E-0052).
 - Every prompt that launches subprocesses (T01.3, T03.5, T03.8, T05.6…): never inherit stdout — pass stdout= explicitly (Appendix 3 rule from T01.2) (E-0052).
 - T01.3 prompt: use JobRef from T01.4's schemas; unknown job_id → -32602 kind internal; job.finished never throttled; cancel while paused unblocks checkpoint() and raises JobCancelled; subprocesses pass stdout explicitly (E-0056).
+- T01.4 / T01.6 prompts: reuse the decisions and carry-overs in E-0056 (CONTEXT.md); T01.4 = ErrorKind closed set, SkaldErrorData, no committed schema exports, ffmpeg lookup via SKALD_FFMPEG / SKALD_VENDOR + deps.lock.json bin; T01.6 = DownloadCancelled, Range 200→restart, retry rules, error-kind mapping.
 - T03.6 prompt: map net.DownloadCancelled → JobCancelled (E-0056).
 - T02.2/T02.3/T02.8 prompts: the spec's "YAML" fixture definitions are TOML files read with tomllib (E-0049).
 - pysbd 0.3.4 emits SyntaxWarning under 3.12 → any `filterwarnings = error` needs a scoped ignore (E-0048).
@@ -68,4 +65,4 @@ None.
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-Confirm PR #7 merged; process the T02.1 handoff (verify PR, then Reviewer prompt). Then list available tasks without prompts.
+Process the T02.1 handoff (verify its PR and CI, then a Reviewer prompt). Then list the available tasks without prompts (E-0057).
