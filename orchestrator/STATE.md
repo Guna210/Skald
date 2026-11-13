@@ -1,24 +1,24 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 15:37 (Asia/Colombo) · last entry: E-0053
+Last updated: 2026-11-13 20:13 (Asia/Colombo) · last entry: E-0054
 Current log file: `CONTEXT.md` (entries E-0001 onward)
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1 merged (E-0050). T01.2 PR #7 CHANGES REQUESTED round 1 (1 Major); fix round 2 issued (E-0052, E-0053). T02.1 building (branch pushed, no handoff yet).
+- Phase 1: T01.1 merged (E-0050). T01.2 PR #7 CHANGES REQUESTED round 1 (1 Major); round 2 pushed (`a6fc6c7`, CI green), in re-check (E-0054). T02.1 building (branch pushed, no handoff yet).
 - `master` at `e3327d8`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: PR #7 T01.2 (https://github.com/Guna210/Skald/pull/7) — fix round 2 in progress (E-0053).
+- Open PRs: PR #7 T01.2 (https://github.com/Guna210/Skald/pull/7) — round 2 in re-check, CI green (E-0054).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6).
-- In fix round: T01.2 (PR #7, round 2, E-0053), then re-check by the same Reviewer.
+- In review: T01.2 (PR #7, round 2 re-check, E-0054).
 - Building: T02.1 EPUB fixtures (E-0049).
 - Also ready, not yet assigned: T01.6, T03.9 [SPIKE][REVIEW], T03.4 [SPIKE][STRONG MODEL][REVIEW], T06.1.
 
 ## Waiting on the owner
-1. Paste the T01.2 round-2 fix prompt into the T01.2 Builder session (E-0053).
+1. Paste the T01.2 round-2 re-check prompt into the same T01.2 Reviewer session (E-0054).
 2. Bring the T02.1 handoff. Say if you want more parallel tasks.
 3. Optional: run `.\scripts\setup.ps1` twice on the laptop (CI covers it).
 
