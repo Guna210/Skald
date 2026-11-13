@@ -252,3 +252,11 @@ Decisions in the prompt (Builder records in Appendix 3):
 ### E-0034 · 2026-11-13 12:56 (Asia/Colombo) · T00.3 · OWNER-ACTION
 Context: While creating the deps-v1 release, the owner asked which "Release label" to pick (None / Pre-release).
 Decision: Pre-release, and leave "Set as the latest release" unticked if shown. Asset download URLs are the same either way; this keeps the dependency mirror out of the repo's "Latest release" slot and /releases/latest, which later belong to the app releases (v0.1.0+). docs/spikes/deps-mirror.md doesn't mention it; no doc change needed now (a future deps-v2 should do the same).
+
+### E-0035 · 2026-11-13 12:59 (Asia/Colombo) · T00.3 · MERGED
+Context: PR #4 merged into master as `b2bfeb8` (normal merge). T00.3 ticked on master.
+
+### E-0036 · 2026-11-13 12:59 (Asia/Colombo) · T00.3 · REVIEW-GATE
+Context: Owner: "okay I did the release".
+Verified by the Orchestrator: release `deps-v1` (https://github.com/Guna210/Skald/releases/tag/deps-v1) published 2026-11-13 07:26 UTC, prerelease: true, not a draft, target master, title "Pinned build dependencies (v1)", description identical to the doc's block. Exactly 8 assets, names exact (both cpython names keep "+"). All 8 downloaded from the mirror URLs (the 6 `mirror_url`s, incl. %2B) with SHA-256 and size matching docs/spikes/deps-mirror.md and deps.lock.json; GitHub's per-asset digests agree. R5-1 (snapshot byte-stability) is moot: the uploaded snapshots match the documented compressed hashes.
+Decision: T00.3 [REVIEW] gate fully signed off (part 1 E-0032, part 2 now). The 2026-11-25 deadline is met. From now on fetch_deps.py should print "using mirror" for all three tools; the T00.4 CI logs should show it (check in T00.4 review).

@@ -1,27 +1,24 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 12:39 (Asia/Colombo) · last entry: E-0034
+Last updated: 2026-11-13 12:59 (Asia/Colombo) · last entry: E-0036
 Current log file: `CONTEXT.md` (entries E-0001 onward)
 
 ## Where the project is
-- Phase 0: T00.1, T00.2 merged. T00.3 APPROVED (ROUND 5, PR #4), merge pending; [REVIEW] gate part 1 signed (E-0032), part 2 = owner's deps-v1 mirror. T00.4 prompt issued (paste after PR #4 merges).
+- Phase 0: T00.1, T00.2, T00.3 merged; T00.3 [REVIEW] gate fully signed (E-0032, E-0036). T00.4 prompt issued (E-0033).
 - Phase 1: T01.1 prompt issued (E-0020); no branch pushed yet.
-- `master` at `3278d73`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: PR #4 T00.3 (https://github.com/Guna210/Skald/pull/4) — APPROVED, merge pending.
-- Releases/tags: none. `deps-v1` mirror pending (owner, by 2026-11-25).
+- `master` at `b2bfeb8`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
+- Open PRs: none.
+- Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
-- Merged: T00.1 (PR #2), T00.2 (PR #3).
-- Approved, merge pending: T00.3 (PR #4).
+- Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4).
 - Assigned: T00.4 CI skeleton (E-0033, paste after PR #4 merges); T01.1 core skeleton (E-0020).
 - After T01.1: T01.2, T01.6, T02.1, T03.9 in parallel; T03.4 needs T01.1 + T00.3. After T00.4: T06.1 (app scaffold) can start.
 
 ## Waiting on the owner
-1. Merge PR #4 (normal merge) (E-0031).
-2. Create the `deps-v1` release per docs/spikes/deps-mirror.md — 8 files — **by 2026-11-25** (upstream ffmpeg URLs vanish ~26 Nov). Then say "mirror done"; the Orchestrator verifies all 8 from the mirror (E-0031, E-0032).
-3. Paste the T00.4 prompt into a Builder session (E-0033); start T01.1 if not started (E-0020).
-4. Optional: run `.\scripts\setup.ps1` twice on the laptop (T00.4 CI covers it).
+1. Paste the T00.4 prompt into a Builder session (E-0033); start T01.1 if not started (E-0020).
+2. Optional: run `.\scripts\setup.ps1` twice on the laptop (T00.4 CI covers it).
 
 ## Pending GPU runs
 None.
@@ -45,6 +42,7 @@ None.
 - Handoffs and verdicts may arrive as cross-session messages or not at all; verify against the PR before acting (E-0009, E-0030).
 - Every Builder prompt that runs npm/pip: source `scripts/dev-env.*` first; there is no `.npmrc` (E-0016).
 - fetch_deps.py is run with the venv Python (`core/.venv`), never bare `python3` (E-0027 R4-5).
+- T00.4 review: CI logs should show "using mirror" for ffmpeg/uv/python (E-0036).
 - Mirror verification after upload: download all 8 deps-v1 assets from the cloud and compare with docs/spikes/deps-mirror.md; snapshots may be accepted on the uncompressed tar SHA-256 (E-0031).
 - T02.3 prompt: include deferred R1-1 (E-0011).
 - T09.1: exclude vendor/*/.tmp-*, .old-*, vendor/.downloads, and ffplay/doc/man (ffmpeg binaries 132–143 MB each; vendor/ffmpeg ~400 MB vs 600 MB limit) (E-0027).
@@ -53,4 +51,4 @@ None.
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-Owner merges PR #4, starts T00.4, and creates the mirror. On "mirror done": verify the 8 assets. On the T00.4 / T01.1 handoffs: verify base and CI on the PR, then Reviewer prompts.
+Wait for the T00.4 and T01.1 handoffs. For each: verify base and CI on the PR, then Reviewer prompt.
