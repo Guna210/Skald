@@ -248,3 +248,7 @@ Decisions in the prompt (Builder records in Appendix 3):
 - `permissions: contents: read`; official actions only.
 - Also in this PR: CLAUDE.md line 45 "Use **Squash and merge**." → normal merge; line 99 merge steps → "Merge pull request" → "Confirm merge" (E-0021). Appendix 3 rows: merge method (owner decision), the T00.3 [REVIEW] sign-off (E-0032), and the T00.4 decisions.
 - T01.1 is in flight: whichever of T00.4/T01.1 merges second must show the core job green (not skipped) on both OSes (E-0020).
+
+### E-0034 · 2026-11-13 12:56 (Asia/Colombo) · T00.3 · OWNER-ACTION
+Context: While creating the deps-v1 release, the owner asked which "Release label" to pick (None / Pre-release).
+Decision: Pre-release, and leave "Set as the latest release" unticked if shown. Asset download URLs are the same either way; this keeps the dependency mirror out of the repo's "Latest release" slot and /releases/latest, which later belong to the app releases (v0.1.0+). docs/spikes/deps-mirror.md doesn't mention it; no doc change needed now (a future deps-v2 should do the same).

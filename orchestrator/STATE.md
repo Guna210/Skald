@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 12:39 (Asia/Colombo) · last entry: E-0033
+Last updated: 2026-11-13 12:39 (Asia/Colombo) · last entry: E-0034
 Current log file: `CONTEXT.md` (entries E-0001 onward)
 
 ## Where the project is
@@ -48,7 +48,7 @@ None.
 - Mirror verification after upload: download all 8 deps-v1 assets from the cloud and compare with docs/spikes/deps-mirror.md; snapshots may be accepted on the uncompressed tar SHA-256 (E-0031).
 - T02.3 prompt: include deferred R1-1 (E-0011).
 - T09.1: exclude vendor/*/.tmp-*, .old-*, vendor/.downloads, and ffplay/doc/man (ffmpeg binaries 132–143 MB each; vendor/ffmpeg ~400 MB vs 600 MB limit) (E-0027).
-- uv mirror assets have no version in the name → a uv bump needs a new mirror tag (deps-v2) (E-0027).
+- uv mirror assets have no version in the name → a uv bump needs a new mirror tag (deps-v2) (E-0027). Mirror releases are marked Pre-release, never "latest" (E-0034).
 - T09.4: ffmpeg is LGPL-3.0-or-later (`--enable-version3`); ship the LGPL-3.0 text + source link (E-0024).
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
