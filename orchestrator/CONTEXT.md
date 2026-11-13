@@ -300,3 +300,8 @@ Re-check: the same Reviewer session, round 2, using the new CI run.
 
 ### E-0042 · 2026-11-13 13:25 (Asia/Colombo) · T00.4 · FIX-PROMPT
 Decision: Issued the round-2 fix prompt to the T00.4 Builder: R1-1, R1-2, R1-3, R1-4, R1-6. Not fixing R1-5.
+
+### E-0043 · 2026-11-13 13:31 (Asia/Colombo) · T00.4 · REVIEW-PROMPT
+Context: T00.4 round-2 handoff (Antigravity / Gemini, pasted by the owner). Commit `a5529d8`, ci.yml only (+24/−28): cancel-in-progress not on master; actions → checkout@v7, setup-python@v7, setup-node@v7, cache@v6 (Builder confirmed v7.0.1 / v7.1.0 / v7.1.0 / v6.1.0 via gh api); vendor cache narrowed to vendor/{ffmpeg,uv,python} + .cache/uv; $LASTEXITCODE checks after each Windows setup call; worker job: setup once, no script tests. Diff matches the handoff exactly.
+CI (checked via the Actions API): push run 43389501302 success; PR run 43389506227 success, attempt 2 (the warm-cache rerun).
+Decision: Quick round-2 re-check by the same Sonnet Reviewer session (verify the 5 fixes and the run logs: no Node 20 warning, mirror/up-to-date lines, script tests only in core).
