@@ -610,7 +610,7 @@ Agents tick `[x]` when a task is done.
 
 **Phase 1 — Core engine**
 - [x] T01.1 Core package skeleton and dependency pins
-- [ ] T01.2 JSON-RPC stdio server
+- [x] T01.2 JSON-RPC stdio server
 - [ ] T01.3 Background job manager with pause
 - [ ] T01.4 Schema models, schema export, `system.info`
 - [ ] T01.5 Project folder storage
@@ -1458,6 +1458,9 @@ Answers from the Orchestrator (or owner) that clarify or change this spec are re
 | 2026-11-13 | T00.4 | What workflow permissions and actions are allowed? | `permissions: contents: read` at workflow level; only official `actions/*` actions. | Orchestrator |
 | 2026-11-12 | T01.1 | How is the "CI core job green on both OSes" criterion handled while T00.4 is built in parallel? | CI doesn't exist yet in T01.1. Instead: (1) run `ruff`, `ruff format --check`, `mypy`, and `pytest` locally on Linux; (2) prove every runtime and dev pin installs from wheels on Windows with `pip download --only-binary=:all: --platform win_amd64 --python-version 3.12 --no-deps`. The CI criterion is then met by whichever of T01.1 and T00.4 merges second: its CI run must show the `core` job green (not skipped) on `windows-latest` and `ubuntu-latest`. | Orchestrator |
 | 2026-11-12 | T01.1 | Should T01.1 create `core/requirements.lock` (listed in B3)? | No. B3 lists `core/requirements.lock`, but no task's Do list creates it. Do not create it in T01.1; its owner task is decided later. | Orchestrator |
+| 2026-11-13 | T01.1 | What is the license of `soundfile`'s bundled native library? | soundfile's wheels bundle libsndfile, which is LGPL-2.1 (with LGPL components such as libmp3lame). Allowed under D10: it is loaded dynamically, not GPL/AGPL. T09.1/T09.4 must ship libsndfile's licence text and a source link; package metadata alone reports only BSD-3. | Orchestrator |
+| 2026-11-13 | T01.2 | Does the JSON-RPC server support batch requests or notifications? | No JSON-RPC batch support (the app never sends batches): a JSON array gets one -32600 Invalid Request response with id null. Requests without an `id` are notifications and get no response, per JSON-RPC 2.0. | Orchestrator |
+| 2026-11-13 | T01.2 | What encoding and line endings does the JSON-RPC stdio server use on all OSes? | The server reads stdin and writes stdout as UTF-8 with "\n" line endings on every OS, regardless of locale (Windows text mode would otherwise write "\r\n" and use the system code page). Tested with a non-ASCII string round-trip in the subprocess test. | Orchestrator |
 
 ## Appendix 4 — Claude Code cloud environment
 
