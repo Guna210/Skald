@@ -1,25 +1,28 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 20:13 (Asia/Colombo) · last entry: E-0054
+Last updated: 2026-11-13 20:32 (Asia/Colombo) · last entry: E-0056
 Current log file: `CONTEXT.md` (entries E-0001 onward)
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1 merged (E-0050). T01.2 PR #7 CHANGES REQUESTED round 1 (1 Major); round 2 pushed (`a6fc6c7`, CI green), in re-check (E-0054). T02.1 building (branch pushed, no handoff yet).
+- Phase 1: T01.1 merged. T01.2 APPROVED (PR #7), merge pending (E-0055). T01.4 + T01.6 prompts issued; T01.3 after T01.4 merges (E-0056). T02.1 building.
 - `master` at `e3327d8`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: PR #7 T01.2 (https://github.com/Guna210/Skald/pull/7) — round 2 in re-check, CI green (E-0054).
+- Open PRs: PR #7 T01.2 (https://github.com/Guna210/Skald/pull/7) — APPROVED, CI green, merge pending.
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6).
-- In review: T01.2 (PR #7, round 2 re-check, E-0054).
+- Approved, merge pending: T01.2 (PR #7).
 - Building: T02.1 EPUB fixtures (E-0049).
-- Also ready, not yet assigned: T01.6, T03.9 [SPIKE][REVIEW], T03.4 [SPIKE][STRONG MODEL][REVIEW], T06.1.
+- Assigned (paste after PR #7 merges): T01.4 schemas + system.info; T01.6 HTTP helper (E-0056).
+- Next after T01.4 merges: T01.3 job manager (sequenced to avoid JobRef/registration conflicts, E-0056).
+- Also ready, not yet assigned: T03.9 [SPIKE][REVIEW], T03.4 [SPIKE][STRONG MODEL][REVIEW], T06.1.
 
 ## Waiting on the owner
-1. Paste the T01.2 round-2 re-check prompt into the same T01.2 Reviewer session (E-0054).
-2. Bring the T02.1 handoff. Say if you want more parallel tasks.
+1. Merge PR #7 (normal merge) (E-0055).
+2. Paste the T01.4 and T01.6 prompts into two Builder sessions (E-0056).
+3. Bring the T02.1 handoff.
 3. Optional: run `.\scripts\setup.ps1` twice on the laptop (CI covers it).
 
 ## Pending GPU runs
@@ -29,6 +32,7 @@ None.
 None.
 
 ## Deferred findings
+- R2-1, R2-2 (T01.2, Nits) → included in the T01.4 prompt (E-0055).
 - R1-1 (T00.1, Nit): docs/defaults.md C1.1 item 5 should say alt text / note bodies are skipped "by default". Fix in T02.3 (E-0011).
 - R5-2 (T00.3, Nit): redundant exception classes in fetch_deps.py except lists — trim when the file is next touched (E-0031).
 - Open item: who creates `core/requirements.lock` (B3)? Not T01.1. Decide by T04.1/T09.1 (E-0020).
@@ -57,7 +61,8 @@ None.
 - uv mirror assets have no version in the name → a uv bump needs a new mirror tag (deps-v2) (E-0027). Mirror releases are marked Pre-release, never "latest" (E-0034).
 - T03.7 prompt: evaluate an fd-level stdout redirect (os.dup/os.dup2) in workers; model libraries may print from C code (E-0052).
 - Every prompt that launches subprocesses (T01.3, T03.5, T03.8, T05.6…): never inherit stdout — pass stdout= explicitly (Appendix 3 rule from T01.2) (E-0052).
-- T01.4 prompt: SkaldErrorData = { kind, details, hint }; protocol errors use kind `internal` (E-0052).
+- T01.3 prompt: use JobRef from T01.4's schemas; unknown job_id → -32602 kind internal; job.finished never throttled; cancel while paused unblocks checkpoint() and raises JobCancelled; subprocesses pass stdout explicitly (E-0056).
+- T03.6 prompt: map net.DownloadCancelled → JobCancelled (E-0056).
 - T02.2/T02.3/T02.8 prompts: the spec's "YAML" fixture definitions are TOML files read with tomllib (E-0049).
 - pysbd 0.3.4 emits SyntaxWarning under 3.12 → any `filterwarnings = error` needs a scoped ignore (E-0048).
 - T09.1/T09.4: soundfile bundles libsndfile (LGPL-2.1) → ship its licence + source link (E-0048).
@@ -65,4 +70,4 @@ None.
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-Owner merges PR #6 and runs T01.2 + T02.1. Offer T01.6 / T03.9 / T03.4 / T06.1 if the owner wants more in parallel.
+Owner merges PR #7, runs T01.4 + T01.6. Then T01.3 after T01.4 merges. Offer T03.9 / T03.4 / T06.1 when there's room.
