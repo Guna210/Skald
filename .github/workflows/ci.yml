@@ -1,0 +1,265 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+jobs:
+  core:
+    name: core (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Cache pip
+        uses: actions/cache@v6
+        with:
+          path: .cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('scripts/deps.lock.json', 'core/pyproject.toml', 'worker/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Cache uv and vendor
+        uses: actions/cache@v6
+        with:
+          path: |
+            .cache/uv
+            vendor/ffmpeg
+            vendor/uv
+            vendor/python
+          key: ${{ runner.os }}-vendor-${{ hashFiles('scripts/deps.lock.json') }}
+
+      - name: Run setup (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: ./scripts/setup.sh
+
+      - name: Run setup twice (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          .\scripts\setup.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .\scripts\setup.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run script tests (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: core/.venv/bin/python -m unittest discover -s scripts/tests -v
+
+      - name: Run script tests (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          & .\core\.venv\Scripts\python.exe -m unittest discover -s scripts/tests -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run core checks (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          if [ ! -f core/pyproject.toml ]; then
+            echo "core/pyproject.toml not found, skipping core checks"
+            exit 0
+          fi
+          cd core
+          .venv/bin/python -m ruff check .
+          .venv/bin/python -m ruff format --check .
+          .venv/bin/python -m mypy skald_core
+          .venv/bin/python -m pytest -m "not network and not slow and not torch and not gpu"
+
+      - name: Run core checks (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          if (-not (Test-Path -LiteralPath "core\pyproject.toml")) {
+            Write-Host "core/pyproject.toml not found, skipping core checks"
+            exit 0
+          }
+          Push-Location core
+          try {
+            & .venv\Scripts\python.exe -m ruff check .
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            & .venv\Scripts\python.exe -m ruff format --check .
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            & .venv\Scripts\python.exe -m mypy skald_core
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            & .venv\Scripts\python.exe -m pytest -m "not network and not slow and not torch and not gpu"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally {
+            Pop-Location
+          }
+
+  worker:
+    name: worker (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Cache pip
+        uses: actions/cache@v6
+        with:
+          path: .cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('scripts/deps.lock.json', 'core/pyproject.toml', 'worker/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Cache uv and vendor
+        uses: actions/cache@v6
+        with:
+          path: |
+            .cache/uv
+            vendor/ffmpeg
+            vendor/uv
+            vendor/python
+          key: ${{ runner.os }}-vendor-${{ hashFiles('scripts/deps.lock.json') }}
+
+      - name: Run setup (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: ./scripts/setup.sh
+
+      - name: Run setup (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          .\scripts\setup.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run worker checks (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          if [ ! -f worker/pyproject.toml ]; then
+            echo "worker/pyproject.toml not found, skipping worker checks"
+            exit 0
+          fi
+          VENV_PY="$PWD/core/.venv/bin/python"
+          cd worker
+          "$VENV_PY" -m ruff check .
+          "$VENV_PY" -m ruff format --check .
+          "$VENV_PY" -m mypy skald_worker
+          "$VENV_PY" -m pytest -m "not network and not slow and not torch and not gpu"
+
+      - name: Run worker checks (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          if (-not (Test-Path -LiteralPath "worker\pyproject.toml")) {
+            Write-Host "worker/pyproject.toml not found, skipping worker checks"
+            exit 0
+          }
+          $VenvPy = Join-Path $PWD "core\.venv\Scripts\python.exe"
+          Push-Location worker
+          try {
+            & $VenvPy -m ruff check .
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            & $VenvPy -m ruff format --check .
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            & $VenvPy -m mypy skald_worker
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            & $VenvPy -m pytest -m "not network and not slow and not torch and not gpu"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally {
+            Pop-Location
+          }
+
+  app:
+    name: app (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Cache npm
+        uses: actions/cache@v6
+        with:
+          path: .cache/npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('app/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
+      - name: Run app checks (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          if [ ! -f app/package.json ]; then
+            echo "app/package.json not found, skipping app checks"
+            exit 0
+          fi
+          source scripts/dev-env.sh
+          cd app
+          npm ci
+          npm run lint
+          npm run typecheck
+          npm test
+
+      - name: Run app checks (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          if (-not (Test-Path -LiteralPath "app\package.json")) {
+            Write-Host "app/package.json not found, skipping app checks"
+            exit 0
+          }
+          . .\scripts\dev-env.ps1
+          Push-Location app
+          try {
+            & npm ci
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            & npm run lint
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            & npm run typecheck
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            & npm test
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally {
+            Pop-Location
+          }

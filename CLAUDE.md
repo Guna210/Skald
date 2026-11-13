@@ -42,7 +42,7 @@ Valid destinations: `PASTE TO: ORCHESTRATOR`, `PASTE TO: BUILDER · <task>`, `PA
 - Branch name: `task/<ID>-<short-slug>`, for example `task/T00.1-repo-scaffolding`.
 - PR title: `<ID>: <task title>`, for example `T00.1: Repository scaffolding`.
 - Builders branch from the latest `master` and never push to `master` directly.
-- A PR is merged only after the Reviewer says **APPROVED**, CI is green and, for **[GPU]** tasks, the owner's self-test report passes. Use **Squash and merge**.
+- A PR is merged only after the Reviewer says **APPROVED**, CI is green and, for **[GPU]** tasks, the owner's self-test report passes. Use a normal merge (**Create a merge commit**).
 - Fix rounds push new commits to the same branch and PR.
 - The branch `orchestrator` holds only the Orchestrator's memory files (see "Orchestrator memory" below). It is never merged into `master`, and Builders and Reviewers never commit to it.
 
@@ -96,7 +96,7 @@ Only the skill files are copied, not Ponytail's plugin hooks, status line or com
 
 **A pasted Reviewer verdict**
 - **CHANGES REQUESTED:** decide which findings must be fixed now. Blockers and majors normally are; minors and nits can be accepted, deferred to a later task, or dropped — say which. Reply with a `PASTE TO: BUILDER · <ID>` fix prompt listing the findings to fix by their IDs.
-- **APPROVED:** tell the owner in plain steps how to merge the PR (open the PR link → check CI is green → for [GPU] tasks, check the self-test report is attached → "Squash and merge" → "Confirm"), then list any follow-ups and offer the next task.
+- **APPROVED:** tell the owner in plain steps how to merge the PR (open the PR link → check CI is green → for [GPU] tasks, check the self-test report is attached → "Merge pull request" → "Confirm merge"), then list any follow-ups and offer the next task.
 - **Round limit:** if a task reaches a third round of changes requested, stop and rethink: re-split the task, clarify the spec, or switch the Builder to a stronger model.
 
 **[REVIEW] gates**
