@@ -1,11 +1,11 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-13 20:32 (Asia/Colombo) · last entry: E-0056
+Last updated: 2026-11-13 20:35 (Asia/Colombo) · last entry: E-0057
 Current log file: `CONTEXT.md` (entries E-0001 onward)
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1 merged. T01.2 APPROVED (PR #7), merge pending (E-0055). T01.4 + T01.6 prompts issued; T01.3 after T01.4 merges (E-0056). T02.1 building.
+- Phase 1: T01.1 merged. T01.2 APPROVED (PR #7), owner merging now. T02.1 built, handoff coming next. T01.4 / T01.6 available (not started).
 - `master` at `e3327d8`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
 - Open PRs: PR #7 T01.2 (https://github.com/Guna210/Skald/pull/7) — APPROVED, CI green, merge pending.
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
@@ -14,16 +14,13 @@ Current log file: `CONTEXT.md` (entries E-0001 onward)
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6).
 - Approved, merge pending: T01.2 (PR #7).
-- Building: T02.1 EPUB fixtures (E-0049).
-- Assigned (paste after PR #7 merges): T01.4 schemas + system.info; T01.6 HTTP helper (E-0056).
-- Next after T01.4 merges: T01.3 job manager (sequenced to avoid JobRef/registration conflicts, E-0056).
-- Also ready, not yet assigned: T03.9 [SPIKE][REVIEW], T03.4 [SPIKE][STRONG MODEL][REVIEW], T06.1.
+- Built, handoff coming: T02.1 EPUB fixtures (E-0049).
+- Available, not started (prompt only when the owner asks; E-0057): T01.4 schemas + system.info, T01.6 HTTP helper (decisions drafted in E-0056), T03.9 [SPIKE][REVIEW], T03.4 [SPIKE][STRONG MODEL][REVIEW], T06.1.
+- T01.3 job manager becomes available after T01.4 merges (E-0056).
 
 ## Waiting on the owner
 1. Merge PR #7 (normal merge) (E-0055).
-2. Paste the T01.4 and T01.6 prompts into two Builder sessions (E-0056).
-3. Bring the T02.1 handoff.
-3. Optional: run `.\scripts\setup.ps1` twice on the laptop (CI covers it).
+2. Send the T02.1 handoff (E-0057).
 
 ## Pending GPU runs
 None.
@@ -44,6 +41,7 @@ None.
 - E-0021 normal merge; E-0032 T00.3 [REVIEW] sign-off; E-0033 T00.4 decisions — the T00.4 Builder records them (and fixes CLAUDE.md lines 45 and 99).
 
 ## Standing notes for prompts
+- **Owner rule (E-0057): after a task completes, only list the available tasks; give a Builder prompt only when the owner asks.** Review/fix/rebase prompts for in-flight work are still given normally.
 - Builder prompts: owner authorizes pushing to `task/<ID>-<slug>` and opening a PR, even if a Claude cloud session got a `claude/…` branch (E-0004). Reviewer prompts: read-only, no pushes or PR comments.
 - `<owner>` in the spec = `Guna210`.
 - Merge method: normal merge ("Create a merge commit"), owner decision (E-0021). Never tell the owner to squash.
@@ -70,4 +68,4 @@ None.
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-Owner merges PR #7, runs T01.4 + T01.6. Then T01.3 after T01.4 merges. Offer T03.9 / T03.4 / T06.1 when there's room.
+Confirm PR #7 merged; process the T02.1 handoff (verify PR, then Reviewer prompt). Then list available tasks without prompts.
