@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-latest]
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -93,41 +93,20 @@ jobs:
           New-Item -ItemType Directory -Force $other | Out-Null
           Write-Host "work=$work other=$other"
 
-          Run lock --check
-          $env:SPIKE_LABEL = ''
-          Run measure --work $work --other-volume $other --only 'cold,warm,bytecode,tamper,move,deep,xvol,relocate,py311,proxy,tls'
-
-          # Long paths. First run above: root ~200 chars with the runner's setting. Now: python.exe itself past 260,
-          # then both again with the OS long-path switch flipped; restore it afterwards.
+          # Run 5: find the pack-root length at which a pack stops working on Windows (runs 1-4 covered the rest).
           $key = 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem'
           $orig = (Get-ItemProperty $key -Name LongPathsEnabled).LongPathsEnabled
-          $env:SPIKE_DEEP_LEN = '245'; $env:SPIKE_LABEL = "-longpaths-$orig-root245"
-          Run measure --work $work --only deep
+          foreach ($len in 111, 130, 160) {
+            $env:SPIKE_DEEP_LEN = "$len"; $env:SPIKE_LABEL = "-longpaths-$orig-root$len"
+            Run measure --work $work --only deep
+          }
           $flipped = 1 - $orig
           Set-ItemProperty $key -Name LongPathsEnabled -Value $flipped
-          $env:SPIKE_DEEP_LEN = '200'; $env:SPIKE_LABEL = "-longpaths-$flipped-root200"
-          Run measure --work $work --only deep
-          $env:SPIKE_DEEP_LEN = '245'; $env:SPIKE_LABEL = "-longpaths-$flipped-root245"
-          Run measure --work $work --only deep
+          foreach ($len in 111, 130) {
+            $env:SPIKE_DEEP_LEN = "$len"; $env:SPIKE_LABEL = "-longpaths-$flipped-root$len"
+            Run measure --work $work --only deep
+          }
           Set-ItemProperty $key -Name LongPathsEnabled -Value $orig
-          $env:SPIKE_DEEP_LEN = ''
-
-          # Antivirus. The runner image ships with Defender real-time scanning off and C:\ and D:\ excluded.
-          # Measure that state, then switch scanning on (if the image allows it), measure again, and restore.
-          $env:SPIKE_LABEL = 'Defender real-time scanning off (runner default)'
-          Run measure --work $work --only av
-          Remove-MpPreference -ExclusionPath 'C:\', 'D:\'
-          Set-MpPreference -DisableRealtimeMonitoring $false
-          Start-Sleep -Seconds 20
-          $rt = (Get-MpComputerStatus).RealTimeProtectionEnabled
-          $env:SPIKE_LABEL = "Defender real-time scanning switched on (RealTimeProtectionEnabled=$rt)"
-          Run measure --work $work --only av
-          Set-MpPreference -DisableRealtimeMonitoring $true
-          Add-MpPreference -ExclusionPath 'C:\', 'D:\'
-          $env:SPIKE_LABEL = ''
-
-          Run measure --work $work --only 'prune,clean'
-          Run measure --work $work --packs cu12
           Copy-Item "$work\results.json" results-windows.json
 
       - name: Machine facts (Windows)
