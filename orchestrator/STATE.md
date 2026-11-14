@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-14 16:50 (Asia/Colombo) · last entry: E-0086
+Last updated: 2026-11-14 17:20 (Asia/Colombo) · last entry: E-0087
 Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -8,20 +8,20 @@ Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 …
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 building in parallel (E-0067). T03.4 (★) merged (PR #11, E-0073). T01.4 merged (PR #10, E-0077). T01.6 merged (PR #9, E-0083). T01.5 round 2 quick fixes (PR #12, E-0086); T01.3 building (E-0084).
+- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 building in parallel (E-0067). T03.4 (★) merged (PR #11, E-0073). T01.4 merged (PR #10, E-0077). T01.6 merged (PR #9, E-0083). T01.5 round-2 re-review (PR #12, E-0087); T01.3 building (E-0084).
 - `master` at `9d2f619`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: #12 T01.5 (R1 APPROVED with minors; quick round 2 sent, E-0086). T01.3 branch exists; handoff not yet received.
+- Open PRs: #12 T01.5 (round 2 at 9705410, CI green; re-review, E-0087). T01.3 branch exists; handoff not yet received.
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7), T02.1 (PR #8), T03.4 (PR #11), T01.4 (PR #10), T01.6 (PR #9).
-- T01.5 project store, PR #12: round 2 quick fixes R1-1…R1-4 + B8 http_* kinds (E-0086); re-review by the same Sonnet session.
+- T01.5 project store, PR #12: round 2 pushed (9705410); re-review by the same Sonnet session (E-0087).
 - Building (round 1, E-0084): T01.3 job manager (`task/T01.3-job-manager`). If T01.5 merges first, T01.3's rebase moves register_project_methods into register_all and uses SkaldError("internal", …, code=INVALID_PARAMS) for unknown job_id (E-0085, Reviewer-approved E-0086). Registration: T01.3 creates rpc/methods.py; the second to merge wires the other in. Whichever merges second rebases (Appendix 3).
 - Available, not started (prompt only when the owner asks; E-0057): T02.2 EPUB container/spine/nav, T03.1 catalog schema, T03.7 worker protocol, T03.9 [SPIKE][REVIEW], T06.1.
 
 ## Waiting on the owner
-1. Paste the T01.5 round-2 fix prompt to the Builder; send back its handoff (E-0086).
+1. Paste the T01.5 round-2 review prompt into the same Sonnet Reviewer session; send back the verdict (E-0087).
 2. Send the T01.3 handoff when ready (E-0084).
 3. Later, before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
@@ -83,4 +83,4 @@ None (T03.4 proposal 12: owner said yes, E-0070).
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-Process the T01.5 round-2 handoff (→ same Sonnet Reviewer) and the T01.3 handoff. After merge, list available tasks without prompts (E-0057).
+Process the T01.5 round-2 verdict and the T01.3 handoff. After merge, list available tasks without prompts (E-0057).
