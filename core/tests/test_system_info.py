@@ -192,3 +192,37 @@ def test_system_info_over_rpc_subprocess(tmp_path: Path) -> None:
         assert isinstance(result["ffmpeg"], str)
         assert result["ffmpeg"].startswith("ffmpeg version")
     assert messages[1] == {"jsonrpc": "2.0", "id": 2, "result": {"ok": True}}
+
+
+def test_system_info_unsupported_platform_returns_none_ffmpeg_and_logs_warning(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.delenv("SKALD_FFMPEG", raising=False)
+    monkeypatch.setenv("SKALD_VENDOR", str(tmp_path))
+    monkeypatch.setattr(platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(platform, "machine", lambda: "arm64")
+
+    with caplog.at_level(logging.WARNING, logger="skald_core.rpc.system"):
+        info = get_system_info()
+
+    assert info.ffmpeg is None
+    assert any("Unsupported platform" in rec.message for rec in caplog.records)
+
+
+def test_system_info_empty_ffmpeg_output_returns_none_and_logs_warning(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    fake_ffmpeg = tmp_path / "ffmpeg-empty"
+    fake_ffmpeg.write_text("placeholder", encoding="utf-8")
+    monkeypatch.setenv("SKALD_FFMPEG", str(fake_ffmpeg))
+
+    def empty_run(cmd: list[str], **kwargs: object) -> SimpleNamespace:
+        return SimpleNamespace(returncode=0, stdout="   \n\n", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", empty_run)
+
+    with caplog.at_level(logging.WARNING, logger="skald_core.rpc.system"):
+        info = get_system_info()
+
+    assert info.ffmpeg is None
+    assert any("empty output" in rec.message for rec in caplog.records)
