@@ -619,7 +619,7 @@ Agents tick `[x]` when a task is done.
 **Phase 1 — Core engine**
 - [x] T01.1 Core package skeleton and dependency pins
 - [x] T01.2 JSON-RPC stdio server
-- [ ] T01.3 Background job manager with pause
+- [x] T01.3 Background job manager with pause
 - [x] T01.4 Schema models, schema export, `system.info`
 - [ ] T01.5 Project folder storage
 - [x] T01.6 HTTP helper and verified downloader
@@ -1065,7 +1065,7 @@ Every adapter task: implements `worker/skald_worker/adapters/<name>.py`; creates
 - **Depends on:** T05.1
 - **Size:** S
 - **Read:** D16
-- **Do:** `voices.design` job: description + optional sample text → N candidates (default 3, different seeds) via `worker.design_sample`; the user picks one; `voices.create` stores `{ design_source: { description, seed, checkpoint }, spec: clone(reference = chosen sample) }`. The clone runs on the family's cloning checkpoint (Qwen Base; VoxCPM2 itself). If a family can't clone from its own design output, the adapter declares it and the UI warns that the voice may vary.
+- **Do:** `voices.design` job: description + optional sample text → N candidates (default 3, different seeds) via `worker.design_sample`; the user picks one; `voices.create` stores `{ design_source: { description, seed, checkpoint_id }, spec: clone(reference = chosen sample) }`. The clone runs on the family's cloning checkpoint (Qwen Base; VoxCPM2 itself). If a family can't clone from its own design output, the adapter declares it and the UI warns that the voice may vary.
 - **Acceptance:** with the fake adapter: design → pick → frozen profile; rendering the frozen profile twice with the same seed gives the same chunk cache key.
 - **Tests:** flow tests.
 
@@ -1493,6 +1493,10 @@ Answers from the Orchestrator (or owner) that clarify or change this spec are re
 | 2026-11-13 | T01.6 | How do `download` resume, verification, and cancellation behave? | `download(url, dest, sha256, size, progress_cb, cancel)` writes `dest.part`, verifies size and SHA-256, and calls `os.replace` to `dest` (creating parent dirs). Resume with HTTP `Range` when `.part` exists; if the server answers 200 instead of 206, restart from zero; if `.part` > `size`, delete it and restart; if `.part` == `size`, verify without downloading. On mismatch, delete `.part`, don't create `dest`, and raise `checksum_mismatch`. Retries during download resume from `.part`. `cancel` is a callable returning `bool` checked between chunks; on cancel, keep `.part` and raise `DownloadCancelled` (a plain exception in `net.py`, not a `SkaldError`). | Orchestrator |
 | 2026-11-14 | T01.6 | How does `download` cap the number of bytes written (R1-1)? | Refuse early before writing when a 200 response's `Content-Length` > `size` or a 206 response's `Content-Range` total != `size`, and stop streaming as soon as `bytes_written` would exceed `size` (close the file, delete `.part`, and raise `checksum_mismatch` with expected and actual sizes in `details`). | Orchestrator |
 | 2026-11-14 | T01.6 | How does `download` handle an untrusted `Range` resume (R1-2, R1-3)? | When a `Range` resume receives HTTP 416 or a 206 whose `Content-Range` start differs from the existing `.part` size, delete `.part` and restart once from zero without a `Range` header; this restart does not count against the 2 connection/5xx retries. A 416 on a request without `Range` raises `http_error`. | Orchestrator |
+| 2026-11-14 | T01.4 | Where are core RPC methods registered, and what is the `DesignSource` checkpoint field named (R1-1, R1-2)? | `core/skald_core/rpc/methods.py` defines `register_all(server)` (called from `run_stdio_server`) for `system.info` and `job.*`; generic `RpcServer` keeps only `system.shutdown`. Keep `DesignSource.checkpoint_id` (updated T05.2 text from `checkpoint` to `checkpoint_id`). | Orchestrator |
+| 2026-11-14 | T01.3 | What schemas and `job_id` format do background jobs use? | Use `JobRef` for "job started" results; add `JobProgress`, `JobLog`, `JobFinished`, and `JobStatus` (shaped per B8) to `skald_core.schemas`. `job_id` is `"j_"` + 8 lowercase alphanumerics generated with `secrets`. | Orchestrator |
+| 2026-11-14 | T01.3 | How do `job.cancel`, `job.pause`, `job.resume`, `job.status`, and job outcomes behave? | Unknown `job_id` → `-32602` with `kind: "internal"`. Control calls on an already-finished job return its status unchanged (idempotent). `job.pause` on queued/running sets `"paused"` immediately (running stops at next `checkpoint()`; queued does not start until resumed); `job.resume` returns to `"running"` or `"queued"`. `job.cancel` on queued never runs and emits `job.finished` (`cancelled`); cancel while paused unblocks `checkpoint()` which raises `JobCancelled`. Outcomes: `JobCancelled` or exception after cancel requested → `cancelled`; normal return → `succeeded` with JSON-serialisable or Pydantic `result`; other exceptions → `failed` keeping `SkaldError` fields (unexpected exceptions logged with traceback as `kind: "internal"`). | Orchestrator |
+| 2026-11-14 | T01.3 | How do process-tree killing, throttling, and `system.shutdown` behave for jobs? | Kill process trees via `psutil` `children(recursive=True)` first then parent: `terminate`, wait up to 1 s, then `kill`; every subprocess passes `stdout=` explicitly (never inherited). Coalesce `job.progress` to at most 10/s per job keeping the latest value and flush any pending latest value before `job.finished`; `job.finished` and `job.log` are never throttled. `system.shutdown` cancels every running or queued job (killing process trees) and waits briefly before exiting. | Orchestrator |
 
 ## Appendix 4 — Claude Code cloud environment
 

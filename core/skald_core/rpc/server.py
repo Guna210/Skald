@@ -16,8 +16,7 @@ from typing import IO, Any
 
 from pydantic import BaseModel, ValidationError
 
-from skald_core.rpc.system import get_system_info
-from skald_core.schemas import ErrorKind, SystemInfo
+from skald_core.schemas import ErrorKind
 
 PARSE_ERROR = -32700
 INVALID_REQUEST = -32600
@@ -36,6 +35,15 @@ HandlerFn = Callable[..., Any]
 
 _active_server_lock = threading.Lock()
 _active_server: RpcServer | None = None
+
+
+class InvalidParamsError(Exception):
+    """Parameter validation error raised by a handler, mapped to JSON-RPC -32602."""
+
+    def __init__(self, message: str = "Invalid params", details: Any = None) -> None:
+        super().__init__(message)
+        self.message = message
+        self.details = details
 
 
 class SkaldError(Exception):
@@ -177,12 +185,32 @@ class RpcServer:
         self._stdout = stdout
         self._write_lock = threading.Lock()
         self._shutdown_event = threading.Event()
+        self._shutdown_hooks: list[Callable[[], None]] = []
+        self._shutdown_hooks_lock = threading.Lock()
+        self._shutdown_hooks_ran = False
         self._methods: dict[str, _MethodEntry] = {}
 
-        self.register("system.info", get_system_info, result_model=SystemInfo)
         self.register("system.shutdown", self._handle_shutdown)
 
+    def add_shutdown_hook(self, hook: Callable[[], None]) -> None:
+        """Register a callback invoked once when the server shuts down."""
+        with self._shutdown_hooks_lock:
+            self._shutdown_hooks.append(hook)
+
+    def _run_shutdown_hooks(self) -> None:
+        with self._shutdown_hooks_lock:
+            if self._shutdown_hooks_ran:
+                return
+            self._shutdown_hooks_ran = True
+            hooks = list(self._shutdown_hooks)
+        for hook in hooks:
+            try:
+                hook()
+            except Exception:
+                logger.exception("Error in RPC shutdown hook")
+
     def _handle_shutdown(self) -> dict[str, bool]:
+        self._run_shutdown_hooks()
         self.request_shutdown()
         return {"ok": True}
 
@@ -313,6 +341,11 @@ class RpcServer:
                 result = entry.handler(validated_params)
             else:
                 result = entry.handler()
+        except InvalidParamsError as exc:
+            logger.warning("Invalid params in %s: %s", method, exc.message)
+            if not has_id:
+                return None
+            return _error_response(req_id, INVALID_PARAMS, exc.message, details=exc.details)
         except SkaldError as exc:
             logger.warning("RPC error in %s (%s): %s", method, exc.kind, exc.message)
             if not has_id:
@@ -368,6 +401,7 @@ class RpcServer:
                 if response is not None:
                     self._write_message(response)
         finally:
+            self._run_shutdown_hooks()
             with _active_server_lock:
                 _active_server = prev_server
 
@@ -387,11 +421,14 @@ def notify(
 
 def run_stdio_server(setup: Callable[[RpcServer], None] | None = None) -> int:
     """Redirect stdout to stderr, configure logging, and run the JSON-RPC stdio loop."""
+    from skald_core.rpc.methods import register_all
+
     real_stdout = sys.stdout
     real_stdout_buffer = real_stdout.buffer
     sys.stdout = sys.stderr
     configure_logging()
     server = RpcServer(stdin=sys.stdin.buffer, stdout=real_stdout_buffer)
+    register_all(server)
     if setup is not None:
         setup(server)
     logger.info("Skald core JSON-RPC server started")
