@@ -39,7 +39,7 @@ _active_server: RpcServer | None = None
 
 
 class SkaldError(Exception):
-    """Application-level error mapped to JSON-RPC error code -32000."""
+    """Application-level error mapped to JSON-RPC error code -32000 (or a specified RPC code)."""
 
     def __init__(
         self,
@@ -47,16 +47,19 @@ class SkaldError(Exception):
         message: str,
         details: Any = None,
         hint: str | None = None,
+        *,
+        code: int = APP_ERROR,
     ) -> None:
         super().__init__(message)
         self.kind: ErrorKind = kind
         self.message = message
         self.details = details
         self.hint = hint
+        self.code = code
 
     def to_error_dict(self) -> dict[str, Any]:
         return {
-            "code": APP_ERROR,
+            "code": self.code,
             "message": self.message,
             "data": {
                 "kind": self.kind,
@@ -387,11 +390,14 @@ def notify(
 
 def run_stdio_server(setup: Callable[[RpcServer], None] | None = None) -> int:
     """Redirect stdout to stderr, configure logging, and run the JSON-RPC stdio loop."""
+    from skald_core.project.rpc import register as register_project_methods
+
     real_stdout = sys.stdout
     real_stdout_buffer = real_stdout.buffer
     sys.stdout = sys.stderr
     configure_logging()
     server = RpcServer(stdin=sys.stdin.buffer, stdout=real_stdout_buffer)
+    register_project_methods(server)
     if setup is not None:
         setup(server)
     logger.info("Skald core JSON-RPC server started")
