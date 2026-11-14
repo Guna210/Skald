@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-14 21:00 (Asia/Colombo) · last entry: E-0094
+Last updated: 2026-11-14 21:40 (Asia/Colombo) · last entry: E-0095
 Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -8,19 +8,19 @@ Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 …
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 building in parallel (E-0067). T03.4 (★) merged (PR #11, E-0073). T01.4 merged (PR #10, E-0077). T01.6 merged (PR #9, E-0083). T01.5 merged (PR #12, E-0089). T01.3 round-2 re-review (PR #13) (E-0094).
+- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 building in parallel (E-0067). T03.4 (★) merged (PR #11, E-0073). T01.4 merged (PR #10, E-0077). T01.6 merged (PR #9, E-0083). T01.5 merged (PR #12, E-0089). T01.3 APPROVED, owner to merge PR #13 → Phase 1 complete (E-0095).
 - `master` at `d9c1034`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: #13 T01.3 (round 2 + O-1 at f2871ef, CI green; re-review, E-0094).
+- Open PRs: #13 T01.3 (APPROVED round 2 at f2871ef, CI green; owner to merge, E-0095).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7), T02.1 (PR #8), T03.4 (PR #11), T01.4 (PR #10), T01.6 (PR #9), T01.5 (PR #12).
-- T01.3 job manager: PR #13, round 1, round 2 pushed (d8f5c67); Orchestrator found a PID-reuse risk in the new kill code → amendment O-1 done at f2871ef (E-0093/E-0094); re-review by the same Opus session.
+- T01.3 job manager: PR #13, round 1, round 2 pushed (d8f5c67); Orchestrator found a PID-reuse risk in the new kill code → O-1 fixed; APPROVED round 2 (E-0095); owner to merge.
 - Available, not started (prompt only when the owner asks; E-0057): T02.2 EPUB container/spine/nav, T03.1 catalog schema, T03.7 worker protocol, T03.9 [SPIKE][REVIEW], T06.1.
 
 ## Waiting on the owner
-1. Paste the T01.3 round-2 review prompt into the same Opus Reviewer session; send back the verdict (E-0094).
+1. Merge PR #13 (T01.3, normal merge) and confirm (E-0095).
 2. Later, before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs
@@ -60,6 +60,7 @@ None (T03.4 proposal 12: owner said yes, E-0070).
 - T03.5: CI `.cache/uv` key covers only deps.lock.json — add pack lockfiles (E-0041).
 - T03.5 prompt: build it from docs/spikes/engine-packs.md §4 + gate decisions G1–G14 (E-0070, in SPEC once PR #11 merges): copy bundled Python to <storage>/python/<ver>/, clean-only-when-empty, try `uv cache clean <pkg>`, cu126 min driver with source, fake-uv tests per G10; F1 storage resolution (SKALD_STORAGE_DIR → <SKALD_DEV_DATA>/storage → platform default) + Appendix 3 row + T06.2 env line; F2 fix the Part B diagram host wording (E-0071).
 - T06.2 prompt: core.ts passes SKALD_STORAGE_DIR only when the user chose a storage folder (F1, E-0071).
+- T03.5 prompt also carries T01.3 R2-1: a PID-reuse simulation test (Popen stand-in returncode=0 + captured live sleeper must survive _kill_process_tree) (E-0095).
 - T03.5 prompt also carries T03.4 R2 leftovers (E-0072): R2-1 guard in docs/spikes/scripts/notes.sh (refuse an existing non-empty folder); R2-2 T07.10 add "move (or re-copy) python/"; R2-3 engine-packs.md:139 "section 3.9" → 3.10; R2-4 cite NVIDIA CUDA 13 notes in the Appendix 3 Pascal row; (a) T06.2 env line per F1; (b) C4 dev pack location → `<SKALD_DEV_DATA>/storage/`.
 - T07.10: storage-folder move per G11; default storage = %LOCALAPPDATA%\Skald / ~/.local/share/Skald (G3) (E-0070).
 - T06.3: ProjectManifest allows extra keys (TS index signature); the UI ignores unknown keys and never sends them back modified (E-0088).
@@ -83,4 +84,4 @@ None (T03.4 proposal 12: owner said yes, E-0070).
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-Process the T01.3 round-2 verdict. After merge, list available tasks (T03.5 becomes available). After merge, list available tasks without prompts (E-0057).
+Confirm the PR #13 merge; then list available tasks (T03.5 newly available) without prompts (E-0057). After merge, list available tasks (T03.5 becomes available). After merge, list available tasks without prompts (E-0057).
