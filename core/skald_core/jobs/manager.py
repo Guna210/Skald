@@ -71,27 +71,38 @@ def _generate_job_id() -> str:
     return f"j_{suffix}"
 
 
-def _kill_process_tree(popen: subprocess.Popen[Any]) -> None:
-    """Terminate children recursively first, then parent; wait up to 1 s, then kill."""
-    # shortcut: if an exited parent was already reaped or its children reparented,
-    # children() cannot find them; switch to process groups/Job Objects if detached
-    # descendants must also be killed.
+def _capture_process(popen: subprocess.Popen[Any]) -> psutil.Process | None:
+    """Capture the psutil.Process for a running Popen, or None if already exited."""
+    if popen.returncode is not None:
+        return None
     try:
-        parent: psutil.Process | None = psutil.Process(popen.pid)
+        return psutil.Process(popen.pid)
     except psutil.NoSuchProcess:
-        parent = None
+        return None
 
-    children: list[psutil.Process] = []
-    if parent is not None:
-        try:
-            children = parent.children(recursive=True)
-        except psutil.NoSuchProcess:
-            children = []
+
+def _kill_process_tree(
+    popen: subprocess.Popen[Any],
+    captured: psutil.Process | None,
+) -> None:
+    """Terminate children recursively first, then parent; wait up to 1 s, then kill."""
+    # shortcut: if the job already reaped the parent (returncode set) or an exited
+    # parent's children were reparented, children() cannot find detached orphans;
+    # switch to process groups/Job Objects if detached descendants must also be killed.
+    if popen.returncode is not None:
+        return
+    if captured is None or not captured.is_running():
+        return
+
+    try:
+        children = captured.children(recursive=True)
+    except psutil.NoSuchProcess:
+        children = []
 
     parent_alive = popen.poll() is None
     targets: list[psutil.Process] = list(children)
-    if parent_alive and parent is not None:
-        targets.append(parent)
+    if parent_alive:
+        targets.append(captured)
     if not targets:
         return
 
@@ -137,7 +148,9 @@ class _JobRecord:
     future: concurrent.futures.Future[None] | None = None
     cancel_event: threading.Event = field(default_factory=threading.Event)
     resume_event: threading.Event = field(default_factory=threading.Event)
-    subprocesses: list[subprocess.Popen[Any]] = field(default_factory=list)
+    subprocesses: list[tuple[subprocess.Popen[Any], psutil.Process | None]] = field(
+        default_factory=list
+    )
     emit_lock: threading.Lock = field(default_factory=threading.Lock)
     last_progress_sent: float = float("-inf")
     pending_progress: JobProgress | None = None
@@ -267,7 +280,7 @@ class JobManager:
         final state.
         """
         finished_payload: JobFinished | None = None
-        procs_to_kill: list[subprocess.Popen[Any]] = []
+        procs_to_kill: list[tuple[subprocess.Popen[Any], psutil.Process | None]] = []
         future_to_cancel: concurrent.futures.Future[None] | None = None
 
         with self._lock:
@@ -290,8 +303,8 @@ class JobManager:
 
         if future_to_cancel is not None:
             future_to_cancel.cancel()
-        for proc in procs_to_kill:
-            _kill_process_tree(proc)
+        for proc, captured in procs_to_kill:
+            _kill_process_tree(proc, captured)
         if finished_payload is not None:
             self._emit_finished(record, finished_payload)
         return snap
@@ -299,7 +312,7 @@ class JobManager:
     def shutdown(self, timeout: float = 2.0) -> None:
         """Cancel all queued/running jobs, kill process trees, and wait briefly for exit."""
         cancelled_queued: list[tuple[_JobRecord, JobFinished]] = []
-        procs_to_kill: list[subprocess.Popen[Any]] = []
+        procs_to_kill: list[tuple[subprocess.Popen[Any], psutil.Process | None]] = []
         futures_to_cancel: list[concurrent.futures.Future[None]] = []
         active_futures: list[concurrent.futures.Future[None]] = []
 
@@ -325,8 +338,8 @@ class JobManager:
 
         for future in futures_to_cancel:
             future.cancel()
-        for proc in procs_to_kill:
-            _kill_process_tree(proc)
+        for proc, captured in procs_to_kill:
+            _kill_process_tree(proc, captured)
         for record, payload in cancelled_queued:
             self._emit_finished(record, payload)
 
@@ -362,12 +375,13 @@ class JobManager:
         )
 
     def _register_subprocess(self, record: _JobRecord, popen: subprocess.Popen[Any]) -> None:
+        captured = _capture_process(popen)
         with self._lock:
-            record.subprocesses = [p for p in record.subprocesses if p.poll() is None]
-            record.subprocesses.append(popen)
+            record.subprocesses = [(p, c) for p, c in record.subprocesses if p.returncode is None]
+            record.subprocesses.append((popen, captured))
             cancelled = record.cancel_requested
         if cancelled:
-            _kill_process_tree(popen)
+            _kill_process_tree(popen, captured)
             raise JobCancelled(record.job_id)
 
     def _emit_log(self, record: _JobRecord, level: str, message: str) -> None:
@@ -524,8 +538,8 @@ class JobManager:
                 record.subprocesses.clear()
                 kill_remaining = record.cancel_requested
             if kill_remaining:
-                for proc in remaining_procs:
-                    _kill_process_tree(proc)
+                for proc, captured in remaining_procs:
+                    _kill_process_tree(proc, captured)
 
         with self._lock:
             record.status = final_status

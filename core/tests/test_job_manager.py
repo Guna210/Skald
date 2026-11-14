@@ -20,7 +20,7 @@ import pytest
 from pydantic import BaseModel
 
 from skald_core.jobs import JobCancelled, JobContext, JobManager, UnknownJobError
-from skald_core.jobs.manager import _kill_process_tree
+from skald_core.jobs.manager import _capture_process, _kill_process_tree
 from skald_core.rpc import (
     APP_ERROR,
     INTERNAL_ERROR,
@@ -782,7 +782,8 @@ def test_kill_process_tree_terminates_children_before_parent(
         try:
             assert parent_proc.stdout is not None
             child_pid = int(parent_proc.stdout.readline().strip())
-            _kill_process_tree(parent_proc)
+            captured = _capture_process(parent_proc)
+            _kill_process_tree(parent_proc, captured)
         finally:
             if parent_proc.poll() is None:
                 parent_proc.kill()
@@ -817,9 +818,10 @@ def test_kill_process_tree_kills_children_even_when_parent_poll_exited(
         assert parent_proc.stdout is not None
         child_pid = int(parent_proc.stdout.readline().strip())
         assert not _is_gone(child_pid)
+        captured = _capture_process(parent_proc)
         try:
             monkeypatch.setattr(parent_proc, "poll", lambda: 0)
-            _kill_process_tree(parent_proc)
+            _kill_process_tree(parent_proc, captured)
             _assert_gone(child_pid)
         finally:
             monkeypatch.undo()
@@ -827,3 +829,93 @@ def test_kill_process_tree_kills_children_even_when_parent_poll_exited(
                 parent_proc.kill()
                 parent_proc.wait()
             _assert_gone(parent_proc.pid)
+
+
+@pytest.mark.timeout(10)
+def test_cancel_does_not_terminate_or_kill_already_waited_popen(
+    manager: JobManager,
+    notifier: _RecordingNotifier,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    waited = threading.Event()
+    can_finish = threading.Event()
+
+    def run_job(ctx: JobContext) -> None:
+        with subprocess.Popen(
+            [sys.executable, "-c", "print('ok', flush=True)"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ) as proc:
+            ctx.register_subprocess(proc)
+            assert proc.stdout is not None
+            assert proc.stdout.readline().strip() == "ok"
+            proc.wait()
+            assert proc.returncode == 0
+        waited.set()
+        assert can_finish.wait(timeout=3.0)
+        ctx.checkpoint()
+
+    job_id = manager.submit("test.waited", run_job)
+    assert waited.wait(timeout=3.0)
+
+    calls: list[tuple[str, int]] = []
+    monkeypatch.setattr(
+        psutil.Process, "terminate", lambda self: calls.append(("terminate", self.pid))
+    )
+    monkeypatch.setattr(psutil.Process, "kill", lambda self: calls.append(("kill", self.pid)))
+
+    manager.cancel(job_id)
+    can_finish.set()
+    fin = notifier.wait_finished(job_id, timeout=2.0)
+
+    assert fin["status"] == "cancelled"
+    assert calls == []
+
+
+@pytest.mark.timeout(10)
+def test_cancel_skips_kill_when_captured_process_is_not_running(
+    manager: JobManager,
+    notifier: _RecordingNotifier,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registered = threading.Event()
+    proc_holder: list[subprocess.Popen[bytes]] = []
+
+    def run_job(ctx: JobContext) -> None:
+        with subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(60)"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        ) as proc:
+            proc_holder.append(proc)
+            ctx.register_subprocess(proc)
+            registered.set()
+            proc.wait()
+        ctx.checkpoint()
+
+    job_id = manager.submit("test.not_running", run_job)
+    assert registered.wait(timeout=3.0)
+    child_proc = proc_holder[0]
+
+    calls: list[tuple[str, int]] = []
+    try:
+        monkeypatch.setattr(psutil.Process, "is_running", lambda self: False)
+        monkeypatch.setattr(
+            psutil.Process, "terminate", lambda self: calls.append(("terminate", self.pid))
+        )
+        monkeypatch.setattr(psutil.Process, "kill", lambda self: calls.append(("kill", self.pid)))
+
+        manager.cancel(job_id)
+        assert calls == []
+    finally:
+        monkeypatch.undo()
+        if child_proc.poll() is None:
+            child_proc.kill()
+            child_proc.wait()
+
+    fin = notifier.wait_finished(job_id, timeout=2.0)
+    assert fin["status"] == "cancelled"
+    _assert_gone(child_proc.pid)
