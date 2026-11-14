@@ -430,6 +430,7 @@ def test_unwritable_log_dir_falls_back_to_stderr_and_keeps_serving(tmp_path: Pat
 @pytest.mark.timeout(10)
 def test_subprocess_popen_flushes_response_before_stdin_eof(tmp_path: Path) -> None:
     env = {**os.environ, "SKALD_LOG_DIR": str(tmp_path)}
+    env.pop("PYTHONUNBUFFERED", None)
     proc = subprocess.Popen(
         [sys.executable, "-m", "skald_core"],
         stdin=subprocess.PIPE,

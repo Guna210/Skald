@@ -620,7 +620,7 @@ Agents tick `[x]` when a task is done.
 - [x] T01.1 Core package skeleton and dependency pins
 - [x] T01.2 JSON-RPC stdio server
 - [ ] T01.3 Background job manager with pause
-- [ ] T01.4 Schema models, schema export, `system.info`
+- [x] T01.4 Schema models, schema export, `system.info`
 - [ ] T01.5 Project folder storage
 - [ ] T01.6 HTTP helper and verified downloader
 
@@ -1485,6 +1485,9 @@ Answers from the Orchestrator (or owner) that clarify or change this spec are re
 | 2026-11-14 | T03.4 | [REVIEW] gate: what else must T03.5 cover? (G10, G13, G14) | `make_locks.py --check`; fake-`uv` tests for the B5 environment, the allowlist failure, a lock-hash mismatch and a failing step 4 after a successful sync; the free-disk figure from a measured install × 1.2; smoke packs on `torch==2.14.1` with `cpu`/`cu126`; the copied base Python; clean-only-when-empty; a note that PowerShell 5.1 treats redirected native stderr as an error; the cu126 minimum NVIDIA driver recorded in pack metadata from NVIDIA's CUDA 12.6 release notes. T03.5 updated. | Orchestrator |
 | 2026-11-14 | T03.4 | How are NVIDIA's proprietary CUDA libraries in GPU packs handled? (G12) | The GPU-pack install screen says NVIDIA's CUDA libraries are downloaded under NVIDIA's licence. Pack wheels are never mirrored or redistributed by us: not in `deps-v*`, installers, test fixtures or notebook artefacts. The third-party notices mention NVIDIA's terms for GPU packs. B5, T07.2 and T09.4 updated. | Owner |
 | 2026-11-14 | T03.4 | Which GPU generations may the catalog promise? | The catalog must not promise Pascal (`sm_61`) support until it has been confirmed on a real card (the Linux cu126 build lists `sm_60` but not `sm_61`). A future `cu13` accelerator drops Maxwell, Pascal and Volta, which affects D9. | Orchestrator |
+| 2026-11-13 | T01.4 | What error kinds are valid, and how are `SkaldError.kind` and `SkaldErrorData` typed? | `ErrorKind` in `skald_core/schemas/` is a closed `Literal` of the 15 B8 kinds plus T01.6's `http_not_found`, `http_error` and `timeout`. `SkaldError.kind` is typed with `ErrorKind` so mypy catches unknown kinds and T07.11 can verify UI message coverage. `SkaldErrorData` is `{ kind: ErrorKind, details, hint }`. | Orchestrator |
+| 2026-11-13 | T01.4 | Should exported JSON Schema files be committed in T01.4, and what does the export round trip check? | Do not commit the exported JSON Schema files in T01.4 (tests export into a temp dir; T06.3 decides later what gets committed). The export CLI still defaults to `app/src/shared/schemas/` and creates the directory. Round trip uses no new dependencies: each written file parses as JSON and equals `Model.model_json_schema()`, and `index.json` lists every model. | Orchestrator |
+| 2026-11-13 | T01.4 | How does `system.info` locate and invoke ffmpeg, and what does CI assert? | Lookup order: (1) env `SKALD_FFMPEG` (full path to the binary), else (2) `$SKALD_VENDOR/ffmpeg/<platform>/<bin>` (`win64`: `bin/ffmpeg.exe`, `linux64`: `bin/ffmpeg`), stored as a small constant in the core and tested against `scripts/deps.lock.json` without reading `deps.lock.json` at runtime. Missing or failing ffmpeg logs a warning and returns `null`. Run ffmpeg with `stdout` captured (never inherited), `stdin=subprocess.DEVNULL` and a timeout. The `system.info` test sets `SKALD_VENDOR` to `<repo>/vendor` and requires `ffmpeg` to be non-null starting with `"ffmpeg version"` when `CI == "true"` (locally `null` is allowed if `vendor/` is empty). | Orchestrator |
 
 ## Appendix 4 — Claude Code cloud environment
 
