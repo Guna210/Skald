@@ -6,13 +6,13 @@ import hashlib
 import logging
 import os
 import re
+import socket
 import time
 from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
 import requests
-import urllib3.exceptions
 
 from skald_core import __version__
 from skald_core.rpc import SkaldError
@@ -59,10 +59,7 @@ def _is_timeout_error(exc: BaseException) -> bool:
         if id(cur) in seen:
             continue
         seen.add(id(cur))
-        if isinstance(
-            cur,
-            (requests.exceptions.Timeout, TimeoutError, urllib3.exceptions.ReadTimeoutError),
-        ):
+        if isinstance(cur, (requests.exceptions.Timeout, TimeoutError, socket.timeout)):
             return True
         if cur.__cause__ is not None:
             stack.append(cur.__cause__)
@@ -299,6 +296,17 @@ def _verify_part_or_raise(
         )
 
 
+def _parse_content_length(headers: Mapping[str, str]) -> int | None:
+    raw = headers.get("Content-Length")
+    if raw is None:
+        return None
+    try:
+        value = int(raw.strip())
+    except ValueError:
+        return None
+    return value if value >= 0 else None
+
+
 def download(
     url: str,
     dest: Path | str,
@@ -345,10 +353,12 @@ def download(
             os.replace(part_path, dest_path)
             return dest_path
 
+    restarted_from_zero = False
+    attempt = 0
     own_session = session is None
     sess = requests.Session() if session is None else session
     try:
-        for attempt in range(max_retries + 1):
+        while True:
             _check_cancel(cancel)
 
             existing_size = part_path.stat().st_size if part_path.exists() else 0
@@ -359,7 +369,8 @@ def download(
                 break
 
             req_headers = _build_headers(headers)
-            if existing_size > 0:
+            sent_range = existing_size > 0
+            if sent_range:
                 req_headers["Range"] = f"bytes={existing_size}-"
 
             try:
@@ -376,17 +387,27 @@ def download(
                                 url,
                             )
                             _sleep_backoff(attempt, backoff_base, cancel)
+                            attempt += 1
                             continue
                         raise _http_status_error(status, url, reason)
+
+                    if status == 416 and sent_range and not restarted_from_zero:
+                        logger.warning(
+                            "HTTP 416 on Range resume for %s; restarting from zero",
+                            url,
+                        )
+                        restarted_from_zero = True
+                        part_path.unlink(missing_ok=True)
+                        continue
 
                     if status >= 400 or status < 200:
                         raise _http_status_error(status, url, resp.reason or "")
 
-                    if existing_size > 0 and status == 206:
+                    if sent_range and status == 206:
                         content_range = resp.headers.get("Content-Range")
                         if content_range:
                             match = _CONTENT_RANGE_RE.match(content_range.strip())
-                            if not match or int(match.group(1)) != existing_size:
+                            if not match:
                                 raise SkaldError(
                                     "http_error",
                                     f"Unexpected Content-Range {content_range!r} from {url}",
@@ -396,23 +417,93 @@ def download(
                                         "content_range": content_range,
                                     },
                                 )
+                            range_start = int(match.group(1))
+                            range_total = match.group(3)
+                            if range_start != existing_size:
+                                if not restarted_from_zero:
+                                    logger.warning(
+                                        "Content-Range start %d != .part size %d for %s; "
+                                        "restarting from zero",
+                                        range_start,
+                                        existing_size,
+                                        url,
+                                    )
+                                    restarted_from_zero = True
+                                    part_path.unlink(missing_ok=True)
+                                    continue
+                                raise SkaldError(
+                                    "http_error",
+                                    f"Unexpected Content-Range {content_range!r} from {url}",
+                                    details={
+                                        "url": url,
+                                        "expected_offset": existing_size,
+                                        "content_range": content_range,
+                                    },
+                                )
+                            if range_total != "*" and int(range_total) != size:
+                                part_path.unlink(missing_ok=True)
+                                raise SkaldError(
+                                    "checksum_mismatch",
+                                    f"Content-Range total {range_total} does not match "
+                                    f"expected size {size} for {dest_path.name}",
+                                    details={
+                                        "url": url,
+                                        "dest": str(dest_path),
+                                        "expected_size": size,
+                                        "actual_size": int(range_total),
+                                    },
+                                    hint="Try downloading the file again.",
+                                )
                         mode = "ab"
                         bytes_written = existing_size
                     else:
+                        content_length = _parse_content_length(resp.headers)
+                        if content_length is not None and content_length > size:
+                            part_path.unlink(missing_ok=True)
+                            raise SkaldError(
+                                "checksum_mismatch",
+                                f"Content-Length {content_length} exceeds expected size {size} "
+                                f"for {dest_path.name}",
+                                details={
+                                    "url": url,
+                                    "dest": str(dest_path),
+                                    "expected_size": size,
+                                    "actual_size": content_length,
+                                },
+                                hint="Try downloading the file again.",
+                            )
                         mode = "wb"
                         bytes_written = 0
 
+                    oversize_actual: int | None = None
                     with part_path.open(mode) as fh:
                         for chunk in resp.iter_content(chunk_size=DOWNLOAD_CHUNK_SIZE):
                             _check_cancel(cancel)
                             if not chunk:
                                 continue
+                            if bytes_written + len(chunk) > size:
+                                oversize_actual = bytes_written + len(chunk)
+                                break
                             fh.write(chunk)
                             fh.flush()
                             bytes_written += len(chunk)
                             if progress_cb is not None:
                                 progress_cb(bytes_written, size)
                             _check_cancel(cancel)
+
+                    if oversize_actual is not None:
+                        part_path.unlink(missing_ok=True)
+                        raise SkaldError(
+                            "checksum_mismatch",
+                            f"Downloaded bytes exceeded expected size {size} for {dest_path.name}",
+                            details={
+                                "url": url,
+                                "dest": str(dest_path),
+                                "expected_size": size,
+                                "actual_size": oversize_actual,
+                            },
+                            hint="Try downloading the file again.",
+                        )
 
                 break
             except DownloadCancelled:
@@ -433,6 +524,7 @@ def download(
                         exc,
                     )
                     _sleep_backoff(attempt, backoff_base, cancel)
+                    attempt += 1
                     continue
                 raise _request_exc_to_skald_error(exc, url) from exc
             except requests.exceptions.RequestException as exc:

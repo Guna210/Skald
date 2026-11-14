@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import requests
+import requests.adapters
 
 from skald_core import __version__, net
 from skald_core.net import DownloadCancelled, download, get_json, get_text
@@ -32,15 +34,18 @@ PROXY_ENV_VARS = (
 
 
 @pytest.fixture(autouse=True)
-def _clear_proxy_env_and_speed_up_retries(
-    monkeypatch: pytest.MonkeyPatch,
-    request: pytest.FixtureRequest,
-) -> None:
-    """Clear ambient cloud proxy vars and set zero backoff by default for fast tests."""
-    for var in PROXY_ENV_VARS:
-        monkeypatch.delenv(var, raising=False)
-    if request.node.name != "test_default_constants":
-        monkeypatch.setattr(net, "BACKOFF_SECONDS", 0.0)
+def _clear_proxy_env() -> Iterator[None]:
+    """Clear ambient cloud proxy vars so 127.0.0.1 traffic stays local."""
+    with pytest.MonkeyPatch.context() as mp:
+        for var in PROXY_ENV_VARS:
+            mp.delenv(var, raising=False)
+        yield
+
+
+@pytest.fixture(autouse=True)
+def _zero_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Set zero backoff by default for fast tests."""
+    monkeypatch.setattr(net, "BACKOFF_SECONDS", 0.0)
 
 
 @contextmanager
@@ -57,9 +62,9 @@ def _run_server(
         daemon=True,
     )
     thread.start()
-    host, port = server.server_address[:2]
+    port = int(server.server_address[1])
     try:
-        yield server, f"http://{host}:{port}"
+        yield server, f"http://127.0.0.1:{port}"
     finally:
         server.shutdown()
         server.server_close()
@@ -72,7 +77,8 @@ def _unused_local_port() -> int:
         return int(sock.getsockname()[1])
 
 
-def test_default_constants() -> None:
+def test_default_constants(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.undo()
     assert net.CONNECT_TIMEOUT == 10.0
     assert net.READ_TIMEOUT == 60.0
     assert net.MAX_RETRIES == 2
@@ -585,3 +591,257 @@ def test_download_500_raises_http_error_after_retries(tmp_path: Path) -> None:
     assert exc_info.value.kind == "http_error"
     assert calls == 3
     assert not dest.exists()
+
+
+def test_download_refuses_oversize_content_length_and_bad_206_total(tmp_path: Path) -> None:
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, format: str, *args: Any) -> None:
+            return
+
+        def do_GET(self) -> None:
+            if self.path == "/oversize-cl":
+                self.send_response(200)
+                self.send_header("Content-Length", "5000")
+                self.end_headers()
+                # Do not send 5000 bytes; client must refuse from header alone.
+                return
+            if self.path == "/bad-206-total":
+                self.send_response(206)
+                self.send_header("Content-Range", "bytes 100-199/2000")
+                self.send_header("Content-Length", "100")
+                self.end_headers()
+                self.wfile.write(b"x" * 100)
+
+    with _run_server(Handler) as (_, base_url):
+        dest1 = tmp_path / "oversize_cl.bin"
+        part1 = tmp_path / "oversize_cl.bin.part"
+        part1.write_bytes(b"stale")
+        with pytest.raises(SkaldError) as exc1:
+            download(f"{base_url}/oversize-cl", dest1, sha256="0" * 64, size=1000)
+        assert exc1.value.kind == "checksum_mismatch"
+        assert exc1.value.details["expected_size"] == 1000
+        assert exc1.value.details["actual_size"] == 5000
+        assert not part1.exists()
+        assert not dest1.exists()
+
+        dest2 = tmp_path / "bad_total.bin"
+        part2 = tmp_path / "bad_total.bin.part"
+        part2.write_bytes(b"x" * 100)
+        with pytest.raises(SkaldError) as exc2:
+            download(f"{base_url}/bad-206-total", dest2, sha256="0" * 64, size=1000)
+        assert exc2.value.kind == "checksum_mismatch"
+        assert exc2.value.details["expected_size"] == 1000
+        assert exc2.value.details["actual_size"] == 2000
+        assert not part2.exists()
+        assert not dest2.exists()
+
+
+def test_download_stops_oversize_body_without_writing_past_size(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(net, "DOWNLOAD_CHUNK_SIZE", 256)
+    chunks_sent = 0
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
+        def log_message(self, format: str, *args: Any) -> None:
+            return
+
+        def do_GET(self) -> None:
+            nonlocal chunks_sent
+            self.send_response(200)
+            self.send_header("Transfer-Encoding", "chunked")
+            self.end_headers()
+            try:
+                for _ in range(50):
+                    chunk = b"B" * 256
+                    self.wfile.write(f"{len(chunk):x}\r\n".encode("ascii") + chunk + b"\r\n")
+                    self.wfile.flush()
+                    chunks_sent += 1
+                self.wfile.write(b"0\r\n\r\n")
+            except OSError:
+                pass
+
+    dest = tmp_path / "oversize_body.bin"
+    part = tmp_path / "oversize_body.bin.part"
+    progress_calls: list[int] = []
+    with _run_server(Handler) as (_, base_url):
+        with pytest.raises(SkaldError) as exc_info:
+            download(
+                f"{base_url}/stream",
+                dest,
+                sha256="0" * 64,
+                size=600,
+                progress_cb=lambda done, _total: progress_calls.append(done),
+            )
+    assert exc_info.value.kind == "checksum_mismatch"
+    assert exc_info.value.details["expected_size"] == 600
+    assert exc_info.value.details["actual_size"] == 768
+    assert max(progress_calls) == 512
+    assert not part.exists()
+    assert not dest.exists()
+
+
+def test_download_stale_part_416_restarts_once_and_non_range_416_fails(tmp_path: Path) -> None:
+    payload = b"fresh-server-payload" * 20
+    expected_sha = hashlib.sha256(payload).hexdigest()
+    range_headers: list[str | None] = []
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, format: str, *args: Any) -> None:
+            return
+
+        def do_GET(self) -> None:
+            rng = self.headers.get("Range")
+            range_headers.append(rng)
+            if self.path == "/always-416":
+                self.send_response(416)
+                self.end_headers()
+                return
+            if rng is not None:
+                self.send_response(416)
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+    dest = tmp_path / "recovered.bin"
+    part = tmp_path / "recovered.bin.part"
+    part.write_bytes(b"stale-partial-bytes")
+
+    with _run_server(Handler) as (_, base_url):
+        # retries=0 proves the untrusted-resume restart does not consume a retry.
+        download(f"{base_url}/file", dest, sha256=expected_sha, size=len(payload), retries=0)
+        assert dest.read_bytes() == payload
+        assert not part.exists()
+        assert range_headers == ["bytes=19-", None]
+
+        dest2 = tmp_path / "non_range_416.bin"
+        with pytest.raises(SkaldError) as exc_info:
+            download(f"{base_url}/always-416", dest2, sha256=expected_sha, size=len(payload))
+        assert exc_info.value.kind == "http_error"
+        assert not dest2.exists()
+
+
+def test_download_206_wrong_content_range_start_restarts_once(tmp_path: Path) -> None:
+    payload = b"valid-file-content" * 30
+    expected_sha = hashlib.sha256(payload).hexdigest()
+    range_headers: list[str | None] = []
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, format: str, *args: Any) -> None:
+            return
+
+        def do_GET(self) -> None:
+            rng = self.headers.get("Range")
+            range_headers.append(rng)
+            if rng is not None:
+                body = payload[50:]
+                self.send_response(206)
+                self.send_header("Content-Range", f"bytes 50-{len(payload) - 1}/{len(payload)}")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+    dest = tmp_path / "wrong_start.bin"
+    part = tmp_path / "wrong_start.bin.part"
+    part.write_bytes(b"X" * 200)
+
+    with _run_server(Handler) as (_, base_url):
+        # retries=0 proves the untrusted-resume restart does not consume a retry.
+        download(f"{base_url}/file", dest, sha256=expected_sha, size=len(payload), retries=0)
+
+    assert dest.read_bytes() == payload
+    assert not part.exists()
+    assert range_headers == ["bytes=200-", None]
+
+
+def test_offline_dns_failure_maps_to_offline() -> None:
+    with pytest.raises(SkaldError) as exc_info:
+        get_text("http://nonexistent.skald.invalid/catalog.json", retries=0)
+    assert exc_info.value.kind == "offline"
+
+
+def test_connect_timeout_via_adapter_maps_to_timeout(tmp_path: Path) -> None:
+    class _ConnectTimeoutAdapter(requests.adapters.BaseAdapter):
+        def __init__(self) -> None:
+            super().__init__()
+            self.calls = 0
+
+        def send(
+            self,
+            request: requests.PreparedRequest,
+            stream: bool = False,
+            timeout: float | tuple[float, float] | tuple[float, None] | None = None,
+            verify: bool | str = True,
+            cert: bytes | str | tuple[bytes | str, bytes | str] | None = None,
+            proxies: Any = None,
+        ) -> requests.Response:
+            self.calls += 1
+            raise requests.ConnectTimeout("connect timed out")
+
+        def close(self) -> None:
+            return
+
+    adapter = _ConnectTimeoutAdapter()
+    with requests.Session() as sess:
+        sess.mount("http://", adapter)
+
+        with pytest.raises(SkaldError) as exc_text:
+            get_text("http://127.0.0.1:9/hello", session=sess)
+        assert exc_text.value.kind == "timeout"
+        assert adapter.calls == 3
+
+        adapter.calls = 0
+        dest = tmp_path / "timeout.bin"
+        with pytest.raises(SkaldError) as exc_dl:
+            download("http://127.0.0.1:9/file", dest, sha256="0" * 64, size=10, session=sess)
+        assert exc_dl.value.kind == "timeout"
+        assert adapter.calls == 3
+        assert not dest.exists()
+
+
+def test_download_404_and_403_no_retry_no_dest_and_part_behavior(tmp_path: Path) -> None:
+    calls: list[str] = []
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, format: str, *args: Any) -> None:
+            return
+
+        def do_GET(self) -> None:
+            calls.append(self.path)
+            if self.path == "/missing":
+                self.send_response(404)
+            else:
+                self.send_response(403)
+            self.end_headers()
+
+    with _run_server(Handler) as (_, base_url):
+        dest_404 = tmp_path / "missing.bin"
+        part_404 = tmp_path / "missing.bin.part"
+        with pytest.raises(SkaldError) as exc_404:
+            download(f"{base_url}/missing", dest_404, sha256="0" * 64, size=100)
+        assert exc_404.value.kind == "http_not_found"
+        assert not dest_404.exists()
+        assert not part_404.exists()  # Fresh download leaves no .part on 404.
+
+        dest_403 = tmp_path / "forbidden.bin"
+        part_403 = tmp_path / "forbidden.bin.part"
+        part_403.write_bytes(b"existing-partial")
+        with pytest.raises(SkaldError) as exc_403:
+            download(f"{base_url}/forbidden", dest_403, sha256="0" * 64, size=100)
+        assert exc_403.value.kind == "http_error"
+        assert not dest_403.exists()
+        # A 4xx response preserves any pre-existing .part (neither deleted nor modified).
+        assert part_403.read_bytes() == b"existing-partial"
+
+    assert calls == ["/missing", "/forbidden"]
