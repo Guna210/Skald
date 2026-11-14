@@ -44,9 +44,10 @@ def new_id(prefix: str) -> str:
     return f"{prefix}{suffix}"
 
 
-def atomic_write_bytes(path: Path, data: bytes) -> None:
+def atomic_write_bytes(path: Path, data: bytes, *, create_parents: bool = True) -> None:
     """Atomically write bytes via a same-directory temp file and `os.replace`."""
-    path.parent.mkdir(parents=True, exist_ok=True)
+    if create_parents:
+        path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path: Path | None = None
     try:
         with tempfile.NamedTemporaryFile(
@@ -67,10 +68,14 @@ def atomic_write_bytes(path: Path, data: bytes) -> None:
         raise
 
 
-def atomic_write_json(path: Path, payload: Any) -> None:
+def atomic_write_json(path: Path, payload: Any, *, create_parents: bool = True) -> None:
     """Atomically write UTF-8 JSON (`ensure_ascii=False`, indent 2, LF newlines)."""
     text = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
-    atomic_write_bytes(path, text.replace("\r\n", "\n").encode("utf-8"))
+    atomic_write_bytes(
+        path,
+        text.replace("\r\n", "\n").encode("utf-8"),
+        create_parents=create_parents,
+    )
 
 
 def _validate_single_segment(segment: str, label: str) -> str:
@@ -390,7 +395,18 @@ class ProjectStore:
                     hint="Create or open a project before saving.",
                     code=INVALID_PARAMS,
                 )
+            if not self._root.is_dir():
+                raise SkaldError(
+                    "project_invalid",
+                    f"Project folder no longer exists: {self._root}",
+                    details={"path": str(self._root)},
+                    hint="The project folder was moved or deleted.",
+                )
             updated = self._manifest.model_copy(update={"updated_at": _utc_now_iso()})
-            atomic_write_json(self._root / MANIFEST_FILENAME, updated.model_dump(mode="json"))
+            atomic_write_json(
+                self._root / MANIFEST_FILENAME,
+                updated.model_dump(mode="json"),
+                create_parents=False,
+            )
             self._manifest = updated
             return updated.model_copy(deep=True)

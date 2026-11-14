@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from skald_core.project.store import ProjectStore
 from skald_core.rpc.server import RpcServer
@@ -15,6 +15,13 @@ class ProjectCreateParams(BaseModel):
     path: str = Field(min_length=1)
     name: str = Field(min_length=1)
     base_seed: int | None = Field(default=None, ge=0, lt=2**31)
+
+    @field_validator("name")
+    @classmethod
+    def _name_must_not_be_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Project name must not be empty or whitespace")
+        return value
 
 
 class ProjectOpenParams(BaseModel):

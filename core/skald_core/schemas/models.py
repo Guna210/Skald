@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field, RootModel
+from pydantic import BaseModel, ConfigDict, Field, RootModel
 
 ErrorKind = Literal[
     "offline",
@@ -39,6 +39,8 @@ class SkaldErrorData(BaseModel):
 
 class ProjectManifest(BaseModel):
     """Project manifest stored in skald-project.json at the project root."""
+
+    model_config = ConfigDict(extra="allow")
 
     schema_version: int = Field(
         default=1,

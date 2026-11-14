@@ -6,6 +6,7 @@ import io
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -53,10 +54,22 @@ def test_create_open_save_round_trip_and_json_formatting(tmp_path: Path) -> None
     assert saved.voice_ids == ["v_abcd1234"]
 
     raw_bytes = (project_dir / "skald-project.json").read_bytes()
-    assert b"\r\n" not in raw_bytes
-    assert raw_bytes.endswith(b"\n")
-    raw_text = raw_bytes.decode("utf-8")
-    assert "\n  " in raw_text
+    expected_text = (
+        "{\n"
+        '  "schema_version": 1,\n'
+        '  "name": "My Book",\n'
+        f'  "created_at": "{created.created_at}",\n'
+        f'  "updated_at": "{saved.updated_at}",\n'
+        '  "base_seed": 42,\n'
+        '  "render_ids": [\n'
+        '    "rn_1234abcd"\n'
+        "  ],\n"
+        '  "voice_ids": [\n'
+        '    "v_abcd1234"\n'
+        "  ]\n"
+        "}\n"
+    )
+    assert raw_bytes == expected_text.encode("utf-8")
 
     reopened_store = ProjectStore()
     reopened = reopened_store.open(project_dir)
@@ -71,10 +84,13 @@ def test_create_random_base_seed_bounds_and_zero_seed(tmp_path: Path) -> None:
     m_zero = store.create(tmp_path / "p0", "Zero Seed", base_seed=0)
     assert m_zero.base_seed == 0
 
+    m_max = store.create(tmp_path / "pmax", "Max Seed", base_seed=2**31 - 1)
+    assert m_max.base_seed == 2**31 - 1
+
     with pytest.raises(ValueError):
         store.create(tmp_path / "p_neg", "Bad Seed", base_seed=-1)
     with pytest.raises(ValueError):
-        store.create(tmp_path / "p_big", "Bad Seed", base_seed=MAX_BASE_SEED)
+        store.create(tmp_path / "p_big", "Bad Seed", base_seed=2**31)
 
 
 def test_non_ascii_and_spaces_in_path_and_name(tmp_path: Path) -> None:
@@ -85,9 +101,20 @@ def test_non_ascii_and_spaces_in_path_and_name(tmp_path: Path) -> None:
     created = store.create(project_dir, name, base_seed=7)
     assert created.name == name
 
-    raw_text = (project_dir / "skald-project.json").read_text(encoding="utf-8")
-    # ensure_ascii=False preserves non-ASCII characters directly in UTF-8 JSON.
-    assert name in raw_text
+    raw_bytes = (project_dir / "skald-project.json").read_bytes()
+    expected_text = (
+        "{\n"
+        '  "schema_version": 1,\n'
+        f'  "name": "{name}",\n'
+        f'  "created_at": "{created.created_at}",\n'
+        f'  "updated_at": "{created.updated_at}",\n'
+        '  "base_seed": 7,\n'
+        '  "render_ids": [],\n'
+        '  "voice_ids": []\n'
+        "}\n"
+    )
+    # Pin indent=2, LF newlines, and ensure_ascii=False in UTF-8 bytes.
+    assert raw_bytes == expected_text.encode("utf-8")
 
     reopened = ProjectStore().open(project_dir)
     assert reopened == created
@@ -432,3 +459,88 @@ def test_rpc_project_methods_over_stdio_subprocess(tmp_path: Path) -> None:
     assert responses[2]["result"]["name"] == "Saga 日本語"
     assert responses[3]["result"]["name"] == "Saga 日本語"
     assert responses[4] == {"jsonrpc": "2.0", "id": 5, "result": {"ok": True}}
+
+
+def test_open_save_preserves_unknown_manifest_fields(tmp_path: Path) -> None:
+    project_dir = tmp_path / "future_minor_fields"
+    project_dir.mkdir()
+    manifest_path = project_dir / "skald-project.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "name": "Forward Compat",
+                "created_at": "2026-11-14T00:00:00Z",
+                "updated_at": "2026-11-14T00:00:00Z",
+                "base_seed": 123,
+                "render_ids": [],
+                "voice_ids": [],
+                "future_flag": True,
+                "future_meta": {"nested": [1, "two"], "note": "keep me"},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    store = ProjectStore()
+    opened = store.open(project_dir)
+    assert opened.model_extra == {
+        "future_flag": True,
+        "future_meta": {"nested": [1, "two"], "note": "keep me"},
+    }
+
+    assert store.manifest is not None
+    store.manifest.voice_ids.append("v_1111aaaa")
+    saved = store.save()
+    assert saved.model_extra == {
+        "future_flag": True,
+        "future_meta": {"nested": [1, "two"], "note": "keep me"},
+    }
+
+    on_disk = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert on_disk["voice_ids"] == ["v_1111aaaa"]
+    assert on_disk["future_flag"] is True
+    assert on_disk["future_meta"] == {"nested": [1, "two"], "note": "keep me"}
+
+
+@pytest.mark.parametrize("blank_name", ["", "   ", "\t\n"])
+def test_rpc_project_create_rejects_blank_name_as_invalid_params(
+    tmp_path: Path, blank_name: str
+) -> None:
+    server = RpcServer(stdin=io.BytesIO(), stdout=io.BytesIO())
+    register(server)
+
+    target = tmp_path / "blank_name_proj"
+    resp = server.handle_line(
+        json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "project.create",
+                "params": {"path": str(target), "name": blank_name},
+            }
+        )
+    )
+    assert resp is not None
+    assert resp["error"]["code"] == INVALID_PARAMS
+    assert resp["error"]["data"]["kind"] == "internal"
+    assert isinstance(resp["error"]["data"]["details"], list)
+    assert not target.exists()
+
+
+def test_save_missing_folder_raises_project_invalid_and_creates_nothing(tmp_path: Path) -> None:
+    parent_dir = tmp_path / "disappearing_parent"
+    project_dir = parent_dir / "proj"
+    store = ProjectStore()
+    store.create(project_dir, "Vanishing Book", base_seed=5)
+
+    shutil.rmtree(parent_dir)
+    assert not parent_dir.exists()
+
+    with pytest.raises(SkaldError) as exc_info:
+        store.save()
+    assert exc_info.value.kind == "project_invalid"
+    assert not parent_dir.exists()
+    assert not project_dir.exists()
