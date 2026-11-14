@@ -1,10 +1,11 @@
 # Spike T03.4 — engine packs (uv + python-build-standalone + hash-locked PyTorch)
 
 Status: findings for Orchestrator/owner review. Input for T03.5 (pack builder).
-Date of measurements: 2026-11-13. uv 0.13.8, vendored CPython 3.12.16 (python-build-standalone 20261110), torch 2.14.1.
+Gate decisions: SPEC.md Appendix 3 (T03.4 rows); section 6 is kept as originally proposed.
+Date of measurements: 2026-11-13 (side observations re-run on 2026-11-14, see below). uv 0.13.8, vendored CPython 3.12.16 (python-build-standalone 20261110), torch 2.14.1.
 
 **Every number below was measured** by `docs/spikes/scripts/spike.py` unless the sentence says *estimate* or *not measured*.
-Raw results: `docs/spikes/scripts/results/` (`cloud-linux.json` full; `ci-linux.json`, `ci-windows.json` condensed from the job logs).
+Raw results: `docs/spikes/scripts/results/` — `cloud-linux.json` (full), `ci-linux.json` and `ci-windows.json` (condensed from the job logs), and `cloud-linux-notes.txt` (raw output of `notes.sh`: index attempts, backend listings, download sizes, tool sizes, TLS variable, Python mirror; cited below as "notes step N").
 
 ## 1. Summary
 
@@ -41,7 +42,7 @@ Spike workflow runs (temporary workflow, deleted from the branch in the last com
 
 Sample packs (`docs/spikes/scripts/torch-cpu/`, `torch-cu12/`): `torch==2.14.1` + `numpy`. B5 steps 3–4 were replaced by a dummy local wheel installed with `--offline --no-index --no-deps` and `check_pack.py` (imports torch and numpy, prints versions, `cuda.is_available()` and the compiled CUDA architecture list).
 
-Reproduce: `core/.venv/bin/python docs/spikes/scripts/spike.py lock --check`, then `… spike.py measure --work <empty folder> [--other-volume <folder on another volume>] [--packs cu12]`.
+Reproduce: `core/.venv/bin/python docs/spikes/scripts/spike.py lock --check`, then `… spike.py measure --work <empty folder> [--other-volume <folder on another volume>] [--packs cu12]`; side observations: `bash docs/spikes/scripts/notes.sh <empty folder> [cu12]` (Linux).
 
 ## 3. Findings (the task's questions)
 
@@ -60,17 +61,18 @@ uv pip compile packs/<family>/requirements.in \
 ```
 
 - **One machine can generate both OSes.** All four locks were generated on the cloud Linux machine. `spike.py lock --check` regenerated them byte-for-byte identically on CI Linux and CI Windows (after LF normalisation), and the Windows runner installed from the Windows locks generated on Linux with `--require-hashes`.
-- **Resulting locks:** CPU: 11 packages, identical text for Linux and Windows. cu12 Linux: 30 packages (torch and triton from the PyTorch index; 17 `nvidia-*-cu12`/`cuda-*` wheels from PyPI). cu12 Windows: 11 packages (the CUDA libraries are inside the torch wheel).
-- **Index strategy (supply chain).** What was tried:
+- **Resulting locks** (pins counted as lines matching `name==version`; notes step 2e): CPU: 11 pins, identical text for Linux and Windows (1 from the PyTorch index, 10 from PyPI). cu12 Linux: 30 pins — `torch` and `triton` from the PyTorch index, 28 from PyPI, of which 18 are NVIDIA wheels (15 `nvidia-*` and 3 `cuda-*`). cu12 Windows: 11 pins (1 + 10; the CUDA libraries are inside the torch wheel).
+- **Index strategy (supply chain).** uv searches `--extra-index-url` **before** `--index-url` and stops at the first index that has the package name. What was tried (re-run on 2026-11-14, notes steps 2a–2d):
 
   | Attempt | Result |
   |---|---|
-  | `--index-url <pytorch cu126> --extra-index-url pypi` | Dependencies came from PyTorch's mirror, which is stale (filelock 4.2.4, setuptools 78.1.0). |
-  | `--index-url pypi --extra-index-url <pytorch>` with `torch==2.14.1` | **Silently resolved torch from PyPI** (the CUDA 13 build). |
-  | Same with `torch==2.14.1+cpu` | Fails: uv stops at the first index that has the package name. |
-  | `--torch-backend <cpu\|cu126>` | Correct: torch (and triton) from `download.pytorch.org/whl/<backend>`, everything else from PyPI. |
+  | PyPI searched first (`--index-url <pytorch cu126> --extra-index-url <pypi>`), `torch==2.14.1` | **Silently resolved torch from PyPI**: all 30 pins from PyPI, `torch==2.14.1` without a `+cu126` tag, with `cuda-toolkit==13.0.3.0` and `nvidia-cublas==13.1.1.3` (the CUDA 13 build). Exit 0, no warning. (2a) |
+  | Same, `torch==2.14.1+cu126` | Fails: "`torch` was found on https://pypi.org/simple, but not at the requested version". (2c) |
+  | PyTorch index searched first (`--index-url <pypi> --extra-index-url <pytorch cpu>`), CPU sample, no `--exclude-newer` | Everything comes from PyTorch's mirror, which is stale: all 11 pins from `…/whl/cpu`, `filelock==4.2.4` and `setuptools==78.1.0` (PyPI: 4.2.10 and 84.2.1). (2b4) |
+  | PyTorch index searched first, cu126 sample | With `--exclude-newer`: fails ("no version of cuda-toolkit[cublas]==12.6.3"; the mirror's files are filtered out). Without it: fails here because the mirror points NVIDIA wheels at `pypi.nvidia.com`, a host we do not allow. (2b, 2b2, 2b3) |
+  | `--torch-backend cu126` | Correct: `torch==2.14.1+cu126` and `triton` from `download.pytorch.org/whl/cu126`, the other 28 pins from PyPI (`filelock==4.2.10`, `setuptools==84.2.1`). (2d) |
 
-  With `--emit-index-annotation` every pin carries a `# from <index>` line. The spike locks contain 48 pins from `https://pypi.org/simple`, 1 from `…/whl/cpu` and 3 from `…/whl/cu126`. **make_locks.py should fail if any package other than an explicit allowlist (`torch`, `triton`, later `torchaudio`/`torchvision` if a pack needs them) is annotated with a PyTorch index, or if `torch` is annotated with PyPI.**
+  With `--emit-index-annotation` every pin carries a `# from <index>` line. Across the four spike locks: 58 pins from `https://pypi.org/simple`, 2 from `…/whl/cpu` and 3 from `…/whl/cu126` (notes step 2e). **make_locks.py should fail if any package other than an explicit allowlist (`torch`, `triton`, later `torchaudio`/`torchvision` if a pack needs them) is annotated with a PyTorch index, or if `torch` is annotated with PyPI.**
 - `--only-binary :all:` makes locking fail rather than pin a source distribution; `uv pip sync --no-build` enforces the same at install time. `--exclude-newer` makes regeneration reproducible (measured: identical output on three machines hours apart).
 - **Locks are specific to the Python version.** A 3.11 lock from the same input differs (numpy 2.4.6 vs 2.5.4, networkx 3.6.1 vs 3.7).
 - `spike.py`'s first version let uv write to `~/.cache/uv`; make_locks.py must set `UV_CACHE_DIR` (and `UV_NO_CONFIG=1`) so nothing outside the project is touched.
@@ -127,14 +129,14 @@ So a pack costs its size once; further packs from the same wheels cost ~10 MB ea
 | cu12 warm sync | 0.73 s | 0.23 s | 7.89 s |
 | cu12 first import | 3.38 s | 2.15 s | 8.08 s |
 
-- Download sizes (cloud Linux, sum of uv's "Downloading" lines ≥ 1 MiB): CPU 211.2 MiB (torch 187.2); cu12 Linux 3,499.5 MiB (torch 828.9, cudnn 674.0, cublas 374.9, nccl 276.3, cusparselt 273.9, triton 235.4, …). Windows download sizes were not measured.
-- Install time is dominated by the network (cloud vs CI for the same 3.5 GiB: 337.8 s vs 22.21 s) and on Windows by file creation and antivirus (3.8).
+- Download sizes (cloud Linux, sum of uv's "Downloading" lines, which uv prints for wheels ≥ 1 MiB; notes steps 5 and 6): CPU 211.2 MiB (torch 187.2, numpy 16.0, sympy 6.0, networkx 2.0); cu12 Linux 3,499.5 MiB (torch 828.9, cudnn 674.0, cublas 374.9, nccl 276.3, cusparselt 273.9, triton 235.4, cusparse 206.5, cufft 190.9, cusolver 150.9, nvshmem 132.7, and nine smaller wheels). Windows download sizes were not measured.
+- Install time is dominated by the network (the same 3.5 GiB took 337.8 s on the cloud machine on 2026-11-13, about 30 s there a day later — notes step 6 — and 22.21 s on CI) and on Windows by file creation and antivirus (section 3.8).
 - **Bytecode pre-compilation is not worth it:** `python -m compileall` took 9–16 s (Linux) / 29 s (Windows), added 127–129 MB, and import time afterwards equalled the ordinary second import (0.68 vs 0.67 s; 1.52 vs 1.51 s). Python writes the bytecode it needs on first use anyway.
-- Vendored tools on disk (Linux): Python 109 MB, uv 37 MB.
+- Vendored tools on disk (Linux, `du -sm`; notes step 1): Python 109 MB, uv 37 MB.
 
 ### 3.6 Behind `HTTPS_PROXY`
 
-- **Plain forwarding proxy** (`connect_proxy.py`, a logging CONNECT proxy; CI Linux and Windows): uv honours `HTTPS_PROXY`; a cold CPU install through it took 4.83 s (Linux) / 22.29 s (Windows). Hosts contacted for a pack install: `pypi.org`, `files.pythonhosted.org`, `download.pytorch.org`, `download-r2.pytorch.org`. With a Python download (3.9) additionally `releases.astral.sh`.
+- **Plain forwarding proxy** (`connect_proxy.py`, a logging CONNECT proxy; CI Linux and Windows): uv honours `HTTPS_PROXY`; a cold CPU install through it took 4.83 s (Linux) / 22.29 s (Windows). Hosts contacted for a pack install: `pypi.org`, `files.pythonhosted.org`, `download.pytorch.org`, `download-r2.pytorch.org`. With a Python download (section 3.9) additionally `releases.astral.sh`.
 - **Proxy down:** fails in 4.28 s (Linux) / 14.36 s (Windows) with `tunnel error: failed to create underlying connection … Connection refused` (exit 2). No silent direct connection.
 - **No proxy variable where one is required** (cloud): DNS error after 11.29 s.
 - **TLS-inspecting proxy** (cloud machine; the proxy re-signs HTTPS with its own CA):
@@ -145,7 +147,7 @@ So a pack costs its size once; further packs from the same wheels cost ~10 MB ea
   | `SSL_CERT_FILE=<CA bundle>` | Works. |
   | `UV_SYSTEM_CERTS=1` (OS trust store) | Works. |
   | `--system-certs` | Works. |
-  | `--native-tls` (old name) | Still accepted; the `UV_NATIVE_TLS` variable prints a deprecation warning. |
+  | `--native-tls` (old name) | Still accepted. The old variable `UV_NATIVE_TLS=1` also works but prints "deprecated … Use `UV_SYSTEM_CERTS` instead" (notes step 4). |
 
   Recommendation: always set `UV_SYSTEM_CERTS=1` and pass the user's `HTTPS_PROXY`, `HTTP_PROXY`, `NO_PROXY` and `SSL_CERT_FILE` through unchanged. A company's CA is normally in the OS store, so this works with no user setting. Never offer `--allow-insecure-host` or any switch that disables verification. Map `UnknownIssuer` to a clear message ("your network inspects HTTPS; ask IT for the certificate or install it in the system store").
 - Not measured: proxies that need a username/password, and the Windows certificate store with a real corporate CA (the Windows runner has no inspecting proxy).
@@ -185,18 +187,18 @@ So Defender made the install 4.8× slower and the first import 1.9× slower; not
 
 - **Moving a pack folder** (plain `uv venv`): `python -c "import torch"` still works, but console scripts break (Linux: stale `#!` path; Windows: `uv trampoline failed to canonicalize script path`).
 - **Moving a `uv venv --relocatable` pack**: imports and console scripts both work on both OSes. It costs nothing, so create packs with it.
-- But a move to **another volume** breaks the hard links: the moved packs become full copies and the sharing in 3.4 is lost for good.
+- But a move to **another volume** breaks the hard links: the moved packs become full copies and the sharing in section 3.4 is lost for good.
 - **Rebuild instead:** copy the cache to the new folder (816.2 MB in 1.02 s on Linux; 562.1 MB in 5.9 s on Windows), then build the pack there with `UV_OFFLINE=1`: 0.13 s / 1.27 s, +1.9 / +9.1 MB, hard-linked again, check passes. No network needed.
 
 Recommendation for the Settings task: "change model storage folder" = (1) move model files, (2) move `uv-cache` (same volume: rename; other volume: copy then delete), (3) delete the old packs and rebuild each from its lock offline, (4) run step 4 for each. If the cache was cleaned earlier, step 3 downloads again; say so in the size warning.
 
-**Base Python location.** Because `pyvenv.cfg` holds an absolute path (3.2), packs break whenever the bundled Python's path changes: an app update that installs to a new folder, a portable copy moved by the user, or (not measured, from how AppImage works) an AppImage, which mounts at a different temporary path on every start. Recommendation: before starting a worker, compare `home` in the pack's `pyvenv.cfg` with the current bundled Python and, if different, run `uv venv --allow-existing --relocatable --python <bundled python> <pack dir>` (0.07–0.14 s measured, packages kept).
+**Base Python location.** Because `pyvenv.cfg` holds an absolute path (section 3.2), packs break whenever the bundled Python's path changes: an app update that installs to a new folder, a portable copy moved by the user, or (not measured, from how AppImage works) an AppImage, which mounts at a different temporary path on every start. Recommendation: before starting a worker, compare `home` in the pack's `pyvenv.cfg` with the current bundled Python and, if different, run `uv venv --allow-existing --relocatable --python <bundled python> <pack dir>` (0.07–0.14 s measured, packages kept).
 
 ### 3.10 A pack that needs Python 3.11
 
 - With `UV_PYTHON_DOWNLOADS=never` (the default recommended here) `uv venv --python 3.11` fails cleanly: "No interpreter found for Python 3.11 in managed installations".
 - With `UV_PYTHON_DOWNLOADS=automatic` and `--managed-python`, `uv venv --python 3.11 --managed-python <pack dir>` downloads CPython 3.11.18 (python-build-standalone 20261110, `install_only_stripped`), 29.4 MiB (Linux) / 24.3 MiB (Windows), in 0.79 s / 3.85 s on CI, into `UV_PYTHON_INSTALL_DIR` (82.9 / 71.7 MB installed). It created no shim on `PATH` and wrote nothing outside the given folders. (`uv python install` without `--no-bin` does create `~/.local/bin/python3.11`; don't use it.)
-- **Source:** uv 0.13.8 first tries `https://releases.astral.sh/github/python-build-standalone/releases/download/<date>/…` and falls back to `https://github.com/astral-sh/python-build-standalone/releases/download/<date>/…` (seen on the cloud machine, where the first host is blocked). Setting `UV_PYTHON_INSTALL_MIRROR=https://github.com/astral-sh/python-build-standalone/releases/download` goes straight to GitHub, which keeps B5's host list unchanged.
+- **Source:** uv 0.13.8 first tries `https://releases.astral.sh/github/python-build-standalone/releases/download/<date>/…` and falls back to `https://github.com/astral-sh/python-build-standalone/releases/download/<date>/…` (seen on the cloud machine, where the first host is blocked; notes step 7b). With `UV_PYTHON_INSTALL_MIRROR=https://github.com/astral-sh/python-build-standalone/releases/download` the only URL uv requested was the GitHub one, and Python 3.11.18 was installed (measured, notes step 7), which keeps B5's host list unchanged.
 - **Verification:** uv checks the archive against a SHA-256 built into the uv binary. A tampered archive served from a `file://` mirror was rejected ("Expected … Computed …", exit 2) on both OSes. So the trust anchor is the pinned uv binary (itself SHA-256-pinned in `scripts/deps.lock.json`).
 - The 3.11 pack then synced from a 3.11 lock and passed the check (python 3.11.18, numpy 2.4.6). The lock must be compiled with `--python-version 3.11`.
 - Which 3.11 patch release is downloaded is fixed by the uv version, so it changes only when we bump uv.
@@ -209,7 +211,7 @@ See `docs/spikes/deps-mirror.md` for what we bundle and mirror (uv: MIT OR Apach
 
 Additional points from this spike:
 
-- **A Python downloaded by uv** (3.10) is the same python-build-standalone distribution, fetched by the user's machine from Astral/GitHub. Skald does not redistribute it, so no extra notice duty arises beyond listing it in the docs.
+- **A Python downloaded by uv** (section 3.10) is the same python-build-standalone distribution, fetched by the user's machine from Astral/GitHub. Skald does not redistribute it, so no extra notice duty arises beyond listing it in the docs.
 - **Pack contents are downloaded by the user's machine from PyPI / PyTorch; Skald redistributes none of them.** Licence metadata of what the sample packs pull in: torch BSD-style, with many bundled third-party licences (Apache-2.0, BSD, MIT, …) inside the wheel; numpy BSD-3-Clause and bundled components; triton MIT; `cuda-bindings` and friends as declared on PyPI; **`nvidia-*-cu12` wheels (Linux) are "NVIDIA Proprietary Software"** under NVIDIA's CUDA/cuDNN licence terms, and the Windows cu126 torch wheel contains the same NVIDIA libraries.
 - **Open question for the owner/Orchestrator (not a Builder's call):** the NVIDIA libraries are proprietary. Downloading them from PyPI/PyTorch onto the user's machine at the user's request is how every PyTorch user gets them, and we never host them, but the model-install screen for GPU packs probably should say that NVIDIA's CUDA libraries are downloaded under NVIDIA's licence. The mirror rule follows: **never mirror pack wheels** in `deps-v1` or anywhere else.
 - No GPL/AGPL package appeared in either sample pack's lock.
@@ -243,7 +245,7 @@ uv pip install --python <pack python> --offline --no-index --no-deps <skald_work
 # 5. write pack.json, then rename the folder
 ```
 
-`<pack python>` is `<pack>/bin/python` (Linux) or `<pack>\Scripts\python.exe` (Windows). The `--torch-backend` value comes from the lock (record it in the lock header or the pack's metadata next to the lock). A venv that has been renamed still works because of `--relocatable` (3.9); if T03.5 prefers, build in place and treat a missing `pack.json` as "half-built" exactly as B5 says — both are safe.
+`<pack python>` is `<pack>/bin/python` (Linux) or `<pack>\Scripts\python.exe` (Windows). The `--torch-backend` value comes from the lock (record it in the lock header or the pack's metadata next to the lock). A venv that has been renamed still works because of `--relocatable` (section 3.9); if T03.5 prefers, build in place and treat a missing `pack.json` as "half-built" exactly as B5 says — both are safe.
 
 ### 4.3 Repair, remove, storage change
 
@@ -270,7 +272,7 @@ uv venv --python 3.11 --managed-python --no-project --relocatable <pack dir>
 
 ### 4.5 Lock generation (`scripts/make_locks.py`)
 
-The command in 3.1, run once per pack × OS on any one machine, with `UV_NO_CONFIG=1` and a project-local `UV_CACHE_DIR`, followed by these checks: (a) index allowlist from the `# from` annotations; (b) no `--no-binary`/sdist entries; (c) lock files written with LF. Add a `--check` mode (regenerate to a temp file and compare) for CI; it passed on all three spike machines.
+The command in section 3.1, run once per pack × OS on any one machine, with `UV_NO_CONFIG=1` and a project-local `UV_CACHE_DIR`, followed by these checks: (a) index allowlist from the `# from` annotations; (b) no `--no-binary`/sdist entries; (c) lock files written with LF. Add a `--check` mode (regenerate to a temp file and compare) for CI; it passed on all three spike machines.
 
 ### 4.6 Free-disk check before install
 
@@ -278,10 +280,10 @@ Measured need = free-space drop of a cold install: CPU 868 MB (Linux) / 623 MB (
 
 ## 5. Watch-outs answered
 
-- **Supply chain:** 3.1 (torch-backend, index annotations + allowlist check, `--only-binary`, `--require-hashes --no-build`, tamper test).
-- **TLS-inspecting proxies:** 3.6 (`UV_SYSTEM_CERTS=1` by default; `SSL_CERT_FILE` honoured; verification never disabled).
-- **CUDA variant:** `cu126`. Available CUDA 12 backends at spike time: cu126 (up to torch 2.14.1), cu128 (stops at 2.11.0), cu129 (Linux only, 2.13.0). torch 2.15.0 ships only cpu/cu132/cu134, so the cu12 family is at its last releases; D-log/B5 should expect a `cu13` accelerator name eventually. `torch.version.cuda` = 12.6, cuDNN 9.10.2. Compiled architecture list: Linux `sm_50 sm_60 sm_70 sm_75 sm_80 sm_86 sm_90`; Windows the same plus `sm_61`. Turing (`sm_75`, e.g. the T4) is listed on both. Pascal: `sm_61` is listed on Windows; on Linux only `sm_60` is, and Pascal desktop cards are `sm_61` — CUDA normally runs `sm_60` code on them, but that was **not measured** (no GPU here). `cuda.is_available()` was `false` on all machines (no GPU), as expected. **The GPU self-test must confirm** `cuda.is_available()` and a tensor operation on the T4 (covers Turing); a Pascal card can only be confirmed by a user or the owner, so catalog `hardware` blocks should not promise Pascal until someone has.
-- **Disk:** packs and caches were deleted between steps; nothing but scripts, four small lock files and three results files is committed.
+- **Supply chain:** section 3.1 (torch-backend, index annotations + allowlist check, `--only-binary`, `--require-hashes --no-build`, tamper test).
+- **TLS-inspecting proxies:** section 3.6 (`UV_SYSTEM_CERTS=1` by default; `SSL_CERT_FILE` honoured; verification never disabled).
+- **CUDA variant:** `cu126`. PyTorch's index listings for Python 3.12 on 2026-11-14 (notes step 3): cu126 has torch 2.6.0–2.14.1 for Linux and Windows; cu128 stops at 2.11.0; cu129 stops at 2.13.0 and is Linux only; cu130 stops at 2.14.1; cu132 has 2.12.0–2.15.0; cu134 has only 2.15.0; cpu has 2.15.0. So torch 2.15.0 has no CUDA 12 build and the cu12 family is at its last releases; the decision log and B5 should expect a `cu13` accelerator name eventually. `torch.version.cuda` = 12.6, cuDNN 9.10.2. Compiled architecture list: Linux `sm_50 sm_60 sm_70 sm_75 sm_80 sm_86 sm_90`; Windows the same plus `sm_61`. Turing (`sm_75`, e.g. the T4) is listed on both. Pascal: `sm_61` is listed on Windows; on Linux only `sm_60` is, and Pascal desktop cards are `sm_61` — CUDA normally runs `sm_60` code on them, but that was **not measured** (no GPU here). `cuda.is_available()` was `false` on all machines (no GPU), as expected. **The GPU self-test must confirm** `cuda.is_available()` and a tensor operation on the T4 (covers Turing); a Pascal card can only be confirmed by a user or the owner, so catalog `hardware` blocks should not promise Pascal until someone has.
+- **Disk:** packs and caches were deleted between steps; nothing but scripts, four small lock files and four results files is committed.
 
 ## 6. Changes proposed for B5 / T03.5
 
@@ -294,11 +296,11 @@ Not applied; for the Orchestrator to decide.
 5. **B5 `<lockhash8>`:** first 8 hex characters of the SHA-256 of the lock file with CRLF converted to LF; add `packs/**/locks/*.txt text eol=lf` to `.gitattributes`.
 6. **B5 Remove:** replace "runs `uv cache prune`" by "runs `uv cache clean` when no pack remains, and offers 'Free up space' in Settings otherwise" (prune frees nothing; clean costs a re-download on the next install).
 7. **B5 hosts, C2 table, Appendix 4:** add `download-r2.pytorch.org` (already added to the owner's Claude cloud environment during this spike, with approval); spell PyPI as `pypi.org` + `files.pythonhosted.org`. If Python downloads are ever enabled, pin `UV_PYTHON_INSTALL_MIRROR` to GitHub rather than adding `releases.astral.sh`.
-8. **B5 new rule:** re-point packs when the bundled Python's path changes (3.9), and on Windows refuse pack folder paths longer than 150 characters; pack folder names ≤ 40 characters.
-9. **B5 Python-version sentence:** "A pack may declare another Python version" works (3.10) but is not needed for MVP; suggest T03.5 leaves it out and B5 says "not implemented until a pack needs it".
-10. **T03.5:** `make_locks.py --check`; free-disk figure from a measured install (4.6); the "killed midway" acceptance test should also cover a pack whose install succeeded but whose step 4 fails (the long-path case); unit tests with the fake `uv` should assert the environment in 4.1; smoke packs pin `torch==2.14.1` with backends `cpu`/`cu126`.
-11. **Settings task (storage folder):** follow 3.9 — move cache, rebuild packs offline, never move pack folders across volumes.
-12. **Model-install UI for GPU packs:** mention that NVIDIA's CUDA libraries are downloaded under NVIDIA's licence (3.11) — needs an owner decision.
+8. **B5 new rule:** re-point packs when the bundled Python's path changes (section 3.9), and on Windows refuse pack folder paths longer than 150 characters; pack folder names ≤ 40 characters.
+9. **B5 Python-version sentence:** "A pack may declare another Python version" works (section 3.10) but is not needed for MVP; suggest T03.5 leaves it out and B5 says "not implemented until a pack needs it".
+10. **T03.5:** `make_locks.py --check`; free-disk figure from a measured install (section 4.6); the "killed midway" acceptance test should also cover a pack whose install succeeded but whose step 4 fails (the long-path case); unit tests with the fake `uv` should assert the environment in 4.1; smoke packs pin `torch==2.14.1` with backends `cpu`/`cu126`.
+11. **Settings task (storage folder):** follow section 3.9 — move cache, rebuild packs offline, never move pack folders across volumes.
+12. **Model-install UI for GPU packs:** mention that NVIDIA's CUDA libraries are downloaded under NVIDIA's licence (section 3.11) — needs an owner decision.
 13. **CI:** PowerShell 5.1 treats redirected stderr of native tools as an error (`setup.ps1 > log 2>&1` failed in run 1); keep that in mind for the weekly slow-install job.
 
 ## 7. Not covered
