@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-14 11:30 (Asia/Colombo) · last entry: E-0074
+Last updated: 2026-11-14 11:55 (Asia/Colombo) · last entry: E-0075
 Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -8,21 +8,21 @@ Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 …
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 building in parallel (E-0067). T03.4 (★) merged (PR #11, E-0073). T01.4 handed off (PR #10), rebasing before review (E-0074).
+- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 building in parallel (E-0067). T03.4 (★) merged (PR #11, E-0073). T01.4 in review (PR #10, rebased) (E-0075).
 - `master` at `d6b0038`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: #10 T01.4 (head c56ffc3, conflicts with master in SPEC.md → rebase-only prompt sent, E-0074). T01.6 branch exists (PR #9 presumably); handoff not yet received.
+- Open PRs: #10 T01.4 (rebased, head 3f96bbf, CI green; in review, E-0075). T01.6 branch exists (PR #9 presumably); handoff not yet received.
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7), T02.1 (PR #8), T03.4 (PR #11).
-- T01.4 schemas + system.info: PR #10, round 1, rebase-only prompt sent; then review by fresh Claude Opus (Builder was Claude Sonnet) (E-0074). Merges before T01.6.
+- T01.4 schemas + system.info: PR #10, round 1, in review by a fresh Claude Opus (Builder was Claude Sonnet) (E-0075). Merges before T01.6.
 - T01.6 HTTP helper: building (`task/T01.6-http-downloader`, E-0067); rebases after T01.4 merges.
 - Available, not started (prompt only when the owner asks; E-0057): T02.2 EPUB container/spine/nav, T03.7 worker protocol, T03.9 [SPIKE][REVIEW], T06.1.
 - T01.3 job manager becomes available after T01.4 merges (E-0056).
 
 ## Waiting on the owner
-1. Paste the rebase prompt to the T01.4 Builder; send back its reply (E-0074).
+1. Run the T01.4 Reviewer (fresh Claude Opus) and send back the verdict (E-0075).
 2. Send the T01.6 handoff when ready (E-0067).
 3. Later, before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
@@ -82,4 +82,4 @@ None (T03.4 proposal 12: owner said yes, E-0070).
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-After the T01.4 rebase: verify + Reviewer prompt (fresh Opus; check R2-1/R2-2 and the E-0067 ffmpeg rules). Then the T01.6 handoff.
+Process the T01.4 verdict. Then the T01.6 handoff (it rebases after T01.4 merges).

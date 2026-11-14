@@ -141,3 +141,8 @@ Context: T01.4 round-1 handoff (Antigravity / Claude Sonnet). Checked: PR [Guna2
 Problem: `git merge-tree` → conflict in SPEC.md with master (T03.4's Appendix 3 rows were added at the same place).
 Decision: rebase-only prompt first (same as T01.1/T02.1), then one review on the rebased branch. Reviewer: fresh Claude Opus (Builder was Claude Sonnet; use a different model). T01.4 merges before T01.6 (T01.3 depends on it); T01.6 rebases after.
 Follow-up: rebase handoff → REVIEW-PROMPT.
+
+### E-0075 · 2026-11-14 11:55 (Asia/Colombo) · T01.4 · REVIEW-PROMPT
+Context: T01.4 rebase handoff (Antigravity / Claude Sonnet). Verified: PR #10 head `3f96bbf` on master d6b0038; range-diff: commits 1–2 identical, only the SPEC commit changed; SPEC diff vs master = tick + 3 T01.4 rows at the end; same 9 files +1015/−11. CI PR run 43584749987 + push run 43584746211 success at 3f96bbf. Builder: 64 passed + 10 scripts tests.
+Decision: Reviewer = fresh Claude Opus (Builder was Claude Sonnet). Focus: model fields vs B6/B7/B8/B9 (no invented fields; Builder's VoiceSpec union, str timestamps, bytes/MiB units, index.json shape); ErrorKind = exactly B8's 15 + 3; system.info lookup/null/stdout/timeout/CI assertion; the deps.lock constant test; R2-1 (flush test still discriminates) and R2-2; export round trip meaningful, nothing committed; registering system.info inside RpcServer.__init__ (generic server vs app methods); scope.
+Follow-up: VERDICT.
