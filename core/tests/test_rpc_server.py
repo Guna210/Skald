@@ -581,3 +581,33 @@ raise SystemExit(run_stdio_server(setup=setup))
         },
     }
     assert messages[4] == {"jsonrpc": "2.0", "id": 4, "result": {"ok": True}}
+
+
+def test_bare_rpc_server_only_registers_shutdown_and_register_all_adds_core_methods() -> None:
+    from skald_core.rpc.methods import register_all
+
+    server, _ = _make_server()
+    resp_info = server.handle_line('{"jsonrpc":"2.0","id":1,"method":"system.info"}')
+    assert resp_info is not None
+    _assert_protocol_error_shape(resp_info, METHOD_NOT_FOUND)
+
+    resp_job = server.handle_line(
+        '{"jsonrpc":"2.0","id":2,"method":"job.status","params":{"job_id":"j_00000000"}}'
+    )
+    assert resp_job is not None
+    _assert_protocol_error_shape(resp_job, METHOD_NOT_FOUND)
+
+    manager = register_all(server)
+    try:
+        resp_info2 = server.handle_line('{"jsonrpc":"2.0","id":3,"method":"system.info"}')
+        assert resp_info2 is not None
+        assert "result" in resp_info2
+        assert "core" in resp_info2["result"]
+
+        resp_job2 = server.handle_line(
+            '{"jsonrpc":"2.0","id":4,"method":"job.status","params":{"job_id":"j_00000000"}}'
+        )
+        assert resp_job2 is not None
+        _assert_protocol_error_shape(resp_job2, INVALID_PARAMS)
+    finally:
+        manager.shutdown()
