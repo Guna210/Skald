@@ -130,3 +130,14 @@ Findings: R2-1 [Minor] notes.sh `rm -rf "$WORK"` with no guard (`notes.sh .` wou
 [REVIEW] gate: SIGNED OFF by the Orchestrator. Findings measured and reproduced by the Reviewer; decisions G1–G14 are recorded in SPEC.md Appendix 3 (T03.4 rows, "[REVIEW] gate: …") in this PR, which is the sign-off record. No further owner check needed (proposal 12 answered in E-0070).
 Decision: Merge PR #11 now (normal merge; CI green at 653f202). All remaining items go to the T03.5 prompt (it edits B5/T07.10/the spike area anyway): R2-1 add a guard to notes.sh (refuse an existing non-empty folder); R2-2 add "move (or re-copy) python/" to T07.10; R2-3 fix the section ref; R2-4 cite NVIDIA's CUDA 13 notes in the Appendix 3 Pascal row; (a) T06.2 env line per F1 (SKALD_STORAGE_DIR only when the user chose a folder); (b) align C4's dev pack location with `<SKALD_DEV_DATA>/storage/`.
 Follow-up: owner merges PR #11. T03.5 needs T03.4 AND T01.3 (which waits for T01.4), so nothing new becomes available from this merge.
+
+### E-0073 · 2026-11-14 11:30 (Asia/Colombo) · T03.4 · MERGED
+Context: Owner: "Merged #11". master now `d6b0038` = "Merge pull request #11 from Guna210/task/T03.4-engine-pack-spike" (normal merge). T03.4 ticked; B5/B9/C2/T03.5/T07.2/T07.10/T09.4/Appendix 3–4 updated per G1–G14.
+Decision: the ★IMPORTANT task (T03.4, E-0066) is done; STATE keeps a one-line answer in case the owner asks. T03.5 still waits for T01.3 (← T01.4).
+Follow-up: none.
+
+### E-0074 · 2026-11-14 11:30 (Asia/Colombo) · T01.4 · NOTE
+Context: T01.4 round-1 handoff (Antigravity / Claude Sonnet). Checked: PR [Guna210/Skald#10](https://github.com/Guna210/Skald/pull/10), branch head `c56ffc3` (3 commits) based on 5a85aac, not current master d6b0038. 9 files +1015/−11: schemas/models.py 282, schemas/__init__.py 80, schemas/export.py 56, rpc/system.py 106, rpc/server.py ±22, tests (test_schemas 280, test_system_info 194, test_rpc_server +1). SPEC: tick + 3 Appendix 3 rows matching E-0056/E-0067. ffmpeg probe: SKALD_FFMPEG → SKALD_VENDOR; subprocess.run with stdout captured, stdin DEVNULL, timeout. Builder: 64 passed; CI run 43467566395 (on the old base). Builder decisions: VoiceSpec as RootModel discriminated union (preset|blend|clone); ISO-8601 str timestamps; HardwareInfo bytes, GpuInfo MiB; index.json {schema_version, models{name: file}}; system.info registered in RpcServer.__init__; R2-1/R2-2 done.
+Problem: `git merge-tree` → conflict in SPEC.md with master (T03.4's Appendix 3 rows were added at the same place).
+Decision: rebase-only prompt first (same as T01.1/T02.1), then one review on the rebased branch. Reviewer: fresh Claude Opus (Builder was Claude Sonnet; use a different model). T01.4 merges before T01.6 (T01.3 depends on it); T01.6 rebases after.
+Follow-up: rebase handoff → REVIEW-PROMPT.
