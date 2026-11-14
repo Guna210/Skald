@@ -112,3 +112,14 @@ Owner: "yes to both" on proposal 12 → (a) the GPU-pack install screen says NVI
  Also: catalog must not promise Pascal until confirmed on a real card; a future cu13 accelerator drops Maxwell/Pascal/Volta (D9) — Appendix 3 note.
 Findings decision: fix R1-1 (re-measure the cheap ones and record raw output; anything not re-measurable labelled "observed during the spike, not recorded"), R1-2, R1-3 (label as inferred, or run once), R1-4. R1-5 accepted as is (throwaway scripts, not linted).
 Follow-up: round-2 handoff → same Opus Reviewer checks fixes + spec edits; then the gate sign-off and merge.
+
+### E-0071 · 2026-11-14 10:10 (Asia/Colombo) · T03.4 · REVIEW-PROMPT + DECISION
+Context: T03.4 round-2 handoff (Claude Fable 5.2). Verified: PR #11 head `653f202`, one new commit on 57f11a5 (no force-push), master 5a85aac still an ancestor; 4 files +313/−46: SPEC.md, engine-packs.md, new notes.sh + results/cloud-linux-notes.txt. No .github change vs master. Orchestrator scan of the new files: no secrets/credentials/internal hosts. CI green (PR run 43582580627, push run 43582577450).
+Orchestrator read the whole SPEC diff: B5 rewritten (G1–G9, G12), B9 split into <userData>/<storage> with the platform-local default, C2 row, T03.5 Do/Tests (G5, G6, G8, G10, G13, G14), T07.2 NVIDIA line, T07.10 move procedure, T09.4 NVIDIA note, Appendix 3 (8 rows), Appendix 4 host. All faithful to E-0070. B7 unchanged (already requires a driver minimum) — accepted.
+Re-run corrections (R1-1): uv searches --extra-index-url before --index-url, so round 1's index table had the orders swapped; rows re-measured. A cu130 backend exists (to 2.14.1); backend list now from index listings (cu126 2.6.0–2.14.1; cu128 to 2.11.0; cu129 to 2.13.0 Linux only; cu132 2.12.0–2.15.0; cu134 2.15.0). UV_NATIVE_TLS warning only without UV_SYSTEM_CERTS. Download sizes reconfirmed (CPU 211.2 MiB; cu12 3,499.5 MiB). Mirror variable measured: GitHub only. Pin counts: 58 PyPI / 2 cpu / 3 cu126; 18 NVIDIA wheels.
+Builder follow-ups decided:
+ F1 How the core learns <storage>: the core reads SKALD_STORAGE_DIR; if unset, `<SKALD_DEV_DATA>/storage` when SKALD_DEV_DATA is set (dev); otherwise the platform default (Windows %LOCALAPPDATA%\Skald, Linux $XDG_DATA_HOME/Skald or ~/.local/share/Skald). The app (T06.2 core.ts) passes SKALD_STORAGE_DIR only when the user chose a folder. T03.5 implements it (first core code needing <storage>) and records it in Appendix 3, also updating T06.2's env line.
+ F2 Part B architecture diagram's host wording → T03.5 fixes it in passing.
+ F3/F4 (pypi.nvidia.com never touched with --torch-backend; install times vary 30 s vs 338 s) — noted, no action.
+Decision: round-2 re-review by the same Opus Reviewer session (it ran round 1).
+Follow-up: VERDICT → Orchestrator gate sign-off → merge.
