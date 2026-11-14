@@ -158,3 +158,14 @@ Decision: Merge PR #10 (normal merge; CI green at 3f96bbf). Routing:
  - R1-5 → dropped.
 After merge newly available: T01.3 (job manager), T01.5 (project store), T03.1 (catalog schema). T01.6 (in build) must rebase after this merge.
 Follow-up: owner merges PR #10; list available tasks without prompts.
+
+### E-0077 · 2026-11-14 12:50 (Asia/Colombo) · T01.4 · MERGED
+Context: master now `8659ccb` = "Merge pull request #10 from Guna210/task/T01.4-schemas-system-info" (seen while checking T01.6; normal merge). T01.4 ticked.
+Decision: newly available (prompts only on request, E-0057): T01.3, T01.5, T03.1.
+Follow-up: none.
+
+### E-0078 · 2026-11-14 12:50 (Asia/Colombo) · T01.6 · NOTE
+Context: T01.6 round-1 handoff (Antigravity / Gemini). Checked: PR [Guna210/Skald#9](https://github.com/Guna210/Skald/pull/9), head `1b23e4f` (2 commits) based on 5a85aac. 3 files +1044: net.py 453, test_net.py 587, SPEC.md (tick + 3 rows). User-Agent from skald_core.__version__. CI runs 43467552614/43467525384 green on the old base. Builder: 64 passed (50 + 14). Decisions: constants read at call time + optional kwargs (timeout, retries, backoff, headers, session); urllib3 ReadTimeoutError → timeout, NewConnectionError → offline; get_text defaults to utf-8 without charset; progress_cb(bytes_written, size); Content-Range start checked on 206.
+Problem: conflicts with master 8659ccb in SPEC.md (Appendix 3 rows from T03.4 and T01.4). After the rebase, SkaldError.kind is typed with T01.4's ErrorKind → net.py must pass mypy against it (helpers that return a kind must be typed ErrorKind, not str).
+Decision: rebase-only prompt (still round 1), then one review (fresh Claude Sonnet; Builder was Gemini; no licence/default surface).
+Follow-up: rebase handoff → REVIEW-PROMPT.
