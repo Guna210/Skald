@@ -619,7 +619,7 @@ Agents tick `[x]` when a task is done.
 **Phase 1 — Core engine**
 - [x] T01.1 Core package skeleton and dependency pins
 - [x] T01.2 JSON-RPC stdio server
-- [ ] T01.3 Background job manager with pause
+- [x] T01.3 Background job manager with pause
 - [x] T01.4 Schema models, schema export, `system.info`
 - [x] T01.5 Project folder storage
 - [x] T01.6 HTTP helper and verified downloader
@@ -1065,7 +1065,7 @@ Every adapter task: implements `worker/skald_worker/adapters/<name>.py`; creates
 - **Depends on:** T05.1
 - **Size:** S
 - **Read:** D16
-- **Do:** `voices.design` job: description + optional sample text → N candidates (default 3, different seeds) via `worker.design_sample`; the user picks one; `voices.create` stores `{ design_source: { description, seed, checkpoint }, spec: clone(reference = chosen sample) }`. The clone runs on the family's cloning checkpoint (Qwen Base; VoxCPM2 itself). If a family can't clone from its own design output, the adapter declares it and the UI warns that the voice may vary.
+- **Do:** `voices.design` job: description + optional sample text → N candidates (default 3, different seeds) via `worker.design_sample`; the user picks one; `voices.create` stores `{ design_source: { description, seed, checkpoint_id }, spec: clone(reference = chosen sample) }`. The clone runs on the family's cloning checkpoint (Qwen Base; VoxCPM2 itself). If a family can't clone from its own design output, the adapter declares it and the UI warns that the voice may vary.
 - **Acceptance:** with the fake adapter: design → pick → frozen profile; rendering the frozen profile twice with the same seed gives the same chunk cache key.
 - **Tests:** flow tests.
 
@@ -1497,6 +1497,10 @@ Answers from the Orchestrator (or owner) that clarify or change this spec are re
 | 2026-11-14 | T01.5 | How do atomic writes, stored paths, and empty-folder checks behave? | Atomic writes use a temp file in the same folder followed by `os.replace` (with handles closed before replacing); leftover temp files are ignored on open. JSON is written UTF-8 with `ensure_ascii=False`, `indent=2`, and `"\n"` newlines on every OS. Stored paths are relative to the project root and use `"/"` separators. `create()` requires a missing or empty folder, ignoring `desktop.ini`, `Thumbs.db`, and `.DS_Store`; non-empty folders raise `folder_not_empty`, and an existing Skald project raises `folder_not_empty` with hint `"This folder already contains a Skald project; open it instead."`. | Orchestrator |
 | 2026-11-14 | T01.5 | How are invalid manifests, open project state, `project.*` RPCs, and migrations handled? | Add `project_invalid` to B8 and `ErrorKind` for missing/malformed manifests and newer `schema_version` values (hint: made by a newer Skald). Core keeps one open project (the last created or opened). `project.create` and `project.open` return the manifest; `project.save` saves it, or returns `-32602` with `kind: "internal"` if none is open. `migrate(manifest)` uses a `{from_version: fn}` map and is a no-op for v1. | Orchestrator |
 | 2026-11-14 | T01.5 | Should `ProjectManifest` preserve unknown fields across `open` → `save`? | Yes. `ProjectManifest` uses `extra="allow"` so unknown keys (for example, fields written by a slightly newer Skald) survive `open` → `save` unchanged instead of being stripped on save. | Orchestrator |
+| 2026-11-14 | T01.4 | Where are core RPC methods registered, and what is the `DesignSource` checkpoint field named (R1-1, R1-2)? | `core/skald_core/rpc/methods.py` defines `register_all(server)` (called from `run_stdio_server`) for `system.info`, `project.*`, and `job.*`; generic `RpcServer` keeps only `system.shutdown`. Keep `DesignSource.checkpoint_id` (updated T05.2 text from `checkpoint` to `checkpoint_id`). | Orchestrator |
+| 2026-11-14 | T01.3 | What schemas and `job_id` format do background jobs use? | Use `JobRef` for "job started" results; add `JobProgress`, `JobLog`, `JobFinished`, and `JobStatus` (shaped per B8) to `skald_core.schemas`. `job_id` is `"j_"` + 8 lowercase alphanumerics generated with `secrets`. | Orchestrator |
+| 2026-11-14 | T01.3 | How do `job.cancel`, `job.pause`, `job.resume`, `job.status`, and job outcomes behave? | Unknown `job_id` → `-32602` with `kind: "internal"` via `SkaldError(..., code=INVALID_PARAMS)`. Control calls on an already-finished job return its status unchanged (idempotent). `job.pause` on queued/running sets `"paused"` immediately (running stops at next `checkpoint()`; queued does not start until resumed); `job.resume` returns to `"running"` or `"queued"`. `job.cancel` on queued never runs and emits `job.finished` (`cancelled`); cancel while paused unblocks `checkpoint()` which raises `JobCancelled`. Outcomes: `JobCancelled` or exception after cancel requested → `cancelled`; normal return → `succeeded` with JSON-serialisable or Pydantic `result`; other exceptions → `failed` keeping `SkaldError` fields (unexpected exceptions logged with traceback as `kind: "internal"`). | Orchestrator |
+| 2026-11-14 | T01.3 | How do process-tree killing, throttling, and `system.shutdown` behave for jobs? | Kill process trees via `psutil` `children(recursive=True)` first then parent: `terminate`, wait up to 1 s, then `kill`; every subprocess passes `stdout=` explicitly (never inherited). Coalesce `job.progress` to at most 10/s per job keeping the latest value and flush any pending latest value before `job.finished`; `job.finished` and `job.log` are never throttled. `system.shutdown` cancels every running or queued job (killing process trees) and waits briefly before exiting. | Orchestrator |
 
 ## Appendix 4 — Claude Code cloud environment
 
