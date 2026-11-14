@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-14 19:40 (Asia/Colombo) · last entry: E-0092
+Last updated: 2026-11-14 20:30 (Asia/Colombo) · last entry: E-0093
 Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -8,19 +8,19 @@ Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 …
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 building in parallel (E-0067). T03.4 (★) merged (PR #11, E-0073). T01.4 merged (PR #10, E-0077). T01.6 merged (PR #9, E-0083). T01.5 merged (PR #12, E-0089). T01.3 round 2 fixes (PR #13) (E-0092).
+- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 building in parallel (E-0067). T03.4 (★) merged (PR #11, E-0073). T01.4 merged (PR #10, E-0077). T01.6 merged (PR #9, E-0083). T01.5 merged (PR #12, E-0089). T01.3 round 2 + PID-reuse amendment (PR #13) (E-0093).
 - `master` at `d9c1034`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: #13 T01.3 (R1 CHANGES REQUESTED: flaky grandchild test; round-2 prompt sent, E-0092).
+- Open PRs: #13 T01.3 (round 2 at d8f5c67, CI green; PID-reuse amendment sent before re-review, E-0093).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7), T02.1 (PR #8), T03.4 (PR #11), T01.4 (PR #10), T01.6 (PR #9), T01.5 (PR #12).
-- T01.3 job manager: PR #13, round 1, round 2 fixes R1-1…R1-5 (zombie-aware PID checks, close pipes, orphan grandchildren, kill-order test) (E-0092); re-review by the same Opus session.
+- T01.3 job manager: PR #13, round 1, round 2 pushed (d8f5c67); Orchestrator found a PID-reuse risk in the new kill code → amendment (capture psutil.Process at register; skip already-reaped PIDs; is_running check) (E-0093); then re-review by the same Opus session.
 - Available, not started (prompt only when the owner asks; E-0057): T02.2 EPUB container/spine/nav, T03.1 catalog schema, T03.7 worker protocol, T03.9 [SPIKE][REVIEW], T06.1.
 
 ## Waiting on the owner
-1. Paste the T01.3 round-2 fix prompt to the Builder; send back its handoff (E-0092).
+1. Paste the T01.3 PID-reuse amendment to the Builder; send back its handoff (E-0093).
 2. Later, before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs
