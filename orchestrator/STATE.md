@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-14 17:50 (Asia/Colombo) · last entry: E-0088
+Last updated: 2026-11-14 18:20 (Asia/Colombo) · last entry: E-0090
 Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -8,22 +8,20 @@ Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 …
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 building in parallel (E-0067). T03.4 (★) merged (PR #11, E-0073). T01.4 merged (PR #10, E-0077). T01.6 merged (PR #9, E-0083). T01.5 APPROVED, owner to merge PR #12 (E-0088); T01.3 building (E-0084).
-- `master` at `9d2f619`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: #12 T01.5 (APPROVED round 2 at 9705410, CI green; owner to merge, E-0088). T01.3 branch exists; handoff not yet received.
+- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 building in parallel (E-0067). T03.4 (★) merged (PR #11, E-0073). T01.4 merged (PR #10, E-0077). T01.6 merged (PR #9, E-0083). T01.5 merged (PR #12, E-0089). T01.3 handed off (PR #13), rebasing before review (E-0090).
+- `master` at `d9c1034`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
+- Open PRs: #13 T01.3 (head 81e2c64, conflicts with master in rpc/server.py + test_schemas.py → rebase-only prompt sent, E-0090).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
-- Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7), T02.1 (PR #8), T03.4 (PR #11), T01.4 (PR #10), T01.6 (PR #9).
-- T01.5 project store, PR #12: APPROVED round 2 (E-0088); owner to merge.
-- Building (round 1, E-0084): T01.3 job manager (`task/T01.3-job-manager`). If T01.5 merges first, T01.3's rebase moves register_project_methods into register_all and uses SkaldError("internal", …, code=INVALID_PARAMS) for unknown job_id (E-0085, Reviewer-approved E-0086). Registration: T01.3 creates rpc/methods.py; the second to merge wires the other in. Whichever merges second rebases (Appendix 3).
+- Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7), T02.1 (PR #8), T03.4 (PR #11), T01.4 (PR #10), T01.6 (PR #9), T01.5 (PR #12).
+- T01.3 job manager: PR #13, round 1, rebase-only prompt sent (unify on SkaldError(code=…), drop InvalidParamsError; project registration into register_all) (E-0090); then review by a fresh Claude Opus.
 - Available, not started (prompt only when the owner asks; E-0057): T02.2 EPUB container/spine/nav, T03.1 catalog schema, T03.7 worker protocol, T03.9 [SPIKE][REVIEW], T06.1.
 
 ## Waiting on the owner
-1. Merge PR #12 (T01.5, normal merge) and confirm (E-0088).
-2. Send the T01.3 handoff when ready (E-0084).
-3. Later, before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
+1. Paste the rebase prompt to the T01.3 Builder; send back its reply (E-0090).
+2. Later, before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs
 None.
@@ -84,4 +82,4 @@ None (T03.4 proposal 12: owner said yes, E-0070).
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-Confirm the PR #12 merge; then the T01.3 handoff (it must rebase onto T01.5: register_all + SkaldError code). After merge, list available tasks without prompts (E-0057).
+After the T01.3 rebase: verify + Reviewer prompt (fresh Opus). After merge, list available tasks (T03.5 becomes available). After merge, list available tasks without prompts (E-0057).
