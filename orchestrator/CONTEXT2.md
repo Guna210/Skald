@@ -146,3 +146,15 @@ Follow-up: rebase handoff → REVIEW-PROMPT.
 Context: T01.4 rebase handoff (Antigravity / Claude Sonnet). Verified: PR #10 head `3f96bbf` on master d6b0038; range-diff: commits 1–2 identical, only the SPEC commit changed; SPEC diff vs master = tick + 3 T01.4 rows at the end; same 9 files +1015/−11. CI PR run 43584749987 + push run 43584746211 success at 3f96bbf. Builder: 64 passed + 10 scripts tests.
 Decision: Reviewer = fresh Claude Opus (Builder was Claude Sonnet). Focus: model fields vs B6/B7/B8/B9 (no invented fields; Builder's VoiceSpec union, str timestamps, bytes/MiB units, index.json shape); ErrorKind = exactly B8's 15 + 3; system.info lookup/null/stdout/timeout/CI assertion; the deps.lock constant test; R2-1 (flush test still discriminates) and R2-2; export round trip meaningful, nothing committed; registering system.info inside RpcServer.__init__ (generic server vs app methods); scope.
 Follow-up: VERDICT.
+
+### E-0076 · 2026-11-14 12:30 (Asia/Colombo) · T01.4 · VERDICT
+Context: Reviewer (fresh Claude Opus) round 1 on PR #10 @3f96bbf: APPROVED. Fresh venv: pytest 64, ruff/format/mypy clean. Mutations: removing the flush fails the flush test (R2-1 holds); a typo kind fails mypy listing 18 literals; changing deps.lock linux64 bin fails the constant test. Edge cases (Darwin, empty output, non-executable, directory) → None + warning, no exception, no stdout. CI=true with empty vendor fails → CI assertion is real. No schema exports committed; no new deps; SPEC rows match. Models trace to B6/B7/B9/C1.5/T02.1; VoiceSpec union matches B6 (oneOf on kind).
+Findings: R1-1 [Minor] system.info registered in RpcServer.__init__ (generic server imports app handlers); R1-2 [Minor] DesignSource.checkpoint_id vs T05.2 text "checkpoint"; R1-3 [Minor] invented fields: ChunkStatus.status literals, attempts, Paragraph.is_heading, Chapter.linear; R1-4 [Minor] no tests for the unsupported-platform and empty-output paths; R1-5 [Nit] blank first line → null.
+Decision: Merge PR #10 (normal merge; CI green at 3f96bbf). Routing:
+ - R1-1 → T01.3 prompt: add `rpc/methods.py` with `register_all(server)`, called from run_stdio_server; move system.info there; the generic server keeps only system.shutdown.
+ - R1-2 → keep `checkpoint_id` (consistent with the other models); T01.3 updates T05.2's text to `checkpoint_id` and adds an Appendix 3 row.
+ - R1-3 → provisional fields: T02.2 owns Chapter.linear, T02.3 Paragraph.is_heading, T05.x ChunkStatus.status/attempts — editable there.
+ - R1-4 → T01.3 prompt (two monkeypatch tests).
+ - R1-5 → dropped.
+After merge newly available: T01.3 (job manager), T01.5 (project store), T03.1 (catalog schema). T01.6 (in build) must rebase after this merge.
+Follow-up: owner merges PR #10; list available tasks without prompts.
