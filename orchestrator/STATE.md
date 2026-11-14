@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-14 18:20 (Asia/Colombo) · last entry: E-0090
+Last updated: 2026-11-14 18:50 (Asia/Colombo) · last entry: E-0091
 Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -8,19 +8,19 @@ Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 …
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 building in parallel (E-0067). T03.4 (★) merged (PR #11, E-0073). T01.4 merged (PR #10, E-0077). T01.6 merged (PR #9, E-0083). T01.5 merged (PR #12, E-0089). T01.3 handed off (PR #13), rebasing before review (E-0090).
+- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 building in parallel (E-0067). T03.4 (★) merged (PR #11, E-0073). T01.4 merged (PR #10, E-0077). T01.6 merged (PR #9, E-0083). T01.5 merged (PR #12, E-0089). T01.3 in review (PR #13, rebased) (E-0091).
 - `master` at `d9c1034`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: #13 T01.3 (head 81e2c64, conflicts with master in rpc/server.py + test_schemas.py → rebase-only prompt sent, E-0090).
+- Open PRs: #13 T01.3 (rebased, head 923ead0, CI green; in review, E-0091).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7), T02.1 (PR #8), T03.4 (PR #11), T01.4 (PR #10), T01.6 (PR #9), T01.5 (PR #12).
-- T01.3 job manager: PR #13, round 1, rebase-only prompt sent (unify on SkaldError(code=…), drop InvalidParamsError; project registration into register_all) (E-0090); then review by a fresh Claude Opus.
+- T01.3 job manager: PR #13, round 1, rebased (single SkaldError(code=…) mechanism; register_all); in review by a fresh Claude Opus (E-0091).
 - Available, not started (prompt only when the owner asks; E-0057): T02.2 EPUB container/spine/nav, T03.1 catalog schema, T03.7 worker protocol, T03.9 [SPIKE][REVIEW], T06.1.
 
 ## Waiting on the owner
-1. Paste the rebase prompt to the T01.3 Builder; send back its reply (E-0090).
+1. Run the T01.3 Reviewer (fresh Claude Opus) and send back the verdict (E-0091).
 2. Later, before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs
@@ -82,4 +82,4 @@ None (T03.4 proposal 12: owner said yes, E-0070).
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-After the T01.3 rebase: verify + Reviewer prompt (fresh Opus). After merge, list available tasks (T03.5 becomes available). After merge, list available tasks without prompts (E-0057).
+Process the T01.3 verdict. After merge, list available tasks (T03.5 becomes available). After merge, list available tasks without prompts (E-0057).
