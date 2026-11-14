@@ -191,3 +191,9 @@ Context: Owner first re-pasted the old rebase handoff by mistake (branch unchang
 Builder decisions: _clear_proxy_env uses MonkeyPatch.context() so test_default_constants can monkeypatch.undo() the backoff without restoring proxy vars; on 206 the start offset is checked before the total (stale .part → restart; correct offset with wrong total → fail early).
 Decision: round-2 re-review by the same Sonnet Reviewer session. Extra focus: the proxy vars really stay cleared in every test (autouse, including after undo); the restart happens at most once and can't loop; the cap test proves bytes on disk never exceed size.
 Follow-up: VERDICT.
+
+### E-0082 · 2026-11-14 15:00 (Asia/Colombo) · T01.6 · VERDICT
+Context: Reviewer (same Sonnet session) round 2 on PR #9 @79666b8: APPROVED. test_net 21 passed ×4 (~1.8 s), clean under -X dev; passes with every proxy var set to a dead address (vars stay cleared, also after undo()); core 85 passed; ruff/format/mypy (incl. test_net.py) clean; only 3 files vs master; no urllib3, no print. Probes: 50 MB advertised for size=1000 refused before reading the body, no .part; chunked oversize never written past size; stale .part + 416 recovers (requests ['bytes=10-', None]); cancel during restart keeps .part; DNS/refused → offline. Mutations A, B, D, E, G, H caught; C (416 guard) survives harmlessly.
+Findings: R2-1 [Nit] redundant `not restarted_from_zero` on the 416 path; R2-2 [Nit] a 206 to a non-Range request is written as a full body (safe: cap + checksum).
+Decision: Merge PR #9 (normal merge; CI green at 79666b8, run 43592462893). R2-1/R2-2 dropped. Merging unlocks nothing new by itself (T03.2 also needs T03.1; T03.6 needs T03.2 + T01.3).
+Follow-up: owner merges PR #9; list available tasks without prompts.
