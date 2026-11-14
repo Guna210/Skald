@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-14 15:00 (Asia/Colombo) · last entry: E-0082
+Last updated: 2026-11-14 15:30 (Asia/Colombo) · last entry: E-0084
 Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -8,19 +8,19 @@ Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 …
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 building in parallel (E-0067). T03.4 (★) merged (PR #11, E-0073). T01.4 merged (PR #10, E-0077). T01.6 APPROVED, owner to merge PR #9 (E-0082).
-- `master` at `8659ccb`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: #9 T01.6 (APPROVED round 2 at 79666b8, CI green; owner to merge, E-0082).
+- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 building in parallel (E-0067). T03.4 (★) merged (PR #11, E-0073). T01.4 merged (PR #10, E-0077). T01.6 merged (PR #9, E-0083). T01.3 and T01.5 prompts issued (parallel, E-0084).
+- `master` at `9d2f619`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
+- Open PRs: none yet (T01.3 and T01.5 Builders starting).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
-- Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7), T02.1 (PR #8), T03.4 (PR #11), T01.4 (PR #10).
-- T01.6 HTTP helper: PR #9 APPROVED round 2 (E-0082); owner to merge.
-- Available, not started (prompt only when the owner asks; E-0057): T01.3 job manager, T01.5 project store, T02.2 EPUB container/spine/nav, T03.1 catalog schema, T03.7 worker protocol, T03.9 [SPIKE][REVIEW], T06.1.
+- Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7), T02.1 (PR #8), T03.4 (PR #11), T01.4 (PR #10), T01.6 (PR #9).
+- Building (round 1, E-0084): T01.3 job manager (`task/T01.3-job-manager`), T01.5 project store (`task/T01.5-project-store`). Registration: T01.3 creates rpc/methods.py; the second to merge wires the other in. Whichever merges second rebases (Appendix 3).
+- Available, not started (prompt only when the owner asks; E-0057): T02.2 EPUB container/spine/nav, T03.1 catalog schema, T03.7 worker protocol, T03.9 [SPIKE][REVIEW], T06.1.
 
 ## Waiting on the owner
-1. Merge PR #9 (T01.6, normal merge) and confirm (E-0082).
+1. Run the T01.3 and T01.5 Builders and send back their handoffs (E-0084).
 2. Later, before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs
@@ -70,7 +70,7 @@ None (T03.4 proposal 12: owner said yes, E-0070).
 - uv mirror assets have no version in the name → a uv bump needs a new mirror tag (deps-v2) (E-0027). Mirror releases are marked Pre-release, never "latest" (E-0034).
 - T03.7 prompt: evaluate an fd-level stdout redirect (os.dup/os.dup2) in workers; model libraries may print from C code (E-0052).
 - Every prompt that launches subprocesses (T01.3, T03.5, T03.8, T05.6…): never inherit stdout — pass stdout= explicitly (Appendix 3 rule from T01.2) (E-0052).
-- T01.3 prompt: carry T01.4 R1-1 (rpc/methods.py register_all(server) from run_stdio_server; move system.info; generic server keeps system.shutdown), R1-2 (T05.2 text → checkpoint_id + Appendix 3 row), R1-4 (tests for unsupported platform + empty ffmpeg output) (E-0076).
+- (issued E-0084) T01.3 prompt: carry T01.4 R1-1 (rpc/methods.py register_all(server) from run_stdio_server; move system.info; generic server keeps system.shutdown), R1-2 (T05.2 text → checkpoint_id + Appendix 3 row), R1-4 (tests for unsupported platform + empty ffmpeg output) (E-0076).
 - T02.2/T02.3/T05.x prompts: T01.4 fields Chapter.linear (T02.2), Paragraph.is_heading (T02.3), ChunkStatus.status/attempts (T05.x) are provisional — edit them as needed (E-0076).
 - T01.3 prompt: use JobRef from T01.4's schemas; unknown job_id → -32602 kind internal; job.finished never throttled; cancel while paused unblocks checkpoint() and raises JobCancelled; subprocesses pass stdout explicitly (E-0056).
 - T03.6 prompt: map net.DownloadCancelled → JobCancelled (E-0056).
@@ -81,4 +81,4 @@ None (T03.4 proposal 12: owner said yes, E-0070).
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-Confirm the PR #9 merge. After merge, list available tasks without prompts (E-0057).
+Process the T01.3 / T01.5 handoffs. After merge, list available tasks without prompts (E-0057).

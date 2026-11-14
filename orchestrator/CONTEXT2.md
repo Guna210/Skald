@@ -197,3 +197,32 @@ Context: Reviewer (same Sonnet session) round 2 on PR #9 @79666b8: APPROVED. tes
 Findings: R2-1 [Nit] redundant `not restarted_from_zero` on the 416 path; R2-2 [Nit] a 206 to a non-Range request is written as a full body (safe: cap + checksum).
 Decision: Merge PR #9 (normal merge; CI green at 79666b8, run 43592462893). R2-1/R2-2 dropped. Merging unlocks nothing new by itself (T03.2 also needs T03.1; T03.6 needs T03.2 + T01.3).
 Follow-up: owner merges PR #9; list available tasks without prompts.
+
+### E-0083 · 2026-11-14 15:30 (Asia/Colombo) · T01.6 · MERGED
+Context: Owner: "Merged #9". master now `9d2f619` = "Merge pull request #9 from Guna210/task/T01.6-http-downloader" (normal merge). Phase 1 left: T01.3, T01.5.
+Follow-up: none.
+
+### E-0084 · 2026-11-14 15:30 (Asia/Colombo) · T01.3, T01.5 · TASK-ASSIGNED
+Context: Owner asked for the T01.3 and T01.5 prompts; both from master 9d2f619, run in parallel. Both add RPC methods → registration coordination (below); both append Appendix 3 rows → whichever merges second rebases.
+Decisions (Builders record in Appendix 3):
+T01.3 job manager:
+ - E-0056 rules: JobRef from schemas; unknown job_id → -32602 kind internal; job.finished never throttled; cancel while paused unblocks checkpoint() and raises JobCancelled; every subprocess passes stdout explicitly.
+ - Add Pydantic models for the job payloads (JobProgress, JobLog, JobFinished, JobStatus) in schemas (B8: all shapes are models). job_id = "j_" + 8 lowercase alphanumerics (secrets).
+ - Control semantics: pause/resume/cancel on a finished job → return its status unchanged (idempotent, no error). pause on a queued or running job → status "paused" at once; a running job actually stops at its next checkpoint(); resume → back to running (or queued if it never started). cancel on a queued job → it never runs, job.finished cancelled.
+ - Outcome: JobCancelled → cancelled; if cancel was requested and fn raises anything else (e.g. its subprocess was killed) → cancelled; normal return → succeeded with result (JSON-serialisable or a Pydantic model).
+ - Kill: psutil children(recursive=True) first, then the parent; terminate, wait ≤1 s, then kill (2 s acceptance).
+ - Throttle: job.progress coalesced to ≤10/s per job keeping the latest; the pending latest progress is flushed before job.finished. job.log not throttled.
+ - system.shutdown cancels all jobs (kill trees) and waits briefly, so no orphan processes.
+ - Carry T01.4 R1-1 (rpc/methods.py register_all(server) called from run_stdio_server; move system.info; generic server keeps system.shutdown), R1-2 (T05.2 text → checkpoint_id + Appendix 3 row), R1-4 (tests: unsupported platform, empty ffmpeg output).
+T01.5 project store:
+ - ProjectManifest model in schemas: schema_version 1, name, created_at, updated_at (ISO-8601 UTC str, as T01.4), base_seed, render_ids, voice_ids.
+ - base_seed = secrets.randbelow(2**31) (0…2^31−1; JSON-safe, fits numpy/torch seeding); create(path, name, base_seed=None) so tests fix it (C1.3).
+ - ID generator per B9: new_id(prefix) for v_/rn_/ch_/p_ + 8 lowercase alphanumerics (secrets). Stable paragraph ids are T02.3's.
+ - Atomic write: temp file in the same folder + os.replace; leftover temp files ignored on open. JSON: UTF-8, ensure_ascii=False, indent 2, "\n" newlines on every OS. Stored paths relative, with "/" separators.
+ - create(): folder must be missing or empty (ignoring desktop.ini, Thumbs.db, .DS_Store); a non-empty folder → folder_not_empty; a folder that already holds a Skald project → folder_not_empty with hint "open it instead".
+ - New error kind `project_invalid` (missing/malformed manifest, or schema_version newer than supported): add to B8's list and to ErrorKind.
+ - The core keeps one open project (last created/opened); project.save saves it (none open → -32602 kind internal). project.create/open return the manifest.
+ - Migration hook: migrate(manifest) → manifest via a small {from_version: fn} map; no-op for v1; tested with a fake v0.
+Registration coordination: T01.3 creates rpc/methods.py; T01.5 puts its handlers and a register(server) function in its own module and wires it with one line — into register_all if T01.3 is already on master when it rebases, otherwise from run_stdio_server (T01.3 then moves that line into register_all on its rebase).
+Builders: any agent, cloud. T01.3 involves threads + Windows process trees: prefer a strong model.
+Follow-up: two handoffs.
