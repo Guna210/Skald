@@ -226,3 +226,10 @@ T01.5 project store:
 Registration coordination: T01.3 creates rpc/methods.py; T01.5 puts its handlers and a register(server) function in its own module and wires it with one line — into register_all if T01.3 is already on master when it rebases, otherwise from run_stdio_server (T01.3 then moves that line into register_all on its rebase).
 Builders: any agent, cloud. T01.3 involves threads + Windows process trees: prefer a strong model.
 Follow-up: two handoffs.
+
+### E-0085 · 2026-11-14 16:10 (Asia/Colombo) · T01.5 · REVIEW-PROMPT
+Context: T01.5 round-1 handoff (Antigravity / Gemini). Verified: PR [Guna210/Skald#12](https://github.com/Guna210/Skald/pull/12), head `4354792` (3 commits) on current master 9d2f619, merges cleanly (no rebase). 9 files +970/−4: project/store.py 396, project/rpc.py 42, project/__init__.py 35, rpc/server.py ±10, schemas (+ProjectManifest, +project_invalid), tests test_project_store.py 434 + test_schemas.py +13; SPEC: B8 kind list + tick + 3 Appendix 3 rows. CI PR run 43598809978 success. Builder: 106 passed. T01.3 branch exists (81e2c64), no handoff yet.
+Builder decisions: project.save returns the updated manifest; SkaldError gains keyword-only `code: int = APP_ERROR` so -32602/internal can be raised via SkaldError; store returns deep copies; Field descriptions on the manifest; register_project_methods called from run_stdio_server (T01.3 moves it into register_all).
+Decision: Reviewer = fresh Claude Sonnet (Builder was Gemini). Focus: E-0084 rules; the SkaldError `code` extension (generic server behaviour; T01.3 must use the same mechanism for unknown job_id); Windows atomic replace / handle closing; empty-folder rule incl. ignored OS files; too-new/malformed manifests; relative "/" paths; ID format; scope.
+Note for T01.3: on rebase, move register_project_methods into register_all, and raise unknown-job_id errors through the same SkaldError(code=-32602) path if T01.5 merged first.
+Follow-up: VERDICT.
