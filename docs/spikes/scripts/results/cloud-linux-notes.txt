@@ -1,0 +1,168 @@
+
+===== date / uv =====
+2026-11-14T09:49:36Z
+uv 0.13.8 (x86_64-unknown-linux-gnu)
+
+===== 1. vendored tool sizes (du -sm, MB) =====
+109	vendor/python/linux64
+37	vendor/uv/linux64
+
+Note: uv searches --extra-index-url BEFORE --index-url, and stops at the first index that has the package name.
+
+===== 2a. index attempt: --index-url pytorch/cu126 --extra-index-url pypi  (PyPI searched first; requirements: torch==2.14.1, numpy) =====
+rc=0
+cuda-toolkit==13.0.3.0	    # via torch
+filelock==4.2.10	    # via torch
+nvidia-cublas==13.1.1.3	    # via
+nvidia-cuda-runtime==13.0.96	    # via cuda-toolkit
+setuptools==84.2.1	    # via torch
+torch==2.14.1	    # via -r docs/spikes/scripts/torch-cu12/requirements.in
+pins per index:
+     30 from https://pypi.org/simple
+
+===== 2b. index attempt: --index-url pypi --extra-index-url pytorch/cu126  (PyTorch index searched first), with --exclude-newer =====
+error: No solution found when resolving dependencies
+  cause: Because there is no version of cuda-toolkit[cublas]==12.6.3 and torch>=2.14.1+cu126 depends on cuda-toolkit[cublas]==12.6.3, we can conclude that torch>=2.14.1+cu126 cannot be used.
+         And because there is no version of torch==2.14.1 and you require torch==2.14.1, we can conclude that your requirements are unsatisfiable.
+
+hint: `cuda-toolkit` was filtered by `exclude-newer` to only include packages uploaded before 2026-11-13T00:00:00Z. Consider using `exclude-newer-package` to override the cutoff for this package.
+
+hint: `torch` was found on https://download.pytorch.org/whl/cu126, but not at the requested version (torch==2.14.1). A compatible version may be available on a subsequent index (e.g., https://pypi.org/simple). By default, uv will only consider versions that are published on the first index that contains a given package, to avoid dependency confusion attacks. If all indexes are equally trusted, use
+rc=1
+
+===== 2b2. as 2b without --exclude-newer =====
+error: Request failed after 3 retries in 6.5s
+  cause: Failed to fetch: https://pypi.nvidia.com/nvidia-nvjitlink-cu12/nvidia_nvjitlink_cu12-12.9.86-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl
+  cause: error sending request for url (https://pypi.nvidia.com/nvidia-nvjitlink-cu12/nvidia_nvjitlink_cu12-12.9.86-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl)
+  cause: client error (Connect)
+  cause: tunnel error: unsuccessful
+rc=2
+
+===== 2b3. as 2b2 with torch==2.14.1+cu126 =====
+error: Request failed after 3 retries in 5.7s
+  cause: Failed to fetch: https://pypi.nvidia.com/nvidia-nvshmem-cu12/nvidia_nvshmem_cu12-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
+  cause: error sending request for url (https://pypi.nvidia.com/nvidia-nvshmem-cu12/nvidia_nvshmem_cu12-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl)
+  cause: client error (Connect)
+  cause: tunnel error: unsuccessful
+rc=2
+
+===== 2b4. CPU sample, PyTorch index searched first (--index-url pypi --extra-index-url pytorch/cpu), without --exclude-newer =====
+rc=0
+filelock==4.2.4	    # via torch
+networkx==3.7	    # via torch
+numpy==2.5.4	    # via -r docs/spikes/scripts/torch-cpu/requirements.in
+setuptools==78.1.0	    # via torch
+torch==2.14.1+cpu	    # via -r docs/spikes/scripts/torch-cpu/requirements.in
+pins per index:
+     11 from https://download.pytorch.org/whl/cpu
+
+===== 2c. index attempt: as 2a (PyPI first) but torch==2.14.1+cu126 =====
+error: No solution found when resolving dependencies
+  cause: Because there is no version of torch==2.14.1+cu126 and you require torch==2.14.1+cu126, we can conclude that your requirements are unsatisfiable.
+
+hint: `torch` was found on https://pypi.org/simple, but not at the requested version (torch==2.14.1+cu126). A compatible version may be available on a subsequent index (e.g., https://download.pytorch.org/whl/cu126). By default, uv will only consider versions that are published on the first index that contains a given package, to avoid dependency confusion attacks. If all indexes are equally trusted, use `--index-strategy unsafe-best-match` to consider all versions from all indexes, regardless of the order in which they were defined.
+rc=1
+
+===== 2d. --torch-backend cu126 (the committed lock's command) =====
+rc=0
+filelock==4.2.10	    # via torch
+setuptools==84.2.1	    # via torch
+torch==2.14.1+cu126	    # via -r docs/spikes/scripts/torch-cu12/requirements.in
+triton==3.8.0	    # via torch
+pins per index:
+      2 from https://download.pytorch.org/whl/cu126
+     28 from https://pypi.org/simple
+
+===== 2e. pins per index in the four committed locks =====
+docs/spikes/scripts/torch-cpu/locks/linux-cpu.txt
+      1 from https://download.pytorch.org/whl/cpu
+     10 from https://pypi.org/simple
+  nvidia-*/cuda-* pins: 0  all pins: 11
+docs/spikes/scripts/torch-cpu/locks/windows-cpu.txt
+      1 from https://download.pytorch.org/whl/cpu
+     10 from https://pypi.org/simple
+  nvidia-*/cuda-* pins: 0  all pins: 11
+docs/spikes/scripts/torch-cu12/locks/linux-cu12.txt
+      2 from https://download.pytorch.org/whl/cu126
+     28 from https://pypi.org/simple
+  nvidia-*/cuda-* pins: 18  all pins: 30
+docs/spikes/scripts/torch-cu12/locks/windows-cu12.txt
+      1 from https://download.pytorch.org/whl/cu126
+     10 from https://pypi.org/simple
+  nvidia-*/cuda-* pins: 0  all pins: 11
+
+===== 3. PyTorch index listings: cp312 torch wheels per backend (version, platforms) =====
+cpu: HTTP 200
+    release versions: 2.2.0 2.2.1 2.2.2 2.3.0 2.3.1 2.4.0 2.4.1 2.5.0 2.5.1 2.6.0 2.7.0 2.7.1 2.8.0 2.9.0 2.9.1 2.10.0 2.11.0 2.12.0 2.12.1 2.13.0 2.14.0 2.14.1 2.15.0 
+    platforms of 2.15.0: linux_s390x macosx_14_0_arm64 manylinux_2_28_aarch64 manylinux_2_28_x86_64 win_amd64 win_arm64 
+cu126: HTTP 200
+    release versions: 2.6.0 2.7.0 2.7.1 2.8.0 2.9.0 2.9.1 2.10.0 2.11.0 2.12.0 2.12.1 2.13.0 2.14.0 2.14.1 
+    platforms of 2.14.1: manylinux_2_28_aarch64 manylinux_2_28_x86_64 win_amd64 
+cu128: HTTP 200
+    release versions: 2.7.0 2.7.1 2.8.0 2.9.0 2.9.1 2.10.0 2.11.0 
+    platforms of 2.11.0: manylinux_2_28_aarch64 manylinux_2_28_x86_64 win_amd64 
+cu129: HTTP 200
+    release versions: 2.8.0 2.9.0 2.9.1 2.10.0 2.11.0 2.12.1 2.13.0 
+    platforms of 2.13.0: manylinux_2_28_aarch64 manylinux_2_28_x86_64 
+cu130: HTTP 200
+    release versions: 2.9.0 2.9.1 2.10.0 2.11.0 2.12.0 2.12.1 2.13.0 2.14.0 2.14.1 
+    platforms of 2.14.1: manylinux_2_28_aarch64 manylinux_2_28_x86_64 win_amd64 
+cu132: HTTP 200
+    release versions: 2.12.0 2.12.1 2.13.0 2.14.0 2.14.1 2.15.0 
+    platforms of 2.15.0: manylinux_2_28_aarch64 manylinux_2_28_x86_64 win_amd64 
+cu134: HTTP 200
+    release versions: 2.15.0 
+    platforms of 2.15.0: manylinux_2_28_aarch64 manylinux_2_28_x86_64 win_amd64 
+
+===== 4. UV_NATIVE_TLS=1 (old variable name) with UV_SYSTEM_CERTS unset =====
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+Resolved 11 packages in 5ms
+rc=0
+
+===== 5. cold CPU sync: download lines =====
+Resolved 11 packages in 128ms
+Downloading numpy (16.0MiB)
+Downloading sympy (6.0MiB)
+Downloading networkx (2.0MiB)
+Downloading torch (187.2MiB)
+Prepared 11 packages in 5.79s
+Installed 11 packages in 139ms
+wheel archives are not kept by uv; sizes above are uv's own figures for wheels >= 1 MiB
+
+===== 6. cold cu12 sync: download lines =====
+Resolved 30 packages in 227ms
+Downloading numpy (16.0MiB)
+Downloading networkx (2.0MiB)
+Downloading nvidia-cufile-cu12 (1.1MiB)
+Downloading nvidia-nvjitlink-cu12 (37.9MiB)
+Downloading nvidia-cusparselt-cu12 (273.9MiB)
+Downloading sympy (6.0MiB)
+Downloading nvidia-nccl-cu12 (276.3MiB)
+Downloading cuda-bindings (7.3MiB)
+Downloading nvidia-cuda-nvrtc-cu12 (22.6MiB)
+Downloading nvidia-cuda-cupti-cu12 (8.5MiB)
+Downloading nvidia-nvshmem-cu12 (132.7MiB)
+Downloading nvidia-cudnn-cu12 (674.0MiB)
+Downloading nvidia-cublas-cu12 (374.9MiB)
+Downloading triton (235.4MiB)
+Downloading torch (828.9MiB)
+Downloading nvidia-curand-cu12 (53.7MiB)
+Downloading nvidia-cufft-cu12 (190.9MiB)
+Downloading nvidia-cusparse-cu12 (206.5MiB)
+Downloading nvidia-cusolver-cu12 (150.9MiB)
+Prepared 30 packages in 30.39s
+Installed 30 packages in 119ms
+wheel archives are not kept by uv; sizes above are uv's own figures for wheels >= 1 MiB
+
+===== 7. Python 3.11 download with UV_PYTHON_INSTALL_MIRROR pointing at GitHub =====
+DEBUG Downloading `https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.11.18%2B20261110-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz`
+Downloading cpython-3.11.18-linux-x86_64-gnu (download) (29.4MiB)
+ Downloaded cpython-3.11.18-linux-x86_64-gnu (download)
+Python 3.11.18
+
+===== 7b. same without the mirror variable (uv's default order), fresh install dir =====
+DEBUG Downloading `https://releases.astral.sh/github/python-build-standalone/releases/download/20261110/cpython-3.11.18%2B20261110-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz`
+WARN Failed to fetch `cpython-3.11.18-linux-x86_64-gnu` from `https://releases.astral.sh/github/python-build-standalone/releases/download/20261110/cpython-3.11.18%2B20261110-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz` (Failed to download `https://releases.astral.sh/github/python-build-standalone/releases/download/20261110/cpython-3.11.18%2B20261110-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz`); falling back to `https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.11.18%2B20261110-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz`
+DEBUG Downloading `https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.11.18%2B20261110-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz`
+Downloading cpython-3.11.18-linux-x86_64-gnu (download) (29.4MiB)
+ Downloaded cpython-3.11.18-linux-x86_64-gnu (download)

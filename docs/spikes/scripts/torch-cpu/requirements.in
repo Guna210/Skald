@@ -1,0 +1,3 @@
+# Throwaway sample pack for spike T03.4 (not a real pack; real packs live in packs/, T03.5).
+torch==2.14.1
+numpy
