@@ -15,11 +15,12 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-import psutil
+import psutil  # type: ignore[import-untyped]
 import pytest
 from pydantic import BaseModel
 
 from skald_core.jobs import JobCancelled, JobContext, JobManager, UnknownJobError
+from skald_core.jobs.manager import _kill_process_tree
 from skald_core.rpc import (
     APP_ERROR,
     INTERNAL_ERROR,
@@ -31,6 +32,23 @@ from skald_core.rpc.methods import register_all
 from skald_core.schemas import JobFinished, JobLog, JobProgress, JobRef
 
 _JOB_ID_RE = re.compile(r"^j_[a-z0-9]{8}$")
+
+
+def _is_gone(pid: int) -> bool:
+    try:
+        proc = psutil.Process(pid)
+        return bool(proc.status() == psutil.STATUS_ZOMBIE)
+    except psutil.NoSuchProcess:
+        return True
+
+
+def _assert_gone(pid: int, timeout: float = 0.5) -> None:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if _is_gone(pid):
+            return
+        time.sleep(0.01)
+    assert _is_gone(pid), f"Process {pid} did not exit or turn zombie within {timeout}s"
 
 
 class _RecordingNotifier:
@@ -80,7 +98,12 @@ def manager(notifier: _RecordingNotifier) -> Iterator[JobManager]:
 
 def test_job_id_format_and_job_ref(manager: JobManager) -> None:
     done = threading.Event()
-    job_id = manager.submit("test.noop", lambda ctx: done.set() or {"ok": True})
+
+    def noop(ctx: JobContext) -> dict[str, bool]:
+        done.set()
+        return {"ok": True}
+
+    job_id = manager.submit("test.noop", noop)
     assert _JOB_ID_RE.match(job_id)
     assert JobRef(job_id=job_id).job_id == job_id
     assert done.wait(timeout=2.0)
@@ -175,22 +198,22 @@ def test_cancel_running_subprocess_kills_process_tree_within_2s(
     pid_holder: list[int] = []
 
     def run_sleep(ctx: JobContext) -> None:
-        proc = subprocess.Popen(
+        with subprocess.Popen(
             [sys.executable, "-c", "import time; time.sleep(60)"],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-        )
-        pid_holder.append(proc.pid)
-        ctx.register_subprocess(proc)
-        registered.set()
-        proc.wait()
+        ) as proc:
+            pid_holder.append(proc.pid)
+            ctx.register_subprocess(proc)
+            registered.set()
+            proc.wait()
         ctx.checkpoint()
 
     job_id = manager.submit("test.sleep", run_sleep)
     assert registered.wait(timeout=3.0)
     child_pid = pid_holder[0]
-    assert psutil.pid_exists(child_pid)
+    assert not _is_gone(child_pid)
 
     t0 = time.monotonic()
     manager.cancel(job_id)
@@ -200,7 +223,7 @@ def test_cancel_running_subprocess_kills_process_tree_within_2s(
     assert elapsed < 2.0
     assert fin["status"] == "cancelled"
     assert manager.status(job_id).status == "cancelled"
-    assert not psutil.pid_exists(child_pid)
+    _assert_gone(child_pid)
 
 
 def test_cancel_requested_while_fn_raises_other_exception_becomes_cancelled(
@@ -504,34 +527,34 @@ def test_cancel_kills_process_tree_including_grandchild(
     pids: list[int] = []
 
     def run_tree(ctx: JobContext) -> None:
-        proc = subprocess.Popen(
+        with subprocess.Popen(
             [sys.executable, "-c", child_code],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             text=True,
-        )
-        assert proc.stdout is not None
-        grandchild_pid = int(proc.stdout.readline().strip())
-        pids.extend([proc.pid, grandchild_pid])
-        ctx.register_subprocess(proc)
-        registered.set()
-        proc.wait()
+        ) as proc:
+            assert proc.stdout is not None
+            grandchild_pid = int(proc.stdout.readline().strip())
+            pids.extend([proc.pid, grandchild_pid])
+            ctx.register_subprocess(proc)
+            registered.set()
+            proc.wait()
         ctx.checkpoint()
 
     job_id = manager.submit("test.tree", run_tree)
     assert registered.wait(timeout=3.0)
     parent_pid, grandchild_pid = pids
-    assert psutil.pid_exists(parent_pid)
-    assert psutil.pid_exists(grandchild_pid)
+    assert not _is_gone(parent_pid)
+    assert not _is_gone(grandchild_pid)
 
     t0 = time.monotonic()
     manager.cancel(job_id)
     fin = notifier.wait_finished(job_id, timeout=2.0)
     assert time.monotonic() - t0 < 2.0
     assert fin["status"] == "cancelled"
-    assert not psutil.pid_exists(parent_pid)
-    assert not psutil.pid_exists(grandchild_pid)
+    _assert_gone(parent_pid)
+    _assert_gone(grandchild_pid)
 
 
 @pytest.mark.timeout(10)
@@ -548,15 +571,15 @@ def setup(server):
     server.add_shutdown_hook(jm1.shutdown)
 
     def run_sleep(ctx):
-        proc = subprocess.Popen(
+        with subprocess.Popen(
             [sys.executable, "-c", "import time; time.sleep(60)"],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-        )
-        ctx.register_subprocess(proc)
-        ctx.log("info", f"pid:{proc.pid}")
-        proc.wait()
+        ) as proc:
+            ctx.register_subprocess(proc)
+            ctx.log("info", f"pid:{proc.pid}")
+            proc.wait()
         ctx.checkpoint()
 
     def run_queued(ctx):
@@ -572,62 +595,64 @@ def setup(server):
 raise SystemExit(run_stdio_server(setup=setup))
 """
     env = {**os.environ, "SKALD_LOG_DIR": str(tmp_path)}
-    proc = subprocess.Popen(
+    with subprocess.Popen(
         [sys.executable, "-c", script],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         env=env,
-    )
-    try:
-        assert proc.stdin is not None
-        assert proc.stdout is not None
-        assert proc.stderr is not None
+    ) as proc:
+        try:
+            assert proc.stdin is not None
+            assert proc.stdout is not None
+            assert proc.stderr is not None
 
-        proc.stdin.write(b'{"jsonrpc":"2.0","id":1,"method":"test.start"}\n')
-        proc.stdin.flush()
+            proc.stdin.write(b'{"jsonrpc":"2.0","id":1,"method":"test.start"}\n')
+            proc.stdin.flush()
 
-        child_pid: int | None = None
-        job_ids: dict[str, str] = {}
-        while child_pid is None or not job_ids:
-            raw_line = proc.stdout.readline()
-            assert raw_line, f"Server exited early; stderr={proc.stderr.read().decode('utf-8')}"
-            msg = json.loads(raw_line.decode("utf-8"))
-            if msg.get("id") == 1:
-                job_ids = msg["result"]
-            elif msg.get("method") == "job.log":
-                text = msg["params"]["message"]
-                if text.startswith("pid:"):
-                    child_pid = int(text.split(":", 1)[1])
+            child_pid: int | None = None
+            job_ids: dict[str, str] = {}
+            while child_pid is None or not job_ids:
+                raw_line = proc.stdout.readline()
+                assert raw_line, f"Server exited early; stderr={proc.stderr.read().decode('utf-8')}"
+                msg = json.loads(raw_line.decode("utf-8"))
+                if msg.get("id") == 1:
+                    job_ids = msg["result"]
+                elif msg.get("method") == "job.log":
+                    text = msg["params"]["message"]
+                    if text.startswith("pid:"):
+                        child_pid = int(text.split(":", 1)[1])
 
-        assert psutil.pid_exists(child_pid)
+            assert not _is_gone(child_pid)
 
-        t0 = time.monotonic()
-        proc.stdin.write(b'{"jsonrpc":"2.0","id":2,"method":"system.shutdown"}\n')
-        proc.stdin.flush()
+            t0 = time.monotonic()
+            proc.stdin.write(b'{"jsonrpc":"2.0","id":2,"method":"system.shutdown"}\n')
+            proc.stdin.flush()
 
-        remaining = [json.loads(line.decode("utf-8")) for line in proc.stdout.readlines() if line]
-        rc = proc.wait(timeout=5)
-        elapsed = time.monotonic() - t0
+            remaining = [
+                json.loads(line.decode("utf-8")) for line in proc.stdout.readlines() if line
+            ]
+            rc = proc.wait(timeout=5)
+            elapsed = time.monotonic() - t0
 
-        assert rc == 0
-        assert elapsed < 2.0
-        assert not psutil.pid_exists(child_pid)
+            assert rc == 0
+            assert elapsed < 2.0
+            _assert_gone(child_pid)
 
-        shutdown_resps = [m for m in remaining if m.get("id") == 2]
-        assert shutdown_resps == [{"jsonrpc": "2.0", "id": 2, "result": {"ok": True}}]
+            shutdown_resps = [m for m in remaining if m.get("id") == 2]
+            assert shutdown_resps == [{"jsonrpc": "2.0", "id": 2, "result": {"ok": True}}]
 
-        finished_by_id = {
-            m["params"]["job_id"]: m["params"]["status"]
-            for m in remaining
-            if m.get("method") == "job.finished"
-        }
-        assert finished_by_id[job_ids["j1"]] == "cancelled"
-        assert finished_by_id[job_ids["j2"]] == "cancelled"
-    finally:
-        if proc.poll() is None:
-            proc.kill()
-            proc.wait()
+            finished_by_id = {
+                m["params"]["job_id"]: m["params"]["status"]
+                for m in remaining
+                if m.get("method") == "job.finished"
+            }
+            assert finished_by_id[job_ids["j1"]] == "cancelled"
+            assert finished_by_id[job_ids["j2"]] == "cancelled"
+        finally:
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
 
 
 def test_no_leftover_threads_after_shutdown() -> None:
@@ -667,14 +692,14 @@ def test_register_subprocess_after_cancel_kills_immediately_and_raises(
         started.set()
         assert cancelled.wait(timeout=3.0)
         assert ctx.cancelled is True
-        proc = subprocess.Popen(
+        with subprocess.Popen(
             [sys.executable, "-c", "import time; time.sleep(60)"],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-        )
-        pid_holder.append(proc.pid)
-        ctx.register_subprocess(proc)
+        ) as proc:
+            pid_holder.append(proc.pid)
+            ctx.register_subprocess(proc)
 
     job_id = manager.submit("test.reg_after_cancel", run_job)
     assert started.wait(timeout=2.0)
@@ -683,7 +708,8 @@ def test_register_subprocess_after_cancel_kills_immediately_and_raises(
 
     fin = notifier.wait_finished(job_id, timeout=2.0)
     assert fin["status"] == "cancelled"
-    assert pid_holder and not psutil.pid_exists(pid_holder[0])
+    assert pid_holder
+    _assert_gone(pid_holder[0])
 
 
 @pytest.mark.timeout(10)
@@ -700,19 +726,19 @@ def test_cancel_kills_stubborn_sigterm_ignoring_subprocess_within_2s(
     )
 
     def run_stubborn(ctx: JobContext) -> None:
-        proc = subprocess.Popen(
+        with subprocess.Popen(
             [sys.executable, "-c", stubborn_code],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             text=True,
-        )
-        assert proc.stdout is not None
-        assert proc.stdout.readline().strip() == "ready"
-        pid_holder.append(proc.pid)
-        ctx.register_subprocess(proc)
-        registered.set()
-        proc.wait()
+        ) as proc:
+            assert proc.stdout is not None
+            assert proc.stdout.readline().strip() == "ready"
+            pid_holder.append(proc.pid)
+            ctx.register_subprocess(proc)
+            registered.set()
+            proc.wait()
         ctx.checkpoint()
 
     job_id = manager.submit("test.stubborn", run_stubborn)
@@ -722,4 +748,82 @@ def test_cancel_kills_stubborn_sigterm_ignoring_subprocess_within_2s(
     fin = notifier.wait_finished(job_id, timeout=2.0)
     assert time.monotonic() - t0 < 2.0
     assert fin["status"] == "cancelled"
-    assert not psutil.pid_exists(pid_holder[0])
+    _assert_gone(pid_holder[0])
+
+
+@pytest.mark.timeout(10)
+def test_kill_process_tree_terminates_children_before_parent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    child_code = (
+        "import subprocess, sys, time; "
+        "c = subprocess.Popen("
+        "[sys.executable, '-c', 'import time; time.sleep(60)'], "
+        "stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL); "
+        "print(c.pid, flush=True); "
+        "c.wait()"
+    )
+    terminate_order: list[int] = []
+    orig_terminate = psutil.Process.terminate
+
+    def recording_terminate(self: psutil.Process) -> None:
+        terminate_order.append(self.pid)
+        orig_terminate(self)
+
+    monkeypatch.setattr(psutil.Process, "terminate", recording_terminate)
+
+    with subprocess.Popen(
+        [sys.executable, "-c", child_code],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    ) as parent_proc:
+        try:
+            assert parent_proc.stdout is not None
+            child_pid = int(parent_proc.stdout.readline().strip())
+            _kill_process_tree(parent_proc)
+        finally:
+            if parent_proc.poll() is None:
+                parent_proc.kill()
+                parent_proc.wait()
+
+    assert child_pid in terminate_order
+    assert parent_proc.pid in terminate_order
+    assert terminate_order.index(child_pid) < terminate_order.index(parent_proc.pid)
+    _assert_gone(child_pid)
+    _assert_gone(parent_proc.pid)
+
+
+@pytest.mark.timeout(10)
+def test_kill_process_tree_kills_children_even_when_parent_poll_exited(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    child_code = (
+        "import subprocess, sys, time; "
+        "c = subprocess.Popen("
+        "[sys.executable, '-c', 'import time; time.sleep(60)'], "
+        "stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL); "
+        "print(c.pid, flush=True); "
+        "c.wait()"
+    )
+    with subprocess.Popen(
+        [sys.executable, "-c", child_code],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    ) as parent_proc:
+        assert parent_proc.stdout is not None
+        child_pid = int(parent_proc.stdout.readline().strip())
+        assert not _is_gone(child_pid)
+        try:
+            monkeypatch.setattr(parent_proc, "poll", lambda: 0)
+            _kill_process_tree(parent_proc)
+            _assert_gone(child_pid)
+        finally:
+            monkeypatch.undo()
+            if parent_proc.poll() is None:
+                parent_proc.kill()
+                parent_proc.wait()
+            _assert_gone(parent_proc.pid)

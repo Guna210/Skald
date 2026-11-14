@@ -73,20 +73,28 @@ def _generate_job_id() -> str:
 
 def _kill_process_tree(popen: subprocess.Popen[Any]) -> None:
     """Terminate children recursively first, then parent; wait up to 1 s, then kill."""
-    if popen.poll() is not None:
+    # shortcut: if an exited parent was already reaped or its children reparented,
+    # children() cannot find them; switch to process groups/Job Objects if detached
+    # descendants must also be killed.
+    try:
+        parent: psutil.Process | None = psutil.Process(popen.pid)
+    except psutil.NoSuchProcess:
+        parent = None
+
+    children: list[psutil.Process] = []
+    if parent is not None:
+        try:
+            children = parent.children(recursive=True)
+        except psutil.NoSuchProcess:
+            children = []
+
+    parent_alive = popen.poll() is None
+    targets: list[psutil.Process] = list(children)
+    if parent_alive and parent is not None:
+        targets.append(parent)
+    if not targets:
         return
 
-    try:
-        parent = psutil.Process(popen.pid)
-    except psutil.NoSuchProcess:
-        return
-
-    try:
-        children = parent.children(recursive=True)
-    except psutil.NoSuchProcess:
-        children = []
-
-    targets = [*children, parent]
     for proc in targets:
         try:
             proc.terminate()
@@ -104,10 +112,11 @@ def _kill_process_tree(popen: subprocess.Popen[Any]) -> None:
                     pass
         psutil.wait_procs(alive, timeout=_KILL_WAIT_S)
 
-    try:
-        popen.wait(timeout=_KILL_WAIT_S)
-    except (subprocess.TimeoutExpired, OSError):
-        pass
+    if parent_alive:
+        try:
+            popen.wait(timeout=_KILL_WAIT_S)
+        except (subprocess.TimeoutExpired, OSError):
+            pass
 
 
 @dataclass
@@ -251,7 +260,12 @@ class JobManager:
             return self._snapshot_locked(record)
 
     def cancel(self, job_id: str) -> JobStatus:
-        """Cancel a job, killing any registered subprocess trees."""
+        """Cancel a job, killing any registered subprocess trees.
+
+        For a running or paused job, the returned status stays "running"/"paused"
+        until the job reaches a checkpoint or exits; ``job.finished`` reports the
+        final state.
+        """
         finished_payload: JobFinished | None = None
         procs_to_kill: list[subprocess.Popen[Any]] = []
         future_to_cancel: concurrent.futures.Future[None] | None = None
@@ -270,7 +284,7 @@ class JobManager:
                 future_to_cancel = record.future
                 finished_payload = JobFinished(job_id=record.job_id, status="cancelled")
             else:
-                procs_to_kill = [p for p in record.subprocesses if p.poll() is None]
+                procs_to_kill = list(record.subprocesses)
 
             snap = self._snapshot_locked(record)
 
@@ -307,7 +321,7 @@ class JobManager:
                         (record, JobFinished(job_id=record.job_id, status="cancelled"))
                     )
                 else:
-                    procs_to_kill.extend(p for p in record.subprocesses if p.poll() is None)
+                    procs_to_kill.extend(record.subprocesses)
 
         for future in futures_to_cancel:
             future.cancel()
