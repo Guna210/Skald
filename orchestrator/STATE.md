@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-14 13:45 (Asia/Colombo) · last entry: E-0080
+Last updated: 2026-11-14 14:20 (Asia/Colombo) · last entry: E-0081
 Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -8,19 +8,19 @@ Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 …
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 building in parallel (E-0067). T03.4 (★) merged (PR #11, E-0073). T01.4 merged (PR #10, E-0077). T01.6 round 2 fixes (PR #9) (E-0080).
+- Phase 1: T01.1, T01.2 merged. T02.1 merged (PR #8). T01.4 and T01.6 building in parallel (E-0067). T03.4 (★) merged (PR #11, E-0073). T01.4 merged (PR #10, E-0077). T01.6 round-2 re-review (PR #9) (E-0081).
 - `master` at `8659ccb`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: #9 T01.6 (R1 CHANGES REQUESTED; round-2 fix prompt sent, E-0080).
+- Open PRs: #9 T01.6 (round 2 at 79666b8, CI green; re-review, E-0081).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7), T02.1 (PR #8), T03.4 (PR #11), T01.4 (PR #10).
-- T01.6 HTTP helper: PR #9, round 2 fixes R1-1…R1-6 (oversize cap, 416/offset restart, drop urllib3, test gaps) (E-0080); re-review by the same Sonnet session.
+- T01.6 HTTP helper: PR #9, round 2 pushed (79666b8); re-review by the same Sonnet session (E-0081).
 - Available, not started (prompt only when the owner asks; E-0057): T01.3 job manager, T01.5 project store, T02.2 EPUB container/spine/nav, T03.1 catalog schema, T03.7 worker protocol, T03.9 [SPIKE][REVIEW], T06.1.
 
 ## Waiting on the owner
-1. Paste the T01.6 round-2 fix prompt to the Builder; send back its handoff (E-0080).
+1. Paste the T01.6 round-2 review prompt into the same Sonnet Reviewer session; send back the verdict (E-0081).
 2. Later, before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs
@@ -81,4 +81,4 @@ None (T03.4 proposal 12: owner said yes, E-0070).
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-Process the T01.6 round-2 handoff → re-review (same Sonnet). After merge, list available tasks without prompts (E-0057).
+Process the T01.6 round-2 verdict. After merge, list available tasks without prompts (E-0057).

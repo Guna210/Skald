@@ -185,3 +185,9 @@ Decision: fix ALL in round 2 (all in net.py/test_net.py, cheap). Rules (Builder 
  - R1-5: add DNS-failure → offline (`.invalid` host), connect timeout → timeout (via an injected session/adapter raising requests.ConnectTimeout — no non-routable IPs), 404 and another 4xx through download() (no retry, no dest, .part handling stated), Content-Range mismatch → restart, oversize body, oversize Content-Length, 416 → restart.
  - R1-6: make `mypy core/tests/test_net.py` clean; replace the request.node.name exemption with a separate fixture or monkeypatch.undo.
 Follow-up: round-2 handoff → same Sonnet Reviewer.
+
+### E-0081 · 2026-11-14 14:20 (Asia/Colombo) · T01.6 · REVIEW-PROMPT
+Context: Owner first re-pasted the old rebase handoff by mistake (branch unchanged at a40d86d; no state change), then the real round-2 handoff (Antigravity / Gemini). Verified: PR #9 head `79666b8`, one new commit on a40d86d; master 8659ccb ancestor; 3 files +375/−21 (net.py +110, test_net.py +284, SPEC.md +2 Appendix 3 rows for the size cap and the untrusted-resume restart). No urllib3 import left in net.py. CI PR run 43592462893 success. Builder: 85 passed; test_net 21 passed ×3 (~1.8 s); mypy on test_net.py clean.
+Builder decisions: _clear_proxy_env uses MonkeyPatch.context() so test_default_constants can monkeypatch.undo() the backoff without restoring proxy vars; on 206 the start offset is checked before the total (stale .part → restart; correct offset with wrong total → fail early).
+Decision: round-2 re-review by the same Sonnet Reviewer session. Extra focus: the proxy vars really stay cleared in every test (autouse, including after undo); the restart happens at most once and can't loop; the cap test proves bytes on disk never exceed size.
+Follow-up: VERDICT.
