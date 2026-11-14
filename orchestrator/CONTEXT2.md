@@ -169,3 +169,8 @@ Context: T01.6 round-1 handoff (Antigravity / Gemini). Checked: PR [Guna210/Skal
 Problem: conflicts with master 8659ccb in SPEC.md (Appendix 3 rows from T03.4 and T01.4). After the rebase, SkaldError.kind is typed with T01.4's ErrorKind → net.py must pass mypy against it (helpers that return a kind must be typed ErrorKind, not str).
 Decision: rebase-only prompt (still round 1), then one review (fresh Claude Sonnet; Builder was Gemini; no licence/default surface).
 Follow-up: rebase handoff → REVIEW-PROMPT.
+
+### E-0079 · 2026-11-14 13:10 (Asia/Colombo) · T01.6 · REVIEW-PROMPT
+Context: T01.6 rebase handoff (Antigravity / Gemini). Verified: PR #9 head `a40d86d` on master 8659ccb; range-diff: code commit identical, only the SPEC commit changed; SPEC diff vs master = tick + 3 T01.6 rows at the end; same 3 files +1044. No ErrorKind change needed (mypy clean). CI PR run 43585656921 + push run 43585652842 success. Builder: 78 passed + 10 scripts tests.
+Decision: Reviewer = fresh Claude Sonnet (Builder was Gemini; no licence/default surface). Focus: E-0056/E-0067 rules (retry set, kind mapping, Range 200→restart, .part >/== size, mismatch, cancel); the urllib3 exception-class logic (version-fragile; NewConnectionError subclasses ConnectTimeoutError in urllib3 2.x); retry mid-download resumes; a server sending more than `size` bytes is cut off (no unbounded download); 416 handling; Windows file handles closed before os.replace/unlink; proxy env cleared in tests and no real network; tests fast; get_text utf-8 default; SPEC rows match.
+Follow-up: VERDICT.
