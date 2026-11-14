@@ -42,6 +42,57 @@ class JobRef(BaseModel):
     job_id: str
 
 
+JobState = Literal["queued", "running", "paused", "succeeded", "failed", "cancelled"]
+JobFinishedStatus = Literal["succeeded", "failed", "cancelled"]
+
+
+class JobError(BaseModel):
+    """Serialized error payload attached to failed jobs, matching the B8 error object."""
+
+    code: int
+    message: str
+    data: SkaldErrorData
+
+
+class JobProgress(BaseModel):
+    """Payload for `job.progress` notifications."""
+
+    job_id: str
+    fraction: float | None = Field(default=None, ge=0.0, le=1.0)
+    message: str = ""
+    stage: str = ""
+
+
+class JobLog(BaseModel):
+    """Payload for `job.log` notifications."""
+
+    job_id: str
+    level: str
+    message: str
+
+
+class JobFinished(BaseModel):
+    """Payload for `job.finished` notifications."""
+
+    job_id: str
+    status: JobFinishedStatus
+    result: Any = None
+    error: JobError | None = None
+
+
+class JobStatus(BaseModel):
+    """Current state returned by `job.status`, `job.cancel`, `job.pause`, and `job.resume`."""
+
+    job_id: str
+    kind: str
+    status: JobState
+    fraction: float | None = Field(default=None, ge=0.0, le=1.0)
+    message: str = ""
+    stage: str = ""
+    result: Any = None
+    error: JobError | None = None
+
+
 class SystemInfo(BaseModel):
     """Core, runtime dependency, and ffmpeg version strings."""
 

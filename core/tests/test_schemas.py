@@ -26,7 +26,12 @@ from skald_core.schemas import (
     ErrorKind,
     GpuInfo,
     HardwareInfo,
+    JobError,
+    JobFinished,
+    JobLog,
+    JobProgress,
     JobRef,
+    JobStatus,
     LexiconRule,
     Paragraph,
     PinnedModelRecord,
@@ -61,6 +66,10 @@ _EXPECTED_MODEL_NAMES = {
     "SystemInfo",
     "HardwareInfo",
     "JobRef",
+    "JobProgress",
+    "JobLog",
+    "JobFinished",
+    "JobStatus",
     "SkaldErrorData",
 }
 
@@ -93,6 +102,7 @@ def test_exported_models_cover_spec_and_have_docstrings_and_snake_case_fields() 
     all_models: tuple[type[BaseModel], ...] = (
         *EXPORTED_MODELS,
         GpuInfo,
+        JobError,
         PresetVoiceSpec,
         BlendPart,
         BlendVoiceSpec,
@@ -262,7 +272,28 @@ def test_core_models_round_trip_json() -> None:
         numpy="2.5.4",
         ffmpeg="ffmpeg version n9.0.2",
     )
-    job_ref = JobRef(job_id="job_1")
+    job_ref = JobRef(job_id="j_a1b2c3d4")
+    job_error = JobError(
+        code=-32000,
+        message="DRM protected",
+        data=SkaldErrorData(kind="epub_drm", details={"file": "book.epub"}, hint="Remove DRM"),
+    )
+    job_progress = JobProgress(job_id="j_a1b2c3d4", fraction=0.5, message="Working", stage="parse")
+    job_log = JobLog(job_id="j_a1b2c3d4", level="info", message="Started")
+    job_finished = JobFinished(
+        job_id="j_a1b2c3d4",
+        status="failed",
+        result=None,
+        error=job_error,
+    )
+    job_status = JobStatus(
+        job_id="j_a1b2c3d4",
+        kind="book.import",
+        status="running",
+        fraction=0.5,
+        message="Working",
+        stage="parse",
+    )
 
     for instance in (
         profile,
@@ -275,6 +306,11 @@ def test_core_models_round_trip_json() -> None:
         record,
         sys_info,
         job_ref,
+        job_error,
+        job_progress,
+        job_log,
+        job_finished,
+        job_status,
     ):
         round_tripped = type(instance).model_validate_json(instance.model_dump_json())
         assert round_tripped == instance
