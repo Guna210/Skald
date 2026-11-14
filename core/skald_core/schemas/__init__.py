@@ -20,6 +20,7 @@ from skald_core.schemas.models import (
     Paragraph,
     PinnedModelRecord,
     PresetVoiceSpec,
+    ProjectManifest,
     QcResult,
     RenderPlan,
     RenderRecord,
@@ -31,6 +32,7 @@ from skald_core.schemas.models import (
 )
 
 EXPORTED_MODELS: tuple[type[BaseModel], ...] = (
+    ProjectManifest,
     Book,
     Chapter,
     Paragraph,
@@ -69,6 +71,7 @@ __all__ = [
     "Paragraph",
     "PinnedModelRecord",
     "PresetVoiceSpec",
+    "ProjectManifest",
     "QcResult",
     "RenderPlan",
     "RenderRecord",

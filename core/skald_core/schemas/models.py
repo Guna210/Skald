@@ -21,6 +21,7 @@ ErrorKind = Literal[
     "adapter_unavailable",
     "ffmpeg_failed",
     "folder_not_empty",
+    "project_invalid",
     "internal",
     "http_not_found",
     "http_error",
@@ -34,6 +35,39 @@ class SkaldErrorData(BaseModel):
     kind: ErrorKind
     details: Any = None
     hint: str | None = None
+
+
+class ProjectManifest(BaseModel):
+    """Project manifest stored in skald-project.json at the project root."""
+
+    schema_version: int = Field(
+        default=1,
+        ge=1,
+        description="Manifest schema version number.",
+    )
+    name: str = Field(
+        min_length=1,
+        description="Human-readable project name.",
+    )
+    created_at: str = Field(
+        description="ISO-8601 UTC timestamp when the project was created.",
+    )
+    updated_at: str = Field(
+        description="ISO-8601 UTC timestamp when the project manifest was last saved.",
+    )
+    base_seed: int = Field(
+        ge=0,
+        lt=2**31,
+        description="Random 31-bit base seed generated at project creation.",
+    )
+    render_ids: list[str] = Field(
+        default_factory=list,
+        description="Identifiers of renders created in this project.",
+    )
+    voice_ids: list[str] = Field(
+        default_factory=list,
+        description="Identifiers of voices used by this project.",
+    )
 
 
 class JobRef(BaseModel):
