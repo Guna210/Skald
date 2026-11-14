@@ -341,7 +341,7 @@ Every adapter declares: capabilities, parameter schema with defaults and ranges,
   - `job.progress` → `{ job_id, fraction (0–1 or null), message, stage }`
   - `job.log` → `{ job_id, level, message }`
   - `job.finished` → `{ job_id, status: "succeeded"|"failed"|"cancelled", result?, error? }`
-- **Error object:** `{ code, message, data: { kind, details, hint } }`. `kind` is a stable machine-readable string the UI maps to friendly messages: `offline`, `epub_drm`, `epub_invalid`, `unsupported_format`, `pack_install_failed`, `model_download_failed`, `checksum_mismatch`, `worker_crashed`, `out_of_memory`, `not_enough_disk`, `license_not_accepted`, `adapter_unavailable`, `ffmpeg_failed`, `folder_not_empty`, `internal`.
+- **Error object:** `{ code, message, data: { kind, details, hint } }`. `kind` is a stable machine-readable string the UI maps to friendly messages: `offline`, `epub_drm`, `epub_invalid`, `unsupported_format`, `pack_install_failed`, `model_download_failed`, `checksum_mismatch`, `worker_crashed`, `out_of_memory`, `not_enough_disk`, `license_not_accepted`, `adapter_unavailable`, `ffmpeg_failed`, `folder_not_empty`, `project_invalid`, `internal`, `http_not_found`, `http_error`, `timeout`.
 - **Schemas:** all request/response shapes are Pydantic models in `skald_core/schemas/`. A script exports them as JSON Schema; the app generates TypeScript types from that (T06.3). The schemas are the single source of truth.
 
 | Method | Kind | Purpose |
@@ -621,7 +621,7 @@ Agents tick `[x]` when a task is done.
 - [x] T01.2 JSON-RPC stdio server
 - [ ] T01.3 Background job manager with pause
 - [x] T01.4 Schema models, schema export, `system.info`
-- [ ] T01.5 Project folder storage
+- [x] T01.5 Project folder storage
 - [x] T01.6 HTTP helper and verified downloader
 
 **Phase 2 — Book import and text**
@@ -1493,6 +1493,10 @@ Answers from the Orchestrator (or owner) that clarify or change this spec are re
 | 2026-11-13 | T01.6 | How do `download` resume, verification, and cancellation behave? | `download(url, dest, sha256, size, progress_cb, cancel)` writes `dest.part`, verifies size and SHA-256, and calls `os.replace` to `dest` (creating parent dirs). Resume with HTTP `Range` when `.part` exists; if the server answers 200 instead of 206, restart from zero; if `.part` > `size`, delete it and restart; if `.part` == `size`, verify without downloading. On mismatch, delete `.part`, don't create `dest`, and raise `checksum_mismatch`. Retries during download resume from `.part`. `cancel` is a callable returning `bool` checked between chunks; on cancel, keep `.part` and raise `DownloadCancelled` (a plain exception in `net.py`, not a `SkaldError`). | Orchestrator |
 | 2026-11-14 | T01.6 | How does `download` cap the number of bytes written (R1-1)? | Refuse early before writing when a 200 response's `Content-Length` > `size` or a 206 response's `Content-Range` total != `size`, and stop streaming as soon as `bytes_written` would exceed `size` (close the file, delete `.part`, and raise `checksum_mismatch` with expected and actual sizes in `details`). | Orchestrator |
 | 2026-11-14 | T01.6 | How does `download` handle an untrusted `Range` resume (R1-2, R1-3)? | When a `Range` resume receives HTTP 416 or a 206 whose `Content-Range` start differs from the existing `.part` size, delete `.part` and restart once from zero without a `Range` header; this restart does not count against the 2 connection/5xx retries. A 416 on a request without `Range` raises `http_error`. | Orchestrator |
+| 2026-11-14 | T01.5 | What schema model, seed range, and ID generator does project storage use? | Add `ProjectManifest` to `skald_core.schemas` (`schema_version: 1`, `name`, `created_at`, `updated_at` as ISO-8601 UTC strings, `base_seed`, `render_ids`, `voice_ids`, with docstrings). `base_seed` defaults to `secrets.randbelow(2**31)` (0 to 2^31−1), with an optional `base_seed` parameter on `create(path, name, base_seed=None)` for deterministic tests. `new_id(prefix)` generates `<prefix><8 lowercase alphanumerics>` via `secrets` for `v_`, `rn_`, `ch_`, and `p_` (stable paragraph ids belong to T02.3). | Orchestrator |
+| 2026-11-14 | T01.5 | How do atomic writes, stored paths, and empty-folder checks behave? | Atomic writes use a temp file in the same folder followed by `os.replace` (with handles closed before replacing); leftover temp files are ignored on open. JSON is written UTF-8 with `ensure_ascii=False`, `indent=2`, and `"\n"` newlines on every OS. Stored paths are relative to the project root and use `"/"` separators. `create()` requires a missing or empty folder, ignoring `desktop.ini`, `Thumbs.db`, and `.DS_Store`; non-empty folders raise `folder_not_empty`, and an existing Skald project raises `folder_not_empty` with hint `"This folder already contains a Skald project; open it instead."`. | Orchestrator |
+| 2026-11-14 | T01.5 | How are invalid manifests, open project state, `project.*` RPCs, and migrations handled? | Add `project_invalid` to B8 and `ErrorKind` for missing/malformed manifests and newer `schema_version` values (hint: made by a newer Skald). Core keeps one open project (the last created or opened). `project.create` and `project.open` return the manifest; `project.save` saves it, or returns `-32602` with `kind: "internal"` if none is open. `migrate(manifest)` uses a `{from_version: fn}` map and is a no-op for v1. | Orchestrator |
+| 2026-11-14 | T01.5 | Should `ProjectManifest` preserve unknown fields across `open` → `save`? | Yes. `ProjectManifest` uses `extra="allow"` so unknown keys (for example, fields written by a slightly newer Skald) survive `open` → `save` unchanged instead of being stripped on save. | Orchestrator |
 
 ## Appendix 4 — Claude Code cloud environment
 

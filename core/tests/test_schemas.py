@@ -31,6 +31,7 @@ from skald_core.schemas import (
     Paragraph,
     PinnedModelRecord,
     PresetVoiceSpec,
+    ProjectManifest,
     QcResult,
     RenderPlan,
     RenderRecord,
@@ -45,6 +46,7 @@ from skald_core.schemas.export import DEFAULT_EXPORT_DIR, export_schemas
 _SNAKE_CASE_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 
 _EXPECTED_MODEL_NAMES = {
+    "ProjectManifest",
     "Book",
     "Chapter",
     "Paragraph",
@@ -79,6 +81,7 @@ _EXPECTED_ERROR_KINDS = {
     "adapter_unavailable",
     "ffmpeg_failed",
     "folder_not_empty",
+    "project_invalid",
     "internal",
     "http_not_found",
     "http_error",
@@ -263,8 +266,18 @@ def test_core_models_round_trip_json() -> None:
         ffmpeg="ffmpeg version n9.0.2",
     )
     job_ref = JobRef(job_id="job_1")
+    manifest = ProjectManifest(
+        schema_version=1,
+        name="The Saga",
+        created_at="2026-11-14T00:00:00Z",
+        updated_at="2026-11-14T00:00:00Z",
+        base_seed=12345,
+        render_ids=["rn_1234abcd"],
+        voice_ids=["v_1234abcd"],
+    )
 
     for instance in (
+        manifest,
         profile,
         book,
         chunk,
