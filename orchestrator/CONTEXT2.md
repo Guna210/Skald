@@ -340,3 +340,8 @@ Decision: fix ALL in round 2, with these rulings (record in Appendix 3):
  - R1-8: rule-4 epub:type applies only to the chapter's own scope: html, body, the chapter's start element (anchor target) and its section ancestors up to body, and top-level sections directly under body — not to embedded descendants deeper in prose. A landmark applies to the chapter whose start (file + anchor) it points at; a landmark to a file without an anchor applies to the chapter starting at the top of that file.
  - R1-9: exact chapter counts (14, 25) and a few known titles/flags. R1-10: parse the NCX only if the nav is missing or yields no entries; otherwise a broken NCX is ignored with a warning. R1-11: compare the cover media type and bytes.
 Follow-up: round-2 handoff → same Opus Reviewer (re-run the 4 surviving mutants).
+
+### E-0100 · 2026-11-15 12:40 (Asia/Colombo) · T02.2 · REVIEW-PROMPT
+Context: T02.2 round-2 handoff (Antigravity / Gemini 3.1 Pro). Verified: PR #14 head `6b3a12d`, one new commit on a360e1f; master 2934f8e ancestor, merges cleanly. 4 files +609/−139 (epub.py ±331, tests ±408, book/__init__ +6 exporting BodySlice/resolve_body_slices/walk_body_slice for T02.3, SPEC Appendix 3 rulings). CI PR run 43682355859 success. Builder: 167 passed (32 epub tests). T03.1 and T03.5 branches now both pushed (handoffs pending).
+Decision: round-2 re-review by the same Opus Reviewer session; must re-run the 4 surviving mutants (strict flags, recover flags, D2 collapse, script/style) and the round-1 probes (external entity → /etc/passwd, pre-anchor loss, dangling anchors, comments, remote-resources, duplicates, embedded toc).
+Follow-up: VERDICT.
