@@ -1,96 +1,54 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-15 22:40 (Asia/Colombo) · last entry: E-0117
-Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
+Last updated: 2026-11-15 23:00 (Asia/Colombo) · last entry: E-0118
+Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 … E-0117), `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
-**T03.4 was the task marked IMPORTANT** (engine-pack spike). If the owner asks "what was the task marked important?" → answer **T03.4**, and say it is done: merged as PR #11 on 2026-11-14 (E-0073), gate signed off (E-0072).
+**T03.4 was the task marked IMPORTANT** (engine-pack spike). If the owner asks "what was the task marked important?" → answer **T03.4**, and say it is done: merged as PR #11 on 2026-11-14 (E-0073), [REVIEW] gate signed off (E-0072); its findings became T03.5, merged as PR #16, and the first real Windows pack install passed (E-0117).
 
 ## Where the project is
-- **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
-- **Phase 1 complete** (T01.1–T01.6 merged; E-0096). T02.1 and T03.4 also merged.
-- `master` at `3228b4a` (PR #16 merge). Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
+- **Phase 0 complete** (T00.1–T00.4; E-0046). **Phase 1 complete** (T01.1–T01.6; E-0096).
+- Also merged: T02.1, T02.2 (Phase 2); T03.1, T03.4, T03.5 (Phase 3).
+- `master` at `3228b4a` (PR #16 merge). Default branch `master`. Merge method: **normal merge** (E-0021) — never tell the owner to squash.
 - Open PRs: none. Nothing in progress.
-- Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
-- Milestones reached: none (next: M1 after T05.8).
+- CI: ci.yml (core/worker/app on windows-latest + ubuntu-latest), catalog.yml (PRs on catalog/** + weekly), slow.yml (weekly + workflow_dispatch; real CPU smoke-pack install — first run 43719877209 passed on both OSes, E-0117).
+- Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036). Milestones: none yet (M1 after T05.8).
 
 ## Tasks
-- Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7), T02.1 (PR #8), T03.4 (PR #11), T01.4 (PR #10), T01.6 (PR #9), T01.5 (PR #12), T01.3 (PR #13), T02.2 (PR #14), T03.1 (PR #15), T03.5 (PR #16; first real Windows pack install passed in slow.yml run 43719877209, E-0117).
-- Available, not started (prompt only when the owner asks; E-0057): T02.3 XHTML → paragraphs, T03.2 catalog fetch/cache/compatibility, T03.3 hardware probe + fit rating, T03.7 worker protocol, T03.9 [SPIKE][REVIEW], T06.1.
-- T03.2 prompt: checkpoint/revision ids are unique per parent, not globally (E-0107); add a test asserting catalog.validate deletes each downloaded file after verification (T03.1 R2-1, E-0109).
-- T03.3 prompt: driver ≥ minor-version floor (525.60.13 / 528.33) but < 12.6 toolkit driver (560.28.03 / 560.76) → "may not work" (PTX-JIT caveat), not a clean fit (E-0114).
-- T03.7 prompt: adapter registry = `ADAPTER_VERSIONS = {...}` dict literal in worker/skald_worker/adapters/__init__.py (read by T03.1 via ast.literal_eval) (E-0097).
+- Merged (PR): T00.1 #2, T00.2 #3, T00.3 #4, T00.4 #5, T01.1 #6, T01.2 #7, T02.1 #8, T01.6 #9, T01.4 #10, T03.4 #11, T01.5 #12, T01.3 #13, T02.2 #14, T03.1 #15, T03.5 #16.
+- **Available, not started** (prompt only when the owner asks; E-0057): T02.3 XHTML → paragraphs; T03.2 catalog fetch/cache/compatibility; T03.3 hardware probe + fit rating; T03.7 worker protocol + skald_worker + fake adapter + contract suite (unlocks the most: T03.8 → T04.x); T03.9 Kokoro G2P / espeak-ng GPL spike [SPIKE][REVIEW]; T06.1 Electron + React + TS scaffold.
+- Unlock map: T03.6 ← T03.2 + T01.6 + T01.3; T03.8 ← T03.7 + T03.5 + T01.3; T02.4/T02.5 ← T02.3; T06.2 ← T06.1 + T01.3; T04.1 ← T03.7 + T03.9 + T03.6.
 
 ## Waiting on the owner
-1. Pick the next task(s) (E-0117).
-2. Later, before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
+1. Pick the next task(s).
+2. Before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
-## Pending GPU runs
+## Pending GPU runs / open questions
 None.
 
-## Open questions from Builders / Reviewers
-None (T03.4 proposal 12: owner said yes, E-0070).
+## Reviewer model policy (as practised)
+Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs, licences, defaults, parsers of untrusted input, concurrency; always a different model from the Builder's. Rebase-only prompt first when a PR conflicts with master; review once on the rebased branch. Same Reviewer session for later rounds. Round 3 CHANGES REQUESTED → rethink (CLAUDE.md).
 
-## Deferred findings
-- R2-1, R2-2 (T01.2, Nits) → in the T01.4 prompt (issued E-0067); check they're done in its review.
-- T02.1 R2-1 (Nit): unused "font_obfuscation" alias + include_font/font_href fallback in make_epubs.py — trim when the file is next touched (E-0063).
-- T02.1 R2-2 (Nit) → T02.2 prompt: assert only status/error kind for epub_invalid (12) and epub_drm (10) fixtures (E-0063).
-- R1-1 (T00.1, Nit): docs/defaults.md C1.1 item 5 should say alt text / note bodies are skipped "by default". Fix in T02.3 (E-0011).
-- R5-2 (T00.3, Nit): redundant exception classes in fetch_deps.py except lists — trim when the file is next touched (E-0031).
-- Open item: who creates `core/requirements.lock` (B3)? Not T01.1. Decide by T04.1/T09.1 (E-0020).
-
-## Decisions not yet written into SPEC.md
-- E-0049 T02.1: TOML defs + ZIP_STORED — recorded in PR #8's Appendix 3 rows (on master once #8 merges).
-- E-0061 D1–D4 — recorded in PR #8's Appendix 3 rows (on master once #8 merges).
-- E-0056 + E-0067 T01.4 / T01.6 decisions — recorded by those Builders in their PRs (check in review).
-(All earlier decisions are on master: E-0020, E-0021, E-0032, E-0033, E-0048, E-0049 T01.2 rows, E-0052 rows.)
-
-## Standing notes for prompts
-- **Owner rule (E-0057): after a task completes, only list the available tasks; give a Builder prompt only when the owner asks.** Review/fix/rebase prompts for in-flight work are still given normally.
-- Builder prompts: owner authorizes pushing to `task/<ID>-<slug>` and opening a PR, even if a Claude cloud session got a `claude/…` branch (E-0004). Reviewer prompts: read-only, no pushes or PR comments.
-- `<owner>` in the spec = `Guna210`.
-- Merge method: normal merge ("Create a merge commit"), owner decision (E-0021). Never tell the owner to squash.
-- Handoffs and verdicts may arrive as cross-session messages or not at all; verify against the PR before acting (E-0009, E-0030).
-- Every Builder prompt that runs npm/pip: source `scripts/dev-env.*` first; there is no `.npmrc` (E-0016).
-- fetch_deps.py is run with the venv Python (`core/.venv`), never bare `python3` (E-0027 R4-5).
-- Future mirror uploads (deps-v2…): verify every asset from the cloud against the doc (method in E-0031/E-0036).
-- T02.3 prompt: include deferred R1-1 (E-0011).
-- T02.3 prompt: R3-1 from T02.2 — one assertion pinning a dangling entry's position (nav a, gone, c, b) (E-0103); "paragraph text count = D2 count (± boundary spaces)" is an acceptance check.
-- T02.3 prompt: slices come back in document order (E-0101); tests reuse the walker for "paragraph text count = D2 count".
-- T02.3 prompt: reuse T02.2's chapter slicing/walker (pre-anchor text in the first chapter; dangling anchors; comments/PIs skipped) so paragraphs and D2 agree (E-0099).
-- T02.7: EPUB 2 <guide> and role="doc-*" are not used for suggested skips (C1.1 names only epub:type + landmarks) (E-0099).
-- T02.2/T02.3 prompts: E-0061 D1 (recover=True for malformed content XHTML with step-7 flags; structural files → epub_invalid), D2 (rule-4 char count), D3 (cumulative skip_reasons), D4 (linear="no" separate from skips). T02.2 owns the entity-expansion fixture (rule 7).
-- T06.1: setup-node@v7 defaults `package-manager-cache: true` — confirm no clash with the .cache/npm cache step (E-0044).
-- T06.1: setup.* will run `npm ci` inside the CI core/worker jobs once app/package-lock.json exists (no npm cache there) — decide then (E-0041).
-- T03.7: worker/pyproject.toml must land with ≥1 test, or CI pytest exits 5 (E-0041).
-- T03.5: CI `.cache/uv` key covers only deps.lock.json — add pack lockfiles (E-0041).
-- T03.5 prompt: build it from docs/spikes/engine-packs.md §4 + gate decisions G1–G14 (E-0070, in SPEC once PR #11 merges): copy bundled Python to <storage>/python/<ver>/, clean-only-when-empty, try `uv cache clean <pkg>`, cu126 min driver with source, fake-uv tests per G10; F1 storage resolution (SKALD_STORAGE_DIR → <SKALD_DEV_DATA>/storage → platform default) + Appendix 3 row + T06.2 env line; F2 fix the Part B diagram host wording (E-0071).
-- T06.2 prompt: core.ts passes SKALD_STORAGE_DIR only when the user chose a storage folder (F1, E-0071).
-- T03.5 prompt also carries T01.3 R2-1: a PID-reuse simulation test (Popen stand-in returncode=0 + captured live sleeper must survive _kill_process_tree) (E-0095).
-- T03.5 prompt also carries T03.4 R2 leftovers (E-0072): R2-1 guard in docs/spikes/scripts/notes.sh (refuse an existing non-empty folder); R2-2 T07.10 add "move (or re-copy) python/"; R2-3 engine-packs.md:139 "section 3.9" → 3.10; R2-4 cite NVIDIA CUDA 13 notes in the Appendix 3 Pascal row; (a) T06.2 env line per F1; (b) C4 dev pack location → `<SKALD_DEV_DATA>/storage/`.
-- T07.10 prompt: T03.5 R2-1/R2-2 — "Free up space" retries cleans that remove() skipped while other ops ran; add a test for the skip-pruning branch; consider a storage-wide lock while pruning (E-0116).
-- T03.6 prompt: models.remove must surface PackManager's "already in progress" SkaldError (T03.5 R2-3) (E-0116).
-- T07.10: storage-folder move per G11; default storage = %LOCALAPPDATA%\Skald / ~/.local/share/Skald (G3) (E-0070).
-- T06.3: ProjectManifest allows extra keys (TS index signature); the UI ignores unknown keys and never sends them back modified (E-0088).
-- T05.x: a JobContext notify callback that raises fails the job (accepted, E-0092).
-- T09.4: NVIDIA terms for GPU packs in third-party notices; T09.2: CLEANUP.md must also list the new default storage folder (G3) (E-0070).
-- Never mirror/redistribute pack wheels anywhere (owner, G12) (E-0070).
-- Catalog/adapter tasks: don't promise Pascal (sm_61) until confirmed on a real card; a future cu13 accelerator drops Pascal/Volta (D9 impact) (E-0069).
-- slow.yml: its ".cache/uv" cache step is ineffective (the real install uses its own <storage>/uv-cache); trim or repoint when next touched (E-0117).
-- T09.1: test fixtures (core/tests/data, incl. Gutenberg EPUBs) are never packaged (E-0060).
-- T09.1: exclude vendor/*/.tmp-*, .old-*, vendor/.downloads, and ffplay/doc/man (ffmpeg binaries 132–143 MB each; vendor/ffmpeg ~400 MB vs 600 MB limit) (E-0027).
-- uv mirror assets have no version in the name → a uv bump needs a new mirror tag (deps-v2) (E-0027). Mirror releases are marked Pre-release, never "latest" (E-0034).
-- T03.7 prompt: evaluate an fd-level stdout redirect (os.dup/os.dup2) in workers; model libraries may print from C code (E-0052).
-- Every prompt that launches subprocesses (T01.3, T03.5, T03.8, T05.6…): never inherit stdout — pass stdout= explicitly (Appendix 3 rule from T01.2) (E-0052).
-- (issued E-0084) T01.3 prompt: carry T01.4 R1-1 (rpc/methods.py register_all(server) from run_stdio_server; move system.info; generic server keeps system.shutdown), R1-2 (T05.2 text → checkpoint_id + Appendix 3 row), R1-4 (tests for unsupported platform + empty ffmpeg output) (E-0076).
-- T02.2/T02.3/T05.x prompts: T01.4 fields Chapter.linear (T02.2), Paragraph.is_heading (T02.3), ChunkStatus.status/attempts (T05.x) are provisional — edit them as needed (E-0076).
-- T01.3 prompt: use JobRef from T01.4's schemas; unknown job_id → -32602 kind internal; job.finished never throttled; cancel while paused unblocks checkpoint() and raises JobCancelled; subprocesses pass stdout explicitly (E-0056).
-- T03.6 prompt: map net.DownloadCancelled → JobCancelled (E-0056).
-- T02.2/T02.3/T02.8 prompts: the spec's "YAML" fixture definitions are TOML files read with tomllib (E-0049).
-- pysbd 0.3.4 emits SyntaxWarning under 3.12 → any `filterwarnings = error` needs a scoped ignore (E-0048).
-- T09.1/T09.4: soundfile bundles libsndfile (LGPL-2.1) → ship its licence + source link (E-0048).
-- T09.4: ffmpeg is LGPL-3.0-or-later (`--enable-version3`); ship the LGPL-3.0 text + source link (E-0024).
-- T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
+## Standing notes for prompts (by task)
+- **All Builder prompts:** owner authorizes pushing to `task/<ID>-<slug>` and opening the PR even from a `claude/…` session branch (E-0004); source `scripts/dev-env.*` first, venv Python (`core/.venv`), no `.npmrc` (E-0016); fetch_deps.py via the venv Python (E-0027); every subprocess passes stdout explicitly, never inherits it (E-0052); one -32602 mechanism = `SkaldError(kind, …, code=INVALID_PARAMS)` (E-0086); RPC methods are registered in `rpc/methods.py:register_all` (E-0090); spec "YAML" fixture defs = TOML via tomllib (E-0049); pysbd SyntaxWarning needs a scoped ignore under `filterwarnings = error` (E-0048).
+- **Reviewer prompts:** read-only, no pushes or PR comments; verify handoffs against the PR (E-0009, E-0030).
+- **T02.3:** reuse T02.2's `resolve_body_slices`/`walk_body_slice` unchanged (slices in document order, paired `anchor`, dangling slices empty; pre-anchor text in the first chapter; comments/PIs skipped) (E-0099, E-0101, E-0103); acceptance check "paragraph text count = D2 count (± boundary spaces)"; carry T02.2 R3-1 (pin a dangling entry's position: nav a, gone, c, b) and T00.1 R1-1 (docs/defaults.md C1.1 item 5: alt text / note bodies skipped "by default") (E-0011); Paragraph.is_heading is provisional (E-0076); D1–D4 in Appendix 3 apply.
+- **T02.7:** EPUB 2 `<guide>` and `role="doc-*"` are not used for suggested skips (E-0099); remote spine item → epub_invalid and pre-anchor sections don't flag the first chapter (ruled, Appendix 3).
+- **T03.2:** checkpoint/revision ids are unique per parent, not globally (E-0107); add a test that catalog.validate deletes each downloaded file after verification (T03.1 R2-1, E-0109).
+- **T03.3:** a driver ≥ the CUDA 12.x minor-version floor (525.60.13 / 528.33) but < the 12.6 toolkit driver (560.28.03 / 560.76) → "may not work" (PTX-JIT caveat), not a clean fit (E-0114); don't promise Pascal (sm_61) until confirmed on a real card; a future cu13 accelerator drops Maxwell/Pascal/Volta (D9) (E-0069).
+- **T03.6:** models.remove surfaces PackManager's "already in progress" SkaldError (T03.5 R2-3, E-0116); map net.DownloadCancelled → JobCancelled (E-0056).
+- **T03.7:** adapter registry = module-level dict literal `ADAPTER_VERSIONS = {"<family>": "<semver>"}` in worker/skald_worker/adapters/__init__.py, read by T03.1 via ast.literal_eval (E-0097); worker/pyproject.toml must land with ≥1 test or CI pytest exits 5 (E-0041); evaluate an fd-level stdout redirect (os.dup/os.dup2) — model libraries may print from C (E-0052).
+- **T05.x:** ChunkStatus.status/attempts are provisional (E-0076); a JobContext notify callback that raises fails the job (accepted, E-0092).
+- **T06.1:** setup-node@v7 `package-manager-cache: true` vs the .cache/npm step (E-0044); `npm ci` will run inside the core/worker CI jobs once app/package-lock.json exists (E-0041).
+- **T06.2:** core.ts passes SKALD_STORAGE_DIR only when the user chose a storage folder (F1, E-0071).
+- **T06.3:** ProjectManifest allows extra keys (TS index signature); the UI ignores unknown keys and never sends them back modified (E-0088).
+- **T07.10:** storage-folder move per G11 incl. python/ (E-0070, E-0072); default storage %LOCALAPPDATA%\Skald / ~/.local/share/Skald (G3); "Free up space" retries cleans remove() skipped while other ops ran + a test for that branch; consider a storage-wide lock while pruning (T03.5 R2-1/R2-2, E-0116).
+- **T09.1:** test fixtures (incl. Gutenberg EPUBs) are never packaged (E-0060); exclude vendor/*/.tmp-*, .old-*, vendor/.downloads, ffplay/doc/man (E-0027).
+- **T09.2:** CLEANUP.md must list userData paths and the default storage folder (E-0009, E-0070).
+- **T09.4:** ffmpeg LGPL-3.0-or-later text + source link (E-0024); soundfile/libsndfile LGPL-2.1 (E-0048); NVIDIA terms for GPU packs (G12, E-0070).
+- **Packs/mirror:** never mirror or redistribute pack wheels anywhere (owner, G12); a uv bump needs a new mirror tag deps-v2, Pre-release, verify every asset (E-0027, E-0031, E-0034, E-0036).
+- **When touched next:** slow.yml's `.cache/uv` step is ineffective (E-0117); make_epubs.py unused "font_obfuscation" alias + include_font/font_href fallback (E-0063); fetch_deps.py redundant except classes (E-0031).
+- **Open item:** who creates `core/requirements.lock` (B3)? Decide by T04.1/T09.1 (E-0020).
 
 ## Recommended next step
-Owner picks from T02.3, T03.2, T03.3, T03.7, T03.9, T06.1 (T03.7 unlocks the most: T03.8 → T04.x). Prompts only on request (E-0057). T03.1 and T03.5 reviews: Opus (licences, catalog, packs). After merge, list available tasks (T03.5 becomes available). After merge, list available tasks without prompts (E-0057).
+Owner picks from the available list. Suggest T03.7 (unlocks the model path) and T02.3 (book path); T03.2/T03.3/T06.1/T03.9 can run in parallel. Prompts only on request (E-0057).
