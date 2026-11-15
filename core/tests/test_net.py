@@ -18,7 +18,7 @@ import requests
 import requests.adapters
 
 from skald_core import __version__, net
-from skald_core.net import DownloadCancelled, download, get_json, get_text
+from skald_core.net import DownloadCancelled, download, get_json, get_text, head
 from skald_core.rpc import SkaldError
 
 PROXY_ENV_VARS = (
@@ -845,3 +845,49 @@ def test_download_404_and_403_no_retry_no_dest_and_part_behavior(tmp_path: Path)
         assert part_403.read_bytes() == b"existing-partial"
 
     assert calls == ["/missing", "/forbidden"]
+
+
+def test_head_follows_redirects_and_maps_errors() -> None:
+    seen_ua: list[str | None] = []
+    flaky_attempts = 0
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, format: str, *args: Any) -> None:
+            return
+
+        def do_HEAD(self) -> None:
+            nonlocal flaky_attempts
+            seen_ua.append(self.headers.get("User-Agent"))
+            if self.path == "/redirect":
+                self.send_response(302)
+                self.send_header("Location", "/target")
+                self.end_headers()
+                return
+            if self.path == "/target":
+                self.send_response(200)
+                self.send_header("X-Reached", "yes")
+                self.end_headers()
+                return
+            if self.path == "/flaky":
+                flaky_attempts += 1
+                if flaky_attempts < 2:
+                    self.send_response(503)
+                    self.end_headers()
+                    return
+                self.send_response(200)
+                self.end_headers()
+                return
+            self.send_response(404)
+            self.end_headers()
+
+    with _run_server(Handler) as (_, base_url):
+        headers = head(f"{base_url}/redirect")
+        assert headers.get("X-Reached") == "yes"
+        assert seen_ua == [f"Skald/{__version__}", f"Skald/{__version__}"]
+
+        head(f"{base_url}/flaky")
+        assert flaky_attempts == 2
+
+        with pytest.raises(SkaldError) as exc_404:
+            head(f"{base_url}/missing")
+        assert exc_404.value.kind == "http_not_found"

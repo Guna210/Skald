@@ -146,6 +146,8 @@ def _decode_text(resp: requests.Response) -> str:
 def _get_response_with_retries(
     url: str,
     *,
+    method: str = "GET",
+    allow_redirects: bool = True,
     headers: Mapping[str, str] | None = None,
     timeout: tuple[float, float] | float | None = None,
     retries: int | None = None,
@@ -162,7 +164,13 @@ def _get_response_with_retries(
     try:
         for attempt in range(max_retries + 1):
             try:
-                resp = sess.get(url, headers=req_headers, timeout=req_timeout)
+                resp = sess.request(
+                    method,
+                    url,
+                    headers=req_headers,
+                    timeout=req_timeout,
+                    allow_redirects=allow_redirects,
+                )
             except (
                 requests.exceptions.Timeout,
                 requests.exceptions.ConnectionError,
@@ -209,6 +217,29 @@ def _get_response_with_retries(
             sess.close()
 
     raise AssertionError("unreachable")  # pragma: no cover
+
+
+def head(
+    url: str,
+    *,
+    headers: Mapping[str, str] | None = None,
+    timeout: tuple[float, float] | float | None = None,
+    retries: int | None = None,
+    backoff: float | None = None,
+    session: requests.Session | None = None,
+) -> dict[str, str]:
+    """Send an HTTP HEAD request (following redirects) and return response headers."""
+    with _get_response_with_retries(
+        url,
+        method="HEAD",
+        allow_redirects=True,
+        headers=headers,
+        timeout=timeout,
+        retries=retries,
+        backoff=backoff,
+        session=session,
+    ) as resp:
+        return dict(resp.headers)
 
 
 def get_text(

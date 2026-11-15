@@ -1,0 +1,440 @@
+{
+  "$defs": {
+    "CatalogCheckpoint": {
+      "description": "A selectable model checkpoint with one or more pinned revisions.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "max_chars": {
+          "exclusiveMinimum": 0,
+          "title": "Max Chars",
+          "type": "integer"
+        },
+        "default_revision": {
+          "minLength": 1,
+          "title": "Default Revision",
+          "type": "string"
+        },
+        "revisions": {
+          "items": {
+            "$ref": "#/$defs/CatalogRevision"
+          },
+          "minItems": 1,
+          "title": "Revisions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "max_chars",
+        "default_revision",
+        "revisions"
+      ],
+      "title": "CatalogCheckpoint",
+      "type": "object"
+    },
+    "CatalogFile": {
+      "description": "A single downloadable model or metadata file pinned by size and SHA-256.",
+      "properties": {
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "format": {
+          "enum": [
+            "safetensors",
+            "onnx",
+            "gguf",
+            "npz",
+            "json",
+            "text",
+            "pickle"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "size": {
+          "exclusiveMinimum": 0,
+          "title": "Size",
+          "type": "integer"
+        },
+        "sha256": {
+          "title": "Sha256",
+          "type": "string"
+        },
+        "approved_exception": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approved Exception"
+        }
+      },
+      "required": [
+        "path",
+        "format",
+        "size",
+        "sha256"
+      ],
+      "title": "CatalogFile",
+      "type": "object"
+    },
+    "CatalogHardware": {
+      "description": "Supported hardware tiers for a catalog model.",
+      "properties": {
+        "cpu": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CpuHardware"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "cuda": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CudaHardware"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "CatalogHardware",
+      "type": "object"
+    },
+    "CatalogLicense": {
+      "description": "License metadata and commercial-use flag for a catalog model.",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "url": {
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        },
+        "commercial": {
+          "title": "Commercial",
+          "type": "boolean"
+        },
+        "acknowledgement": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Acknowledgement"
+        }
+      },
+      "required": [
+        "name",
+        "url",
+        "commercial"
+      ],
+      "title": "CatalogLicense",
+      "type": "object"
+    },
+    "CatalogModel": {
+      "description": "A model family entry in the Skald catalog.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "retired"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "family_adapter": {
+          "minLength": 1,
+          "title": "Family Adapter",
+          "type": "string"
+        },
+        "pack": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pack"
+        },
+        "summary": {
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "license": {
+          "$ref": "#/$defs/CatalogLicense"
+        },
+        "languages": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Languages",
+          "type": "array"
+        },
+        "capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "hardware": {
+          "$ref": "#/$defs/CatalogHardware"
+        },
+        "notes": {
+          "$ref": "#/$defs/CatalogNotes"
+        },
+        "checkpoints": {
+          "items": {
+            "$ref": "#/$defs/CatalogCheckpoint"
+          },
+          "minItems": 1,
+          "title": "Checkpoints",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "status",
+        "family_adapter",
+        "summary",
+        "license",
+        "languages",
+        "hardware",
+        "checkpoints"
+      ],
+      "title": "CatalogModel",
+      "type": "object"
+    },
+    "CatalogNotes": {
+      "description": "Additional model notes such as watermark disclosure.",
+      "properties": {
+        "watermark": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Watermark"
+        }
+      },
+      "title": "CatalogNotes",
+      "type": "object"
+    },
+    "CatalogRevision": {
+      "description": "A pinned upstream revision of a checkpoint.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "bundled": {
+          "default": false,
+          "title": "Bundled",
+          "type": "boolean"
+        },
+        "min_adapter_version": {
+          "title": "Min Adapter Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/CatalogSource"
+        },
+        "files": {
+          "items": {
+            "$ref": "#/$defs/CatalogFile"
+          },
+          "minItems": 1,
+          "title": "Files",
+          "type": "array"
+        },
+        "changelog": {
+          "default": "",
+          "title": "Changelog",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "min_adapter_version",
+        "source",
+        "files"
+      ],
+      "title": "CatalogRevision",
+      "type": "object"
+    },
+    "CatalogSource": {
+      "description": "Upstream hosting location and pinned revision/tag for a catalog revision.",
+      "properties": {
+        "host": {
+          "enum": [
+            "huggingface",
+            "github-release"
+          ],
+          "title": "Host",
+          "type": "string"
+        },
+        "repo": {
+          "minLength": 1,
+          "title": "Repo",
+          "type": "string"
+        },
+        "ref": {
+          "minLength": 1,
+          "title": "Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "host",
+        "repo",
+        "ref"
+      ],
+      "title": "CatalogSource",
+      "type": "object"
+    },
+    "CpuHardware": {
+      "description": "CPU hardware requirements and reference speed for a model.",
+      "properties": {
+        "min_ram_gb": {
+          "exclusiveMinimum": 0,
+          "title": "Min Ram Gb",
+          "type": "number"
+        },
+        "rtf_reference": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rtf Reference"
+        }
+      },
+      "required": [
+        "min_ram_gb"
+      ],
+      "title": "CpuHardware",
+      "type": "object"
+    },
+    "CudaHardware": {
+      "description": "NVIDIA CUDA hardware requirements and reference speed for a model.",
+      "properties": {
+        "min_vram_gb": {
+          "exclusiveMinimum": 0,
+          "title": "Min Vram Gb",
+          "type": "number"
+        },
+        "min_ram_gb": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Ram Gb"
+        },
+        "rtf_reference": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rtf Reference"
+        }
+      },
+      "required": [
+        "min_vram_gb"
+      ],
+      "title": "CudaHardware",
+      "type": "object"
+    }
+  },
+  "description": "Top-level Skald model catalog document.",
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "min_app_version": {
+      "title": "Min App Version",
+      "type": "string"
+    },
+    "updated_at": {
+      "title": "Updated At",
+      "type": "string"
+    },
+    "models": {
+      "items": {
+        "$ref": "#/$defs/CatalogModel"
+      },
+      "title": "Models",
+      "type": "array"
+    }
+  },
+  "required": [
+    "min_app_version",
+    "updated_at"
+  ],
+  "title": "Catalog",
+  "type": "object"
+}
