@@ -1,0 +1,104 @@
+name: Slow Pack Install Tests
+
+on:
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+jobs:
+  slow:
+    name: slow (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Cache pip
+        uses: actions/cache@v6
+        with:
+          path: .cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('scripts/deps.lock.json', 'core/pyproject.toml', 'worker/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Cache vendor
+        uses: actions/cache@v6
+        with:
+          path: |
+            vendor/ffmpeg
+            vendor/uv
+            vendor/python
+          key: ${{ runner.os }}-vendor-${{ hashFiles('scripts/deps.lock.json') }}
+
+      - name: Cache uv
+        uses: actions/cache@v6
+        with:
+          path: .cache/uv
+          key: ${{ runner.os }}-uv-slow-${{ hashFiles('scripts/deps.lock.json', 'packs/**/locks/*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-slow-
+            ${{ runner.os }}-uv-
+
+      - name: Run setup (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: ./scripts/setup.sh
+
+      - name: Run setup (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          .\scripts\setup.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify pack lockfiles (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: core/.venv/bin/python scripts/make_locks.py --check
+
+      - name: Verify pack lockfiles (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          & .\core\.venv\Scripts\python.exe scripts\make_locks.py --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run slow CPU smoke pack install tests (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cd core
+          .venv/bin/python -m pytest -m "slow and not gpu" -v
+
+      - name: Run slow CPU smoke pack install tests (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          Push-Location core
+          try {
+            & .venv\Scripts\python.exe -m pytest -m "slow and not gpu" -v
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally {
+            Pop-Location
+          }
