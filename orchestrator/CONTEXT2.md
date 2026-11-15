@@ -293,3 +293,30 @@ Follow-up: owner merges PR #13; list available tasks without prompts.
 Context: Owner: "Merged #13". master now `2934f8e` = "Merge pull request #13 from Guna210/task/T01.3-job-manager" (normal merge). Phase 1 complete (T01.1–T01.6).
 Decision: available (prompts only on request, E-0057): T02.2, T03.1, T03.5, T03.7, T03.9 [SPIKE][REVIEW], T06.1. Nothing in progress; no open PRs.
 Follow-up: none.
+
+### E-0097 · 2026-11-15 09:40 (Asia/Colombo) · T02.2, T03.1, T03.5 · TASK-ASSIGNED
+Context: Owner asked for the T02.2, T03.1 and T03.5 prompts; all from master 2934f8e, in parallel (separate code areas; all append Appendix 3 rows → later PRs rebase).
+Decisions in the prompts (Builders record in Appendix 3):
+T02.2 EPUB structure:
+ - Carry: Appendix 3 D1–D4 (T02.1); fixtures are TOML (tomllib); T02.1 R2-2 — for 10 (epub_drm) and 12 (epub_invalid) assert only status/kind; T01.4's Chapter.linear is provisional (edit freely); T02.1 R2-1 trim make_epubs.py's unused alias/fallback only if touching it.
+ - Output = internal dataclasses for T02.3/T02.7 (no RPC; book.import is T02.7).
+ - D1 recover parsing applies to content docs here too (needed for anchors and the D2 count); D2 count computed here.
+ - hrefs: URL-decode (unquote) and split the fragment before zip lookup; resolve relative to the OPF/nav dir; reject absolute, "..", or escaping paths (zip-slip) → epub_invalid.
+ - 500 MB = sum of ZipInfo.file_size → epub_invalid. lxml parser flags per C1.1 step 7 (+ huge_tree off); entity-expansion test.
+ - Both Gutenberg EPUBs must parse to a non-empty chapter list (smoke test).
+T03.1 catalog:
+ - Schema at core/skald_core/catalog/schema.py (B4); export committed to catalog/catalog.schema.json with a no-diff test (generated, never hand-edited).
+ - Adapter registry format, fixed now for T03.7: worker/skald_worker/adapters/__init__.py has a module-level dict literal `ADAPTER_VERSIONS = {"<family>": "<semver>"}` read with ast.literal_eval (core never imports the worker). Missing file → empty registry.
+ - Commercial allowlist exact names: Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause, NVIDIA Open Model License.
+ - Formats: safetensors, onnx, gguf, npz, json, text; "pickle" only with a file-level `approved_exception` string (D13); size > 0; sha256 64 lowercase hex; source.host "huggingface" (40-hex commit) or "github-release" (tag); URLs built per C2.
+ - Unique ids at all levels; default_revision must exist; only active models count toward 5/3.
+ - --network uses T01.6 net.py (download() verifies size+SHA into a temp dir); reachability via a small HEAD helper added to net.py if needed (same error mapping). Diff against origin/master → catalog.yml checks out with fetch-depth 0. catalog.yml: PRs touching catalog/ + weekly, T00.4 rules.
+T03.5 pack builder:
+ - Spec on master already has G1–G14 (B5/B9/T03.5). Carry: F1 storage resolution (SKALD_STORAGE_DIR → <SKALD_DEV_DATA>/storage → platform default) in core + Appendix 3 row + T06.2 env line; F2 Part B diagram hosts; T03.4 R2 leftovers (notes.sh guard; T07.10 python/; engine-packs.md "section 3.9"→3.10; cite NVIDIA CUDA 13 notes in the Pascal row; C4 dev pack location → <SKALD_DEV_DATA>/storage/); T01.3 R2-1 PID-reuse simulation test; CI .cache/uv key adds pack lockfiles (E-0041).
+ - uv/python paths via SKALD_VENDOR + per-platform constants tested against deps.lock.json (T01.4 pattern). uv invocation injectable (argv prefix) so tests use [sys.executable, fake_uv.py] on both OSes.
+ - Step 3 optional (no worker until T03.7); step 4 runs `python -m skald_worker --adapter <family> --check` unless the pack dir has check.py (smoke packs). Install = JobManager job with stages venv/sync/worker/check/finalize; uv subprocesses registered, stdout=PIPE explicitly; pack_install_failed carries the last 30 log lines.
+ - Lock header: `# skald-backend: <cpu|cu126>` and `# skald-required-bytes: <n>` (per-OS measured free-space drop × 1.2; CPU 868/623 MB, cu12 6,669/4,326 MB from engine-packs.md §3.4).
+ - Min NVIDIA driver for cu126: cite NVIDIA's own docs (CUDA 12.6 release notes / CUDA compatibility guide) with the URL; record both the minor-version-compatibility minimum and the 12.6 toolkit driver, and justify which pack.json uses (PyTorch wheels bundle the runtime). If docs.nvidia.com is blocked, say so — don't guess.
+ - Weekly + on-demand slow job: new .github/workflows/slow.yml (schedule + workflow_dispatch), both OSes, T00.4 rules.
+Agents: T03.5 → Claude Code cloud, strongest model (pack hosts already allowed there; complex); T02.2 and T03.1 → any agent.
+Follow-up: three handoffs.
