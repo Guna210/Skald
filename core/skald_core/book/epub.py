@@ -7,8 +7,10 @@ import posixpath
 import re
 import urllib.parse
 import zipfile
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from lxml import etree  # type: ignore[import-untyped]
 
@@ -16,7 +18,7 @@ from skald_core.rpc.server import SkaldError
 
 logger = logging.getLogger(__name__)
 
-MAX_UNCOMPRESSED_BYTES = 500 * 1024 * 1024  # 500 MB (T02.2)
+MAX_UNCOMPRESSED_BYTES = 500_000_000  # 500 MB (SPEC T02.2)
 SHORT_CHAPTER_CHARS = 200  # C1.1 rule 4
 
 SKIP_REASON_ORDER: tuple[str, ...] = ("cover", "toc", "copyright-page", "index", "short")
@@ -32,6 +34,14 @@ ALLOWED_ENCRYPTION_ALGORITHMS: frozenset[str] = frozenset(
 EPUB_OPS_NS = "http://www.idpf.org/2007/ops"
 EPUB_TYPE_ATTR = f"{{{EPUB_OPS_NS}}}type"
 HEADING_TAGS: frozenset[str] = frozenset({"h1", "h2", "h3", "h4", "h5", "h6"})
+
+# C1.1 step 7: disable entity resolution, network access, DTD loading, and huge trees.
+_SAFE_PARSER_KWARGS: dict[str, Any] = {
+    "resolve_entities": False,
+    "no_network": True,
+    "load_dtd": False,
+    "huge_tree": False,
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,9 +90,19 @@ class EpubStructure:
 
 
 @dataclass(frozen=True, slots=True)
+class BodySlice:
+    """Resolved DOM bounds for a chapter slice inside an XHTML document."""
+
+    root: etree._Element
+    start_el: etree._Element | None
+    end_el: etree._Element | None
+    anchor_el: etree._Element | None
+
+
+@dataclass(frozen=True, slots=True)
 class _ManifestItem:
     id: str
-    href: str
+    raw_href: str
     media_type: str
     properties: frozenset[str]
 
@@ -124,24 +144,12 @@ def _collapse_ws(text: str) -> str:
 
 
 def _strict_parser() -> etree.XMLParser:
-    # C1.1 step 7: disable entity resolution, network access, DTD loading, and huge trees.
-    return etree.XMLParser(
-        resolve_entities=False,
-        no_network=True,
-        load_dtd=False,
-        huge_tree=False,
-    )
+    return etree.XMLParser(**_SAFE_PARSER_KWARGS)
 
 
 def _recover_parser() -> etree.XMLParser:
     # D1: recover=True for malformed content XHTML, keeping C1.1 step 7 flags.
-    return etree.XMLParser(
-        recover=True,
-        resolve_entities=False,
-        no_network=True,
-        load_dtd=False,
-        huge_tree=False,
-    )
+    return etree.XMLParser(recover=True, **_SAFE_PARSER_KWARGS)
 
 
 def _parse_structural_xml(data: bytes, label: str) -> etree._Element:
@@ -169,6 +177,11 @@ def _parse_content_xhtml(data: bytes, zip_path: str) -> etree._Element:
     if root is None:
         raise _invalid_epub(f"Unreadable XHTML content in {zip_path}.")
     return root
+
+
+def _is_remote_href(raw_href: str) -> bool:
+    lowered = raw_href.strip().lower()
+    return lowered.startswith(("http://", "https://"))
 
 
 def _resolve_zip_path(base_dir: str, raw_href: str) -> tuple[str, str | None]:
@@ -290,7 +303,7 @@ def _parse_metadata(opf_root: etree._Element) -> tuple[EpubMetadata, str | None]
     return EpubMetadata(title=title, authors=authors, language=language), epub2_cover_id
 
 
-def _parse_manifest(opf_root: etree._Element, opf_dir: str) -> dict[str, _ManifestItem]:
+def _parse_manifest(opf_root: etree._Element) -> dict[str, _ManifestItem]:
     manifest: dict[str, _ManifestItem] = {}
     for el in opf_root.iter():
         if _local_name(el) != "item":
@@ -299,15 +312,19 @@ def _parse_manifest(opf_root: etree._Element, opf_dir: str) -> dict[str, _Manife
         raw_href = el.get("href")
         if not item_id or not raw_href:
             continue
-        resolved_href, _ = _resolve_zip_path(opf_dir, raw_href)
         props = frozenset((el.get("properties") or "").split())
         manifest[item_id] = _ManifestItem(
             id=item_id,
-            href=resolved_href,
+            raw_href=raw_href,
             media_type=el.get("media-type") or "",
             properties=props,
         )
     return manifest
+
+
+def _resolve_item_href(item: _ManifestItem, opf_dir: str) -> str:
+    resolved, _ = _resolve_zip_path(opf_dir, item.raw_href)
+    return resolved
 
 
 def _parse_spine(
@@ -339,16 +356,18 @@ def _parse_spine(
 
 
 def _get_epub_type_tokens(el: etree._Element) -> set[str]:
+    if not isinstance(el.tag, str):
+        return set()
     raw = el.get(EPUB_TYPE_ATTR) or el.get("epub:type") or ""
     return {tok.strip().lower() for tok in raw.split() if tok.strip()}
 
 
 def _parse_nav(
     zf: zipfile.ZipFile,
-    nav_item: _ManifestItem,
+    nav_href: str,
 ) -> tuple[list[_NavEntry], dict[tuple[str, str | None], set[str]]]:
-    nav_root = _parse_structural_xml(_read_zip_bytes(zf, nav_item.href), nav_item.href)
-    nav_dir = posixpath.dirname(nav_item.href)
+    nav_root = _parse_structural_xml(_read_zip_bytes(zf, nav_href), nav_href)
+    nav_dir = posixpath.dirname(nav_href)
 
     nav_elements = [el for el in nav_root.iter() if _local_name(el) == "nav"]
     toc_nav: etree._Element | None = None
@@ -370,7 +389,7 @@ def _parse_nav(
             if _local_name(el) != "a":
                 continue
             raw_href = el.get("href")
-            if not raw_href:
+            if not raw_href or _is_remote_href(raw_href):
                 continue
             resolved_href, anchor = _resolve_zip_path(nav_dir, raw_href)
             title = _collapse_ws("".join(el.itertext()))
@@ -383,7 +402,7 @@ def _parse_nav(
             if _local_name(el) != "a":
                 continue
             raw_href = el.get("href")
-            if not raw_href:
+            if not raw_href or _is_remote_href(raw_href):
                 continue
             types = _get_epub_type_tokens(el) & SKIP_EPUB_TYPES
             if not types:
@@ -395,9 +414,9 @@ def _parse_nav(
     return toc_entries, landmarks
 
 
-def _parse_ncx(zf: zipfile.ZipFile, ncx_item: _ManifestItem) -> list[_NavEntry]:
-    ncx_root = _parse_structural_xml(_read_zip_bytes(zf, ncx_item.href), ncx_item.href)
-    ncx_dir = posixpath.dirname(ncx_item.href)
+def _parse_ncx(zf: zipfile.ZipFile, ncx_href: str) -> list[_NavEntry]:
+    ncx_root = _parse_structural_xml(_read_zip_bytes(zf, ncx_href), ncx_href)
+    ncx_dir = posixpath.dirname(ncx_href)
 
     entries: list[_NavEntry] = []
     for el in ncx_root.iter():
@@ -411,18 +430,18 @@ def _parse_ncx(zf: zipfile.ZipFile, ncx_item: _ManifestItem) -> list[_NavEntry]:
                 label_text = _collapse_ws("".join(child.itertext()))
             elif child_name == "content" and content_src is None:
                 content_src = child.get("src")
-        if content_src and label_text:
+        if content_src and label_text and not _is_remote_href(content_src):
             resolved_href, anchor = _resolve_zip_path(ncx_dir, content_src)
             entries.append(_NavEntry(title=label_text, href=resolved_href, anchor=anchor))
     return entries
 
 
-def _extract_slice_info(
+def resolve_body_slices(
     doc_root: etree._Element,
-    start_anchor: str | None,
-    end_anchor: str | None,
-) -> tuple[int, str | None, set[str]]:
-    """Return ``(d2_char_count, first_heading, in_doc_skip_types)`` for a chapter slice."""
+    anchors: Sequence[str | None],
+    zip_path: str,
+) -> list[BodySlice]:
+    """Resolve non-overlapping DOM slice bounds for each chapter anchor in ``doc_root``."""
     body: etree._Element | None = None
     for el in doc_root.iter():
         if _local_name(el) == "body":
@@ -431,28 +450,77 @@ def _extract_slice_info(
     root_el = body if body is not None else doc_root
 
     id_map: dict[str, etree._Element] = {}
-    if start_anchor is not None or end_anchor is not None:
+    if any(a is not None for a in anchors):
         for el in root_el.iter():
             if isinstance(el.tag, str):
                 el_id = el.get("id")
                 if el_id:
                     id_map[el_id] = el
 
-    start_el: etree._Element | None = root_el
-    if start_anchor is not None:
-        start_el = id_map.get(start_anchor)
-        if start_el is None:
-            return 0, None, set()
+    resolved_anchors: list[etree._Element | None] = []
+    for anchor in anchors:
+        if anchor is None:
+            resolved_anchors.append(None)
+        elif anchor in id_map:
+            resolved_anchors.append(id_map[anchor])
+        else:
+            logger.warning(
+                "Dangling anchor %s#%s not found in document; falling back to sequential start.",
+                zip_path,
+                anchor,
+            )
+            resolved_anchors.append(None)
 
-    end_el: etree._Element | None = id_map.get(end_anchor) if end_anchor is not None else None
+    slices: list[BodySlice] = []
+    prev_end_el: etree._Element | None = root_el
+    for idx, anchor in enumerate(anchors):
+        anchor_el = resolved_anchors[idx]
+        if idx == 0:
+            # R1-3: text before the first anchor belongs to the first chapter in the file.
+            start_el: etree._Element | None = root_el
+        elif anchor_el is not None:
+            start_el = anchor_el
+        else:
+            # Dangling anchor: start where the previous chapter ended (prev_end_el is None at EOF).
+            start_el = prev_end_el
 
-    text_chunks: list[str] = []
-    first_heading: str | None = None
-    skip_types: set[str] = set()
+        end_el: etree._Element | None = None
+        for future_el in resolved_anchors[idx + 1 :]:
+            if future_el is not None:
+                end_el = future_el
+                break
+
+        slices.append(
+            BodySlice(
+                root=root_el,
+                start_el=start_el,
+                end_el=end_el,
+                anchor_el=anchor_el,
+            )
+        )
+        prev_end_el = end_el
+
+    return slices
+
+
+def walk_body_slice(
+    body_slice: BodySlice,
+    *,
+    on_enter: Callable[[etree._Element], bool | None] | None = None,
+    on_text: Callable[[str], None] | None = None,
+    on_exit: Callable[[etree._Element], None] | None = None,
+) -> None:
+    """Walk ``body_slice`` in document order, skipping comments/PIs while keeping their tails."""
+    if body_slice.start_el is None:
+        return
+
+    root_el = body_slice.root
+    start_el = body_slice.start_el
+    end_el = body_slice.end_el
     state = "inside" if start_el is root_el else "before"
 
     def _walk(el: etree._Element) -> None:
-        nonlocal state, first_heading
+        nonlocal state
         if state == "after":
             return
         if end_el is not None and el is end_el:
@@ -461,37 +529,89 @@ def _extract_slice_info(
         if el is start_el:
             state = "inside"
 
-        tag_name = _local_name(el)
-        if tag_name in {"script", "style"}:
-            if state == "inside" and el is not root_el and el.tail:
-                text_chunks.append(el.tail)
+        # R1-4: skip non-element nodes (Comment, ProcessingInstruction), keeping their tails.
+        if not isinstance(el.tag, str):
+            if state == "inside" and el is not root_el and el.tail and on_text is not None:
+                on_text(el.tail)
             return
 
+        entered = False
+        skip_subtree = False
         if state == "inside":
-            skip_types.update(_get_epub_type_tokens(el) & SKIP_EPUB_TYPES)
-            if first_heading is None and tag_name in HEADING_TAGS:
-                heading = _collapse_ws("".join(el.itertext()))
-                if heading:
-                    first_heading = heading
-            if el.text:
-                text_chunks.append(el.text)
+            entered = True
+            if on_enter is not None and on_enter(el) is False:
+                skip_subtree = True
+            if not skip_subtree and el.text and on_text is not None:
+                on_text(el.text)
 
-        for child in el:
-            _walk(child)
-            if state == "after":
-                break
+        if not skip_subtree:
+            for child in el:
+                _walk(child)
+                if state == "after":
+                    break
 
-        if state == "inside" and el is not root_el and el.tail:
-            text_chunks.append(el.tail)
+        if entered and on_exit is not None:
+            on_exit(el)
+
+        if state == "inside" and el is not root_el and el.tail and on_text is not None:
+            on_text(el.tail)
 
     _walk(root_el)
+
+
+def _slice_epub_types(doc_root: etree._Element, body_slice: BodySlice) -> set[str]:
+    """Return Rule-4 ``epub:type`` tokens in the chapter's own scope (R1-8)."""
+    found: set[str] = set()
+    if _local_name(doc_root) == "html":
+        found.update(_get_epub_type_tokens(doc_root) & SKIP_EPUB_TYPES)
+
+    root_el = body_slice.root
+    found.update(_get_epub_type_tokens(root_el) & SKIP_EPUB_TYPES)
+
+    if body_slice.anchor_el is not None:
+        cur: etree._Element | None = body_slice.anchor_el
+        while cur is not None and cur is not root_el:
+            found.update(_get_epub_type_tokens(cur) & SKIP_EPUB_TYPES)
+            cur = cur.getparent()
+    else:
+        for child in root_el:
+            if body_slice.end_el is not None and child is body_slice.end_el:
+                break
+            if _local_name(child) == "section":
+                found.update(_get_epub_type_tokens(child) & SKIP_EPUB_TYPES)
+
+    return found
+
+
+def _extract_slice_info(
+    doc_root: etree._Element,
+    body_slice: BodySlice,
+) -> tuple[int, str | None, set[str]]:
+    """Return ``(d2_char_count, first_heading, in_doc_skip_types)`` for a chapter slice."""
+    text_chunks: list[str] = []
+    first_heading: str | None = None
+
+    def _on_enter(el: etree._Element) -> bool | None:
+        nonlocal first_heading
+        tag_name = _local_name(el)
+        if tag_name in {"script", "style"}:
+            return False
+        if first_heading is None and tag_name in HEADING_TAGS:
+            heading = _collapse_ws("".join(el.itertext()))
+            if heading:
+                first_heading = heading
+        return None
+
+    walk_body_slice(body_slice, on_enter=_on_enter, on_text=text_chunks.append)
     char_count = len(_collapse_ws("".join(text_chunks)))
+    skip_types = _slice_epub_types(doc_root, body_slice)
     return char_count, first_heading, skip_types
 
 
 def _resolve_cover(
     zf: zipfile.ZipFile,
     manifest: dict[str, _ManifestItem],
+    opf_dir: str,
     epub2_cover_id: str | None,
 ) -> EpubCover | None:
     cover_item: _ManifestItem | None = None
@@ -502,14 +622,15 @@ def _resolve_cover(
     if cover_item is None and epub2_cover_id is not None:
         cover_item = manifest.get(epub2_cover_id)
 
-    if cover_item is None:
+    if cover_item is None or _is_remote_href(cover_item.raw_href):
         return None
-    if cover_item.href not in zf.namelist():
+    cover_href = _resolve_item_href(cover_item, opf_dir)
+    if cover_href not in zf.namelist():
         return None
     return EpubCover(
-        href=cover_item.href,
+        href=cover_href,
         media_type=cover_item.media_type or None,
-        data=zf.read(cover_item.href),
+        data=zf.read(cover_href),
     )
 
 
@@ -525,10 +646,15 @@ def parse_epub(path: Path | str) -> EpubStructure:
         ) from exc
 
     with zf_ctx as zf:
-        total_uncompressed = sum(info.file_size for info in zf.infolist())
+        infos = zf.infolist()
+        names = [info.filename for info in infos]
+        if len(names) != len(set(names)):
+            raise _invalid_epub("EPUB archive contains duplicate file entries.")
+
+        total_uncompressed = sum(info.file_size for info in infos)
         if total_uncompressed > MAX_UNCOMPRESSED_BYTES:
             raise _invalid_epub(
-                "EPUB exceeds maximum uncompressed size limit of 500 MB.",
+                "EPUB exceeds maximum uncompressed size limit of 500 MB (500,000,000 bytes).",
                 details=f"uncompressed_bytes={total_uncompressed}",
             )
 
@@ -539,7 +665,7 @@ def parse_epub(path: Path | str) -> EpubStructure:
         opf_root = _parse_structural_xml(_read_zip_bytes(zf, opf_path), opf_path)
 
         metadata, epub2_cover_id = _parse_metadata(opf_root)
-        manifest = _parse_manifest(opf_root, opf_dir)
+        manifest = _parse_manifest(opf_root)
         spine_items, toc_id = _parse_spine(opf_root, manifest)
 
         nav_item = next(
@@ -548,20 +674,24 @@ def parse_epub(path: Path | str) -> EpubStructure:
         )
         nav_entries: list[_NavEntry] = []
         landmarks: dict[tuple[str, str | None], set[str]] = {}
-        if nav_item is not None:
-            nav_entries, landmarks = _parse_nav(zf, nav_item)
+        if nav_item is not None and not _is_remote_href(nav_item.raw_href):
+            nav_entries, landmarks = _parse_nav(zf, _resolve_item_href(nav_item, opf_dir))
 
-        ncx_item: _ManifestItem | None = manifest.get(toc_id) if toc_id else None
-        if ncx_item is None:
-            ncx_item = next(
-                (
-                    item
-                    for item in manifest.values()
-                    if item.media_type == "application/x-dtbncx+xml"
-                ),
-                None,
-            )
-        ncx_entries = _parse_ncx(zf, ncx_item) if ncx_item is not None else []
+        # R1-10: parse NCX only if nav is missing or yielded no entries.
+        ncx_entries: list[_NavEntry] = []
+        if not nav_entries:
+            ncx_item: _ManifestItem | None = manifest.get(toc_id) if toc_id else None
+            if ncx_item is None:
+                ncx_item = next(
+                    (
+                        item
+                        for item in manifest.values()
+                        if item.media_type == "application/x-dtbncx+xml"
+                    ),
+                    None,
+                )
+            if ncx_item is not None and not _is_remote_href(ncx_item.raw_href):
+                ncx_entries = _parse_ncx(zf, _resolve_item_href(ncx_item, opf_dir))
 
         # Build title lookup maps (nav wins over NCX).
         nav_titles: dict[tuple[str, str | None], str] = {}
@@ -582,10 +712,13 @@ def parse_epub(path: Path | str) -> EpubStructure:
 
         chapters: list[EpubChapterEntry] = []
         for item, linear in spine_items:
-            raw_bytes = _read_zip_bytes(zf, item.href)
-            doc_root = _parse_content_xhtml(raw_bytes, item.href)
+            if _is_remote_href(item.raw_href):
+                raise _invalid_epub("Spine item cannot be a remote URL.", details=item.raw_href)
+            item_href = _resolve_item_href(item, opf_dir)
+            raw_bytes = _read_zip_bytes(zf, item_href)
+            doc_root = _parse_content_xhtml(raw_bytes, item_href)
 
-            candidate_anchors = anchors_by_href.get(item.href, [])
+            candidate_anchors = anchors_by_href.get(item_href, [])
             has_fragments = any(a is not None for a in candidate_anchors)
             if has_fragments:
                 # Keep a leading None entry only if the first nav entry had no fragment.
@@ -596,36 +729,38 @@ def parse_epub(path: Path | str) -> EpubStructure:
             else:
                 chapter_anchors = [None]
 
-            for idx, anchor in enumerate(chapter_anchors):
-                next_anchor = chapter_anchors[idx + 1] if idx + 1 < len(chapter_anchors) else None
+            body_slices = resolve_body_slices(doc_root, chapter_anchors, item_href)
+            for idx, (anchor, body_slice) in enumerate(
+                zip(chapter_anchors, body_slices, strict=True)
+            ):
                 char_count, first_heading, in_doc_types = _extract_slice_info(
                     doc_root,
-                    anchor,
-                    next_anchor,
+                    body_slice,
                 )
 
                 # C1.1 rule 2: nav -> NCX -> first heading -> "Chapter N"
                 chapter_num = len(chapters) + 1
                 title = (
-                    nav_titles.get((item.href, anchor))
-                    or (nav_titles.get((item.href, None)) if anchor is None else None)
-                    or ncx_titles.get((item.href, anchor))
-                    or (ncx_titles.get((item.href, None)) if anchor is None else None)
+                    nav_titles.get((item_href, anchor))
+                    or (nav_titles.get((item_href, None)) if anchor is None else None)
+                    or ncx_titles.get((item_href, anchor))
+                    or (ncx_titles.get((item_href, None)) if anchor is None else None)
                     or first_heading
                     or f"Chapter {chapter_num}"
                 )
 
                 reasons_set: set[str] = set(in_doc_types)
-                reasons_set.update(landmarks.get((item.href, anchor), set()))
-                if anchor is not None:
-                    reasons_set.update(landmarks.get((item.href, None), set()))
+                reasons_set.update(landmarks.get((item_href, anchor), set()))
+                if idx == 0:
+                    # R1-8: landmark with no anchor applies to the chapter at the top of the file.
+                    reasons_set.update(landmarks.get((item_href, None), set()))
                 if char_count < SHORT_CHAPTER_CHARS:
                     reasons_set.add("short")
 
                 skip_reasons = [r for r in SKIP_REASON_ORDER if r in reasons_set]
                 chapters.append(
                     EpubChapterEntry(
-                        href=item.href,
+                        href=item_href,
                         anchor=anchor,
                         title=title,
                         linear=linear,
@@ -635,5 +770,5 @@ def parse_epub(path: Path | str) -> EpubStructure:
                     )
                 )
 
-        cover = _resolve_cover(zf, manifest, epub2_cover_id)
+        cover = _resolve_cover(zf, manifest, opf_dir, epub2_cover_id)
         return EpubStructure(metadata=metadata, chapters=chapters, cover=cover)
