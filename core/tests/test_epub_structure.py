@@ -628,3 +628,288 @@ def test_corrupt_zip_and_missing_container_rejected(tmp_path: Path) -> None:
     with pytest.raises(SkaldError) as exc_info:
         parse_epub(no_container)
     assert exc_info.value.kind == "epub_invalid"
+
+
+def test_reversed_nav_anchors_ordered_by_document_position(tmp_path: Path) -> None:
+    opf = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<package xmlns="http://www.idpf.org/2007/opf" version="3.0"'
+        ' unique-identifier="pub-id">\n'
+        '  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">\n'
+        '    <dc:identifier id="pub-id">urn:uuid:0000</dc:identifier>\n'
+        "    <dc:title>Reversed Nav</dc:title>\n"
+        "  </metadata>\n"
+        "  <manifest>\n"
+        '    <item id="nav" href="nav.xhtml"'
+        ' media-type="application/xhtml+xml" properties="nav"/>\n'
+        '    <item id="ch1" href="ch1.xhtml" media-type="application/xhtml+xml"/>\n'
+        "  </manifest>\n"
+        '  <spine><itemref idref="ch1"/></spine>\n'
+        "</package>\n"
+    )
+    ch1 = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<html xmlns="http://www.w3.org/1999/xhtml"><body>\n'
+        f'<section id="a"><p>{"Alpha " * 18}</p></section>\n'
+        f'<section id="b"><p>{"Bravo " * 18}</p></section>\n'
+        f'<section id="c"><p>{"Charlie " * 18}</p></section>\n'
+        "</body></html>\n"
+    ).encode()
+
+    # Whole-file count without nav splitting
+    whole_epub = _build_minimal_epub(
+        tmp_path / "whole.epub",
+        opf_xml=opf.replace(
+            '    <item id="nav" href="nav.xhtml"'
+            ' media-type="application/xhtml+xml" properties="nav"/>\n',
+            "",
+        ),
+        extra_files={"OEBPS/ch1.xhtml": ch1},
+    )
+    whole_count = parse_epub(whole_epub).chapters[0].char_count
+
+    nav = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<html xmlns="http://www.w3.org/1999/xhtml"'
+        ' xmlns:epub="http://www.idpf.org/2007/ops">\n'
+        '<body><nav epub:type="toc"><ol>'
+        '<li><a href="ch1.xhtml#c">Title C</a></li>'
+        '<li><a href="ch1.xhtml#b">Title B</a></li>'
+        '<li><a href="ch1.xhtml#a">Title A</a></li>'
+        "</ol></nav></body></html>\n"
+    )
+    rev_epub = _build_minimal_epub(
+        tmp_path / "reversed.epub",
+        opf_xml=opf,
+        nav_xml=nav,
+        extra_files={"OEBPS/ch1.xhtml": ch1},
+    )
+    res = parse_epub(rev_epub)
+    assert [ch.title for ch in res.chapters] == ["Title A", "Title B", "Title C"]
+    assert [ch.anchor for ch in res.chapters] == ["a", "b", "c"]
+    assert all(ch.char_count > 0 for ch in res.chapters)
+    assert abs(sum(ch.char_count for ch in res.chapters) - whole_count) <= 2
+
+
+@pytest.mark.parametrize(
+    ("anchors", "expected_warnings"),
+    [
+        (["missing_first", "b", "c"], ["OEBPS/ch1.xhtml#missing_first"]),
+        (["a", "missing_mid", "c"], ["OEBPS/ch1.xhtml#missing_mid"]),
+        (["a", "b", "missing_last"], ["OEBPS/ch1.xhtml#missing_last"]),
+        (["a", "m1", "m2", "c"], ["OEBPS/ch1.xhtml#m1", "OEBPS/ch1.xhtml#m2"]),
+    ],
+)
+def test_dangling_anchors_first_middle_last_and_consecutive(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    anchors: list[str],
+    expected_warnings: list[str],
+) -> None:
+    opf = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<package xmlns="http://www.idpf.org/2007/opf" version="3.0"'
+        ' unique-identifier="pub-id">\n'
+        '  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">\n'
+        '    <dc:identifier id="pub-id">urn:uuid:0000</dc:identifier>\n'
+        "    <dc:title>Dangling Matrix</dc:title>\n"
+        "  </metadata>\n"
+        "  <manifest>\n"
+        '    <item id="nav" href="nav.xhtml"'
+        ' media-type="application/xhtml+xml" properties="nav"/>\n'
+        '    <item id="ch1" href="ch1.xhtml" media-type="application/xhtml+xml"/>\n'
+        "  </manifest>\n"
+        '  <spine><itemref idref="ch1"/></spine>\n'
+        "</package>\n"
+    )
+    ch1 = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<html xmlns="http://www.w3.org/1999/xhtml"><body>\n'
+        f'<section id="a"><p>{"Alpha " * 15}</p></section>\n'
+        f'<section id="b"><p>{"Bravo " * 15}</p></section>\n'
+        f'<section id="c"><p>{"Charlie " * 15}</p></section>\n'
+        "</body></html>\n"
+    ).encode()
+    whole_count = (
+        len(" ".join(["Alpha"] * 15))
+        + 1
+        + len(" ".join(["Bravo"] * 15))
+        + 1
+        + len(" ".join(["Charlie"] * 15))
+    )
+
+    lis = "".join(f'<li><a href="ch1.xhtml#{a}">{a}</a></li>' for a in anchors)
+    nav = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<html xmlns="http://www.w3.org/1999/xhtml"'
+        ' xmlns:epub="http://www.idpf.org/2007/ops">\n'
+        f'<body><nav epub:type="toc"><ol>{lis}</ol></nav></body></html>\n'
+    )
+    epub_path = _build_minimal_epub(
+        tmp_path / "dangling.epub",
+        opf_xml=opf,
+        nav_xml=nav,
+        extra_files={"OEBPS/ch1.xhtml": ch1},
+    )
+    with caplog.at_level(logging.WARNING):
+        res = parse_epub(epub_path)
+
+    assert len(res.chapters) == len(anchors)
+    for warn in expected_warnings:
+        assert any(warn in rec.message for rec in caplog.records)
+    # No overlap: sum of per-chapter counts matches whole-file count within boundary spaces.
+    assert abs(sum(ch.char_count for ch in res.chapters) - whole_count) <= len(anchors)
+
+
+def test_rule4_epub_type_scope_positive_and_negative(tmp_path: Path) -> None:
+    prose = "word " * 50  # 250 chars -> never "short"
+    opf = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<package xmlns="http://www.idpf.org/2007/opf" version="3.0"'
+        ' unique-identifier="pub-id">\n'
+        '  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">\n'
+        '    <dc:identifier id="pub-id">urn:uuid:0000</dc:identifier>\n'
+        "    <dc:title>Scope Test</dc:title>\n"
+        "  </metadata>\n"
+        "  <manifest>\n"
+        '    <item id="nav" href="nav.xhtml"'
+        ' media-type="application/xhtml+xml" properties="nav"/>\n'
+        '    <item id="html_flag" href="html_flag.xhtml" media-type="application/xhtml+xml"/>\n'
+        '    <item id="body_flag" href="body_flag.xhtml" media-type="application/xhtml+xml"/>\n'
+        '    <item id="split" href="split.xhtml" media-type="application/xhtml+xml"/>\n'
+        '    <item id="top_sec" href="top_sec.xhtml" media-type="application/xhtml+xml"/>\n'
+        '    <item id="neg" href="neg.xhtml" media-type="application/xhtml+xml"/>\n'
+        "  </manifest>\n"
+        "  <spine>\n"
+        '    <itemref idref="html_flag"/>\n'
+        '    <itemref idref="body_flag"/>\n'
+        '    <itemref idref="split"/>\n'
+        '    <itemref idref="top_sec"/>\n'
+        '    <itemref idref="neg"/>\n'
+        "  </spine>\n"
+        "</package>\n"
+    )
+    nav = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<html xmlns="http://www.w3.org/1999/xhtml"'
+        ' xmlns:epub="http://www.idpf.org/2007/ops">\n'
+        '<body><nav epub:type="toc"><ol>'
+        '<li><a href="html_flag.xhtml">Html</a></li>'
+        '<li><a href="body_flag.xhtml">Body</a></li>'
+        '<li><a href="split.xhtml#cp">Anchor Self</a></li>'
+        '<li><a href="split.xhtml#idx">Ancestor Div</a></li>'
+        '<li><a href="split.xhtml#toc_sec">Ancestor Sec</a></li>'
+        '<li><a href="top_sec.xhtml">Top Sec</a></li>'
+        '<li><a href="neg.xhtml">Neg</a></li>'
+        "</ol></nav></body></html>\n"
+    )
+    files = {
+        "OEBPS/html_flag.xhtml": (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<html xmlns="http://www.w3.org/1999/xhtml"'
+            f' xmlns:epub="http://www.idpf.org/2007/ops" epub:type="cover">'
+            f"<body><p>{prose}</p></body></html>\n"
+        ).encode(),
+        "OEBPS/body_flag.xhtml": (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<html xmlns="http://www.w3.org/1999/xhtml"'
+            ' xmlns:epub="http://www.idpf.org/2007/ops">'
+            f'<body epub:type="toc"><p>{prose}</p></body></html>\n'
+        ).encode(),
+        "OEBPS/split.xhtml": (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<html xmlns="http://www.w3.org/1999/xhtml"'
+            ' xmlns:epub="http://www.idpf.org/2007/ops"><body>\n'
+            f'  <h1 id="cp" epub:type="copyright-page">Copyright</h1><p>{prose}</p>\n'
+            f'  <div epub:type="index"><h1 id="idx">Index</h1><p>{prose}</p></div>\n'
+            f'  <section epub:type="toc"><h1 id="toc_sec">TOC</h1><p>{prose}</p></section>\n'
+            "</body></html>\n"
+        ).encode(),
+        "OEBPS/top_sec.xhtml": (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<html xmlns="http://www.w3.org/1999/xhtml"'
+            ' xmlns:epub="http://www.idpf.org/2007/ops"><body>\n'
+            f'  <section epub:type="index"><p>{prose}</p></section>\n'
+            "</body></html>\n"
+        ).encode(),
+        "OEBPS/neg.xhtml": (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<html xmlns="http://www.w3.org/1999/xhtml"'
+            ' xmlns:epub="http://www.idpf.org/2007/ops"><body>\n'
+            f'  <div epub:type="index"><p>{prose}</p></div>\n'
+            '  <section><div epub:type="toc"><p>Nested</p></div></section>\n'
+            "</body></html>\n"
+        ).encode(),
+    }
+    epub_path = _build_minimal_epub(
+        tmp_path / "scope.epub",
+        opf_xml=opf,
+        nav_xml=nav,
+        extra_files=files,
+    )
+    res = parse_epub(epub_path)
+    by_title = {ch.title: ch for ch in res.chapters}
+    assert by_title["Html"].skip_reasons == ["cover"]
+    assert by_title["Body"].skip_reasons == ["toc"]
+    assert by_title["Anchor Self"].skip_reasons == ["copyright-page"]
+    assert by_title["Ancestor Div"].skip_reasons == ["index"]
+    assert by_title["Ancestor Sec"].skip_reasons == ["toc"]
+    assert by_title["Top Sec"].skip_reasons == ["index"]
+    assert by_title["Neg"].suggested_skip is False
+    assert by_title["Neg"].skip_reasons == []
+
+
+def test_landmark_scope_unanchored_and_anchored(tmp_path: Path) -> None:
+    prose = "word " * 50
+    opf = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<package xmlns="http://www.idpf.org/2007/opf" version="3.0"'
+        ' unique-identifier="pub-id">\n'
+        '  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">\n'
+        '    <dc:identifier id="pub-id">urn:uuid:0000</dc:identifier>\n'
+        "    <dc:title>Landmark Scope</dc:title>\n"
+        "  </metadata>\n"
+        "  <manifest>\n"
+        '    <item id="nav" href="nav.xhtml"'
+        ' media-type="application/xhtml+xml" properties="nav"/>\n'
+        '    <item id="ch1" href="ch1.xhtml" media-type="application/xhtml+xml"/>\n'
+        '    <item id="ch2" href="ch2.xhtml" media-type="application/xhtml+xml"/>\n'
+        "  </manifest>\n"
+        '  <spine><itemref idref="ch1"/><itemref idref="ch2"/></spine>\n'
+        "</package>\n"
+    )
+    nav = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<html xmlns="http://www.w3.org/1999/xhtml"'
+        ' xmlns:epub="http://www.idpf.org/2007/ops"><body>\n'
+        '  <nav epub:type="toc"><ol>'
+        '<li><a href="ch1.xhtml#s1">F1 S1</a></li>'
+        '<li><a href="ch1.xhtml#s2">F1 S2</a></li>'
+        '<li><a href="ch2.xhtml#s1">F2 S1</a></li>'
+        '<li><a href="ch2.xhtml#s2">F2 S2</a></li>'
+        "</ol></nav>\n"
+        '  <nav epub:type="landmarks"><ol>'
+        '<li><a epub:type="cover" href="ch1.xhtml">Cover</a></li>'
+        '<li><a epub:type="index" href="ch2.xhtml#s2">Index</a></li>'
+        "</ol></nav>\n"
+        "</body></html>\n"
+    )
+    split_body = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<html xmlns="http://www.w3.org/1999/xhtml"><body>\n'
+        f'  <section id="s1"><p>{prose}</p></section>\n'
+        f'  <section id="s2"><p>{prose}</p></section>\n'
+        "</body></html>\n"
+    ).encode()
+    epub_path = _build_minimal_epub(
+        tmp_path / "landmarks.epub",
+        opf_xml=opf,
+        nav_xml=nav,
+        extra_files={"OEBPS/ch1.xhtml": split_body, "OEBPS/ch2.xhtml": split_body},
+    )
+    res = parse_epub(epub_path)
+    by_title = {ch.title: ch for ch in res.chapters}
+    assert by_title["F1 S1"].skip_reasons == ["cover"]
+    assert by_title["F1 S2"].skip_reasons == []
+    assert by_title["F2 S1"].skip_reasons == []
+    assert by_title["F2 S2"].skip_reasons == ["index"]

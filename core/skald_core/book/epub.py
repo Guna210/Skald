@@ -93,6 +93,7 @@ class EpubStructure:
 class BodySlice:
     """Resolved DOM bounds for a chapter slice inside an XHTML document."""
 
+    anchor: str | None
     root: etree._Element
     start_el: etree._Element | None
     end_el: etree._Element | None
@@ -441,7 +442,7 @@ def resolve_body_slices(
     anchors: Sequence[str | None],
     zip_path: str,
 ) -> list[BodySlice]:
-    """Resolve non-overlapping DOM slice bounds for each chapter anchor in ``doc_root``."""
+    """Resolve non-overlapping DOM slice bounds in document order for ``anchors``."""
     body: etree._Element | None = None
     for el in doc_root.iter():
         if _local_name(el) == "body":
@@ -450,31 +451,40 @@ def resolve_body_slices(
     root_el = body if body is not None else doc_root
 
     id_map: dict[str, etree._Element] = {}
+    pos_map: dict[etree._Element, int] = {}
     if any(a is not None for a in anchors):
-        for el in root_el.iter():
+        for pos, el in enumerate(root_el.iter()):
             if isinstance(el.tag, str):
+                pos_map[el] = pos
                 el_id = el.get("id")
                 if el_id:
                     id_map[el_id] = el
 
-    resolved_anchors: list[etree._Element | None] = []
-    for anchor in anchors:
+    # R2-1: order slices by document position; dangling anchors keep relative position.
+    items: list[tuple[int, int, str | None, etree._Element | None]] = []
+    prev_pos = 0
+    for orig_idx, anchor in enumerate(anchors):
         if anchor is None:
-            resolved_anchors.append(None)
+            items.append((0, orig_idx, None, None))
+            prev_pos = 0
         elif anchor in id_map:
-            resolved_anchors.append(id_map[anchor])
+            el = id_map[anchor]
+            pos = pos_map[el]
+            items.append((pos, orig_idx, anchor, el))
+            prev_pos = pos
         else:
             logger.warning(
                 "Dangling anchor %s#%s not found in document; falling back to sequential start.",
                 zip_path,
                 anchor,
             )
-            resolved_anchors.append(None)
+            items.append((prev_pos, orig_idx, anchor, None))
+
+    items.sort(key=lambda item: (item[0], item[1]))
 
     slices: list[BodySlice] = []
     prev_end_el: etree._Element | None = root_el
-    for idx, anchor in enumerate(anchors):
-        anchor_el = resolved_anchors[idx]
+    for idx, (_pos, _orig_idx, anchor, anchor_el) in enumerate(items):
         if idx == 0:
             # R1-3: text before the first anchor belongs to the first chapter in the file.
             start_el: etree._Element | None = root_el
@@ -485,13 +495,14 @@ def resolve_body_slices(
             start_el = prev_end_el
 
         end_el: etree._Element | None = None
-        for future_el in resolved_anchors[idx + 1 :]:
+        for _fpos, _fidx, _fanchor, future_el in items[idx + 1 :]:
             if future_el is not None:
                 end_el = future_el
                 break
 
         slices.append(
             BodySlice(
+                anchor=anchor,
                 root=root_el,
                 start_el=start_el,
                 end_el=end_el,
@@ -730,9 +741,8 @@ def parse_epub(path: Path | str) -> EpubStructure:
                 chapter_anchors = [None]
 
             body_slices = resolve_body_slices(doc_root, chapter_anchors, item_href)
-            for idx, (anchor, body_slice) in enumerate(
-                zip(chapter_anchors, body_slices, strict=True)
-            ):
+            for idx, body_slice in enumerate(body_slices):
+                anchor = body_slice.anchor
                 char_count, first_heading, in_doc_types = _extract_slice_info(
                     doc_root,
                     body_slice,
