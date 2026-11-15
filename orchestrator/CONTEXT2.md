@@ -378,3 +378,8 @@ Context: T03.1 round-1 handoff (Antigravity / Gemini 2.5 Pro). Checked: PR [Guna
 Problem: conflicts with master 2dead6e in SPEC.md (T02.2 rows).
 Decision: rebase-only prompt (round 1), then review by a fresh Claude Opus (catalog + licences; Builder Gemini).
 Follow-up: rebase handoff → REVIEW-PROMPT.
+
+### E-0106 · 2026-11-15 15:50 (Asia/Colombo) · T03.1 · REVIEW-PROMPT
+Context: T03.1 rebase handoff (Antigravity / Gemini 2.5 Pro). Verified: PR #15 head `25de321` on master 2dead6e (single commit); everything except SPEC.md identical to the pre-rebase 5a813d7 (diff compared); SPEC diff vs master = tick + 3 T03.1 rows. CI ci.yml run 43688685035 + catalog.yml run 43688685059 success at 25de321. Builder: 197 passed; validator passes on the empty catalog.
+Decision: Reviewer = fresh Claude Opus (catalog + licence allowlist; Builder Gemini). Focus: B4/V5 rules each with a failing-catalog test (incl. the decided table); allowlist + acknowledgement for non-commercial; pickle/approved_exception; URL construction per C2; registry read via ast only (no worker import), missing → empty, malformed → clear error; semver parse; --network: changed-entry diff vs origin/master, download verify via net.download into temp, head() mapping; no real internet in tests; catalog.yml (T00.4 rules; note its paths filter doesn't include the validator code — is that OK?); committed schema no-diff; AGENTS Part 5 edit; scope.
+Follow-up: VERDICT.
