@@ -409,3 +409,8 @@ Context: Reviewer (same Opus session) round 2 on PR #15 @79289bf: APPROVED. 204 
 Findings: R2-1 [Minor] deletion-after-verify not asserted by a test; R2-2 [Nit] base-unavailable warning also prints on the very first catalog PR (no base on master yet) — harmless.
 Decision: Merge PR #15 (normal merge; ci.yml run 43689637033 + catalog.yml run 43689637077 green at 79289bf, checked by the Orchestrator in E-0108). R2-1 → T03.2 prompt (add the assertion when touching the download path). R2-2 dropped. After merge: T03.2 (model file installer… wait: T03.2 = catalog fetch/cache per the dependency list; deps T03.1 + T01.6) and T03.3 (deps T03.1) become available.
 Follow-up: owner merges PR #15.
+
+### E-0110 · 2026-11-15 18:25 (Asia/Colombo) · T03.1 · CORRECTION
+Context: E-0109's last line contains a garbled aside ("model file installer… wait:").
+Decision: Correct reading — after PR #15 merges, T03.2 "Catalog fetch, cache and compatibility" (deps T03.1, T01.6) and T03.3 "Hardware probe and fit rating" (dep T03.1) become available.
+Follow-up: none.
