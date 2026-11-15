@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-15 14:10 (Asia/Colombo) · last entry: E-0102
+Last updated: 2026-11-15 14:50 (Asia/Colombo) · last entry: E-0103
 Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -10,19 +10,19 @@ Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 …
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
 - **Phase 1 complete** (T01.1–T01.6 merged; E-0096). T02.1 and T03.4 also merged.
 - `master` at `2934f8e`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: #14 T02.2 (round 3 at 8b65474, CI green; re-review, E-0102). T03.1 and T03.5 branches pushed; handoffs pending.
+- Open PRs: #14 T02.2 (APPROVED round 3 at 8b65474, CI green; owner to merge, E-0103). T03.1 and T03.5 branches pushed; handoffs pending.
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7), T02.1 (PR #8), T03.4 (PR #11), T01.4 (PR #10), T01.6 (PR #9), T01.5 (PR #12), T01.3 (PR #13).
-- T02.2 EPUB structure, PR #14: round 2 fixes R1-1…R1-11 R2 CHANGES REQUESTED → round 3: document-order slices + tests pinning R1-3/R1-8; R2-3 any ancestor; R2-4 leave (E-0101). If round 3 fails again → rethink (stronger model / re-split).
+- T02.2 EPUB structure, PR #14: round 2 fixes R1-1…R1-11 APPROVED round 3 (E-0103); owner to merge. T02.3 becomes available after.
 - Building (round 1, E-0097): T03.1 catalog schema (`task/T03.1-catalog-schema`), T03.5 pack builder (`task/T03.5-pack-builder`, Claude cloud, strongest model). Later merges rebase (Appendix 3).
 - Available, not started (prompt only when the owner asks; E-0057): T03.7 worker protocol, T03.9 [SPIKE][REVIEW], T06.1.
 - T03.7 prompt: adapter registry = `ADAPTER_VERSIONS = {...}` dict literal in worker/skald_worker/adapters/__init__.py (read by T03.1 via ast.literal_eval) (E-0097).
 
 ## Waiting on the owner
-1. Paste the T02.2 round-3 review prompt into the same Opus Reviewer session; send back the verdict (E-0102).
+1. Merge PR #14 (T02.2, normal merge) and confirm (E-0103).
 2. Send the T03.1 and T03.5 handoffs when ready (E-0097).
 3. Later, before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
@@ -56,6 +56,7 @@ None (T03.4 proposal 12: owner said yes, E-0070).
 - fetch_deps.py is run with the venv Python (`core/.venv`), never bare `python3` (E-0027 R4-5).
 - Future mirror uploads (deps-v2…): verify every asset from the cloud against the doc (method in E-0031/E-0036).
 - T02.3 prompt: include deferred R1-1 (E-0011).
+- T02.3 prompt: R3-1 from T02.2 — one assertion pinning a dangling entry's position (nav a, gone, c, b) (E-0103); "paragraph text count = D2 count (± boundary spaces)" is an acceptance check.
 - T02.3 prompt: slices come back in document order (E-0101); tests reuse the walker for "paragraph text count = D2 count".
 - T02.3 prompt: reuse T02.2's chapter slicing/walker (pre-anchor text in the first chapter; dangling anchors; comments/PIs skipped) so paragraphs and D2 agree (E-0099).
 - T02.7: EPUB 2 <guide> and role="doc-*" are not used for suggested skips (C1.1 names only epub:type + landmarks) (E-0099).
@@ -90,4 +91,4 @@ None (T03.4 proposal 12: owner said yes, E-0070).
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-Process the T02.2 round-3 verdict and the T03.1 / T03.5 handoffs. T03.1 and T03.5 reviews: Opus (licences, catalog, packs). After merge, list available tasks (T03.5 becomes available). After merge, list available tasks without prompts (E-0057).
+Confirm the PR #14 merge (T02.3 becomes available); process the T03.1 / T03.5 handoffs. T03.1 and T03.5 reviews: Opus (licences, catalog, packs). After merge, list available tasks (T03.5 becomes available). After merge, list available tasks without prompts (E-0057).

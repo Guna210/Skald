@@ -362,3 +362,9 @@ Follow-up: round-3 handoff → same Opus Reviewer.
 Context: T02.2 round-3 handoff (Antigravity / Gemini 3.1 Pro). Verified: PR #14 head `8b65474`, one new commit on 6b3a12d; master 2934f8e ancestor, merges cleanly. 3 files +309/−14 (epub.py ±36: document-order sort, BodySlice.anchor; tests +285; SPEC row updated). No fixture data changed. CI PR run 43683373112 success. Builder: 174 passed (39 epub tests).
 Decision: round-3 re-review by the same Opus session: re-run the 4 round-2 surviving mutants + the reversed-nav probe; confirm Appendix 3 wording.
 Follow-up: VERDICT (a third CHANGES REQUESTED → rethink per CLAUDE.md).
+
+### E-0103 · 2026-11-15 14:50 (Asia/Colombo) · T02.2 · VERDICT
+Context: Reviewer (same Opus session) round 3 on PR #14 @8b65474: APPROVED. 174 passed; clean; no fixture edits. All 4 round-2 survivors now fail; removing the document-order sort fails; slice-ends-at-next-anchor mutation fails. Probes: c,b,a → a,b,c with correct titles, sums 335–336 vs 337 (boundary spaces); mixed out-of-order + dangling: nothing lost or double-counted; all earlier probes unchanged (no /etc/passwd leak etc.). BodySlice.anchor pairs correctly; dangling slice → empty walk. Appendix 3 row accurate.
+Findings: R3-1 [Minor] the relative position of a 0-char dangling entry in the chapter list isn't pinned (moving it to the end passes).
+Decision: Merge PR #14 (normal merge; CI PR run 43683373112 green at 8b65474, checked by the Orchestrator in E-0102). R3-1 → T02.3 prompt (one assertion on nav a, gone, c, b). After merge, T02.3 (XHTML → paragraphs) becomes available; its prompt reuses resolve_body_slices/walk_body_slice unchanged, and "paragraph text count = D2 count (± boundary spaces)" is one of its acceptance checks.
+Follow-up: owner merges PR #14.
