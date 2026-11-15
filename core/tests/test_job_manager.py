@@ -13,6 +13,7 @@ import threading
 import time
 from collections.abc import Iterator
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import psutil  # type: ignore[import-untyped]
@@ -919,3 +920,40 @@ def test_cancel_skips_kill_when_captured_process_is_not_running(
     fin = notifier.wait_finished(job_id, timeout=2.0)
     assert fin["status"] == "cancelled"
     _assert_gone(child_proc.pid)
+
+
+@pytest.mark.timeout(10)
+def test_kill_process_tree_leaves_unrelated_process_alive_on_pid_reuse() -> None:
+    calls: list[str] = []
+
+    class _ReusedPidProcess:
+        pid = 999999
+
+        def is_running(self) -> bool:
+            return False
+
+        def children(self, recursive: bool = False) -> list[Any]:
+            calls.append("children")
+            return []
+
+        def terminate(self) -> None:
+            calls.append("terminate")
+
+        def kill(self) -> None:
+            calls.append("kill")
+
+        def wait(self, timeout: float | None = None) -> int:
+            return 0
+
+        def __hash__(self) -> int:
+            return self.pid
+
+    captured: Any = _ReusedPidProcess()
+    popen_standin: Any = SimpleNamespace(
+        pid=captured.pid,
+        returncode=None,
+        poll=lambda: None,
+        wait=lambda timeout=None: 0,
+    )
+    _kill_process_tree(popen_standin, captured)
+    assert calls == []

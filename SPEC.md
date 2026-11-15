@@ -158,7 +158,9 @@ Every decision made in planning, with the reason. Agents must not reverse these 
 └──────────────────────────────────────────────────────────────────────┘
         ▲ HTTPS (only when installing or updating)
         │ catalog.json (GitHub raw) · model files (Hugging Face, pinned
-        │ revisions) · wheels (PyPI, download.pytorch.org, hash-locked)
+        │ revisions) · wheels, hash-locked (PyPI: pypi.org +
+        │ files.pythonhosted.org; PyTorch: download.pytorch.org +
+        │ download-r2.pytorch.org)
 ```
 
 ## B2. Technology stack
@@ -213,7 +215,7 @@ Skald/
 ├─ core/
 │  ├─ pyproject.toml  requirements.lock
 │  ├─ skald_core/  (rpc jobs project book text catalog hardware packs models
-│  │                workers voices render audio export verify schemas cli.py)
+│  │                workers voices render audio export verify schemas storage.py cli.py)
 │  └─ tests/ (data/ golden/)
 ├─ worker/
 │  ├─ pyproject.toml               # builds the skald_worker wheel installed into every pack
@@ -228,7 +230,7 @@ Skald/
 │  └─ src/ main/ preload/ renderer/ shared/   # shared/ holds generated RPC types (do not hand-edit)
 ├─ vendor/                         # gitignored: ffmpeg, uv, python for dev
 ├─ .cache/                         # gitignored: pip/uv/npm/electron caches, dev packs and models
-└─ .github/workflows/  ci.yml  catalog.yml  cpu-models.yml  release.yml
+└─ .github/workflows/  ci.yml  slow.yml  catalog.yml  cpu-models.yml  release.yml
 ```
 
 ## B4. The model catalog
@@ -536,9 +538,8 @@ Agent command-line tools (Claude Code, Codex), if installed locally, are also gl
 ### C4.2 Project-local
 
 - `core/.venv/` — the core's development environment (~1 GB; no PyTorch).
-- `.cache/packs/` — development copies of engine packs (1–5 GB each with PyTorch; install only the ones you work on; CPU packs only on the laptop).
-- `.cache/uv`, `.cache/pip`, `.cache/npm`, `.cache/electron`, `.cache/electron-builder` — set by `scripts/dev-env.*`.
-- `.cache/devdata/` — stands in for the app's user-data folder in dev (models, packs, voices).
+- `.cache/devdata/` — stands in for Electron `userData` in dev (`SKALD_DEV_DATA`, e.g. settings, logs, voices); `.cache/devdata/storage/` (`<SKALD_DEV_DATA>/storage/`) holds development `models/`, `packs/`, `uv-cache/`, and `python/` (1–5 GB per PyTorch pack; install only what you work on; CPU packs only on the laptop).
+- `.cache/uv`, `.cache/pip`, `.cache/npm`, `.cache/electron`, `.cache/electron-builder` — set by `scripts/dev-env.*` for tool installs (`make_locks.py` uses `.cache/uv` for resolution).
 - `vendor/` — ffmpeg, uv and python-build-standalone for the current OS (from `scripts/fetch_deps.py`).
 - `app/node_modules/`.
 
@@ -639,7 +640,7 @@ Agents tick `[x]` when a task is done.
 - [ ] T03.2 Catalog fetch, cache and compatibility
 - [ ] T03.3 Hardware probe and fit rating
 - [x] T03.4 Engine-pack spike: uv + python-build-standalone + hash-locked PyTorch [SPIKE] [STRONG MODEL] [REVIEW]
-- [ ] T03.5 Pack builder: lockfiles, install, repair, remove
+- [x] T03.5 Pack builder: lockfiles, install, repair, remove
 - [ ] T03.6 Model file installer, revisions and license acceptance
 - [ ] T03.7 Worker protocol, `skald_worker` package, fake adapter, contract suite
 - [ ] T03.8 Worker manager in the core
@@ -1140,7 +1141,7 @@ Every adapter task: implements `worker/skald_worker/adapters/<name>.py`; creates
 - **Read:** B1, B8
 - **Do:** `src/main/core.ts`:
   1. Resolve the core command: dev → `<repo>/core/.venv/(Scripts|bin)/python -m skald_core`; production → the bundled executable under `process.resourcesPath/core/` (finalized in T09.2; keep it in one function).
-  2. Pass env: `SKALD_LOG_DIR` (Electron `userData/logs`), `SKALD_DATA_DIR` (userData; dev: `SKALD_DEV_DATA`), `SKALD_VENDOR` (dev: repo `vendor/`; production: resources).
+  2. Pass env: `SKALD_LOG_DIR` (Electron `userData/logs`), `SKALD_DATA_DIR` (userData; dev: `SKALD_DEV_DATA`), `SKALD_STORAGE_DIR` (only when the user chose a custom model storage folder; otherwise core resolves `<storage>` per Decision F1), `SKALD_VENDOR` (dev: repo `vendor/`; production: resources).
   3. Line-buffered stdout reader → JSON parse → route responses by `id` and notifications to subscribers; stderr → log file.
   4. Request API with per-request timeouts (default 30 s for sync methods; jobs return quickly and then use notifications).
   5. Crash handling: on unexpected exit, reject pending requests, emit `core.crashed`, restart once; after a second crash within 60 s, stay down and show the error.
@@ -1272,7 +1273,7 @@ Every UI task includes loading, empty and error states; keyboard access; both th
 - **Depends on:** T06.4, T06.3
 - **Size:** S
 - **Read:** A6, B9
-- **Do:** Settings (persisted in `userData/settings.json`): theme, model storage folder (moving it, with a size warning: move `models/`; move `uv-cache/` — rename on the same volume, otherwise copy then delete; delete the packs and rebuild them offline from their locks; run B5 step 4 on each; never move pack folders across volumes — see `docs/spikes/engine-packs.md` section 3.9; warn when the folder's path is too long for packs on Windows, B5), CPU threads, preferred GPU, idle unload time, default pauses (advanced), open logs folder. About: versions (`system.info`), app license, third-party notices, model licenses, repository link, how to cite.
+- **Do:** Settings (persisted in `userData/settings.json`): theme, model storage folder (moving it, with a size warning: move `models/`; move `uv-cache/` — rename on the same volume, otherwise copy then delete; move (or re-copy) `python/`; delete the packs and rebuild them offline from their locks; run B5 step 4 on each; never move pack folders across volumes — see `docs/spikes/engine-packs.md` section 3.9; warn when the folder's path is too long for packs on Windows, B5), CPU threads, preferred GPU, idle unload time, default pauses (advanced), open logs folder. About: versions (`system.info`), app license, third-party notices, model licenses, repository link, how to cite.
 - **Acceptance:** settings persist across restarts and take effect.
 - **Tests:** settings store tests.
 
@@ -1484,7 +1485,7 @@ Answers from the Orchestrator (or owner) that clarify or change this spec are re
 | 2026-11-14 | T03.4 | [REVIEW] gate: which hosts do pack installs use? (G7) | `pypi.org`, `files.pythonhosted.org`, `download.pytorch.org` and `download-r2.pytorch.org` (PyTorch's wheel files). B5, C2 and Appendix 4 updated. | Orchestrator |
 | 2026-11-14 | T03.4 | [REVIEW] gate: what else must T03.5 cover? (G10, G13, G14) | `make_locks.py --check`; fake-`uv` tests for the B5 environment, the allowlist failure, a lock-hash mismatch and a failing step 4 after a successful sync; the free-disk figure from a measured install × 1.2; smoke packs on `torch==2.14.1` with `cpu`/`cu126`; the copied base Python; clean-only-when-empty; a note that PowerShell 5.1 treats redirected native stderr as an error; the cu126 minimum NVIDIA driver recorded in pack metadata from NVIDIA's CUDA 12.6 release notes. T03.5 updated. | Orchestrator |
 | 2026-11-14 | T03.4 | How are NVIDIA's proprietary CUDA libraries in GPU packs handled? (G12) | The GPU-pack install screen says NVIDIA's CUDA libraries are downloaded under NVIDIA's licence. Pack wheels are never mirrored or redistributed by us: not in `deps-v*`, installers, test fixtures or notebook artefacts. The third-party notices mention NVIDIA's terms for GPU packs. B5, T07.2 and T09.4 updated. | Owner |
-| 2026-11-14 | T03.4 | Which GPU generations may the catalog promise? | The catalog must not promise Pascal (`sm_61`) support until it has been confirmed on a real card (the Linux cu126 build lists `sm_60` but not `sm_61`). A future `cu13` accelerator drops Maxwell, Pascal and Volta, which affects D9. | Orchestrator |
+| 2026-11-14 | T03.4 | Which GPU generations may the catalog promise? | The catalog must not promise Pascal (`sm_61`) support until it has been confirmed on a real card (the Linux cu126 build lists `sm_60` but not `sm_61`). A future `cu13` accelerator drops Maxwell, Pascal and Volta, which affects D9 (per NVIDIA's CUDA 13 release notes, section 2.6.2: https://docs.nvidia.com/cuda/archive/13.1.2/cuda-toolkit-release-notes/index.html). | Orchestrator |
 | 2026-11-13 | T01.4 | What error kinds are valid, and how are `SkaldError.kind` and `SkaldErrorData` typed? | `ErrorKind` in `skald_core/schemas/` is a closed `Literal` of the 15 B8 kinds plus T01.6's `http_not_found`, `http_error` and `timeout`. `SkaldError.kind` is typed with `ErrorKind` so mypy catches unknown kinds and T07.11 can verify UI message coverage. `SkaldErrorData` is `{ kind: ErrorKind, details, hint }`. | Orchestrator |
 | 2026-11-13 | T01.4 | Should exported JSON Schema files be committed in T01.4, and what does the export round trip check? | Do not commit the exported JSON Schema files in T01.4 (tests export into a temp dir; T06.3 decides later what gets committed). The export CLI still defaults to `app/src/shared/schemas/` and creates the directory. Round trip uses no new dependencies: each written file parses as JSON and equals `Model.model_json_schema()`, and `index.json` lists every model. | Orchestrator |
 | 2026-11-13 | T01.4 | How does `system.info` locate and invoke ffmpeg, and what does CI assert? | Lookup order: (1) env `SKALD_FFMPEG` (full path to the binary), else (2) `$SKALD_VENDOR/ffmpeg/<platform>/<bin>` (`win64`: `bin/ffmpeg.exe`, `linux64`: `bin/ffmpeg`), stored as a small constant in the core and tested against `scripts/deps.lock.json` without reading `deps.lock.json` at runtime. Missing or failing ffmpeg logs a warning and returns `null`. Run ffmpeg with `stdout` captured (never inherited), `stdin=subprocess.DEVNULL` and a timeout. The `system.info` test sets `SKALD_VENDOR` to `<repo>/vendor` and requires `ffmpeg` to be non-null starting with `"ffmpeg version"` when `CI == "true"` (locally `null` is allowed if `vendor/` is empty). | Orchestrator |
@@ -1507,6 +1508,15 @@ Answers from the Orchestrator (or owner) that clarify or change this spec are re
 | 2026-11-14 | T03.1 | How does the validator read the worker's adapter registry without importing the worker? | `worker/skald_worker/adapters/__init__.py` defines a module-level dict literal `ADAPTER_VERSIONS = {"<family>": "<semver>", ...}`, read via `ast.literal_eval` of that assignment. If the file doesn't exist yet, treat the registry as empty. Semver comparison uses a small `X.Y.Z` parser (no new dependency). | Orchestrator |
 | 2026-11-14 | T03.1 | What are the exact commercial license allowlist, file format, source URL, and `--network` rules? | Commercial allowlist is exact names: `Apache-2.0`, `MIT`, `BSD-2-Clause`, `BSD-3-Clause`, `NVIDIA Open Model License`; `commercial` must match that allowlist, and non-commercial entries require a license URL and `acknowledgement` text. File `format` is `safetensors`, `onnx`, `gguf`, `npz`, `json`, `text`, or `pickle` (only with a file-level `approved_exception` string); `size > 0`; `sha256` is 64 lowercase hex chars. `source.host` is `huggingface` (40-hex commit SHA) or `github-release` (tag), building C2 URLs. Ids are unique at every level; `default_revision` must exist; only `status: "active"` counts toward `<= 5` (`>= 3` with `--release`) and requires `docs/models/<id>.md`. `--network` uses `net.head()` for reachability and `net.download()` into a temp dir for entries changed vs `origin/master`; `.github/workflows/catalog.yml` checks out with `fetch-depth: 0` and follows T00.4 rules. | Orchestrator |
 | 2026-11-14 | T03.1 | How do `--network` base-catalog fallback, strict extra fields, whitespace/date checks, and duplicate file paths behave (R1-2, R1-6, R1-7)? | If `origin/master`'s `catalog/catalog.json` cannot be loaded during `--network`, print one warning line to stderr and treat all entries as changed (documented in `--help`). Every catalog Pydantic model uses `ConfigDict(extra="forbid")` (`additionalProperties: false` in `catalog/catalog.schema.json`). License `url` and file `path` must be non-empty after stripping whitespace; `updated_at` must match `YYYY-MM-DD` strictly; duplicate file paths within one revision are rejected. | Orchestrator |
+| 2026-11-15 | T03.5 | How is `<storage>` resolved across production, dev, and custom user choice (F1)? | `core/skald_core/storage.py` resolves `<storage>` as: env `SKALD_STORAGE_DIR` if set; else `<SKALD_DEV_DATA>/storage` if `SKALD_DEV_DATA` is set (dev); else the platform default (`%LOCALAPPDATA%\Skald` on Windows; `$XDG_DATA_HOME/Skald`, default `~/.local/share/Skald`, on Linux). T06.2 passes `SKALD_STORAGE_DIR` only when the user chose a custom folder. | Orchestrator |
+| 2026-11-15 | T03.5 | How are bundled `uv` and CPython located and tested without hardcoding host paths? | Located under `$SKALD_VENDOR/uv/<platform>/…` and `$SKALD_VENDOR/python/<platform>/…` using per-platform relative-path constants verified by test against `scripts/deps.lock.json`'s `"bin"` (matching T01.4's `ffmpeg` pattern). The `uv` invocation takes an injectable argv prefix so unit tests run a fake `uv` via `[sys.executable, fake_uv.py]` on both OSes. | Orchestrator |
+| 2026-11-15 | T03.5 | How do steps 3 and 4 run before T03.7 creates `skald_worker` and for smoke packs? | Step 3 is skipped when no worker wheel is provided. Step 4 runs `python -m skald_worker --adapter <family> --check`, unless the pack directory in the repo has `check.py`, which is run instead (used by the smoke packs for their tensor check). | Orchestrator |
+| 2026-11-15 | T03.5 | How does `PackManager` report job stages, capture subprocesses, and treat half-built packs? | Install runs via `JobManager` with stages `venv → sync → worker → check → finalize`. Every `uv`/Python subprocess registers with `ctx.register_subprocess`, sets `stdout=subprocess.PIPE` (never inherited), and streams logs through `ctx.log`. `pack_install_failed` carries the last 30 log lines; a folder without a valid `pack.json` is never treated as valid. | Orchestrator |
+| 2026-11-15 | T03.5 | What headers do `make_locks.py` lockfiles carry for backend and disk checks? | Each lockfile starts with `# skald-backend: <cpu\|cu126>` and `# skald-required-bytes: <n>`, where `<n>` is the per-OS measured free-space drop × 1.2 from `docs/spikes/engine-packs.md` section 3.4 (CPU: 868 MB Linux / 623 MB Windows; cu126: 6,669 MB Linux / 4,326 MB Windows). | Orchestrator |
+| 2026-11-15 | T03.5 | What NVIDIA driver versions does `cu126` `pack.json` record and why? | From NVIDIA's CUDA 12.6 Release Notes & CUDA Compatibility Guide (`https://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html`, Tables 3 & 4): native 12.6 toolkit driver (`560.28.03` Linux / `560.76` Windows) and CUDA 12.x minor-version compatibility minimum (`525.60.13` Linux / `528.33` Windows). `pack.json` sets `min_nvidia_driver` to the minor-version compatibility floor because PyTorch wheels bundle the CUDA runtime, alongside `cuda_toolkit_driver` and `nvidia_driver_source`. | Orchestrator |
+| 2026-11-15 | T03.5 | How is the `slow` pack install test scheduled and cached in CI? | Added `.github/workflows/slow.yml` (`schedule` weekly + `workflow_dispatch`, both OSes, `permissions: contents: read`, official `actions/*` actions only, PowerShell 5.1 safe stderr handling) and updated `.cache/uv` keys in `ci.yml` and `slow.yml` to include `packs/**/locks/*.txt`. | Orchestrator |
+| 2026-11-15 | T03.5 | What environment do step 4 (`check` / `check.py`) and the Python version probe run with (R1-3)? | Build their env from `os.environ` with every `PYTHON*` variable (`PYTHONPATH`, `PYTHONHOME`, `PYTHONSTARTUP`, …) and every `UV_*` variable removed (`build_python_env`). | Orchestrator |
+| 2026-11-15 | T03.5 | How are concurrent operations on the same pack handled in `PackManager` (R1-4)? | `PackManager` holds a per-pack in-process lock across `install_job`, `repair_job` (before deleting any folder), and `remove`. A second install, repair, or remove of the same pack fails immediately with `SkaldError` kind `pack_install_failed` and hint containing `"already in progress"`, without deleting the active job's folder; different packs may run in parallel. | Orchestrator |
 
 ## Appendix 4 — Claude Code cloud environment
 

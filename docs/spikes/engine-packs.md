@@ -136,7 +136,7 @@ So a pack costs its size once; further packs from the same wheels cost ~10 MB ea
 
 ### 3.6 Behind `HTTPS_PROXY`
 
-- **Plain forwarding proxy** (`connect_proxy.py`, a logging CONNECT proxy; CI Linux and Windows): uv honours `HTTPS_PROXY`; a cold CPU install through it took 4.83 s (Linux) / 22.29 s (Windows). Hosts contacted for a pack install: `pypi.org`, `files.pythonhosted.org`, `download.pytorch.org`, `download-r2.pytorch.org`. With a Python download (section 3.9) additionally `releases.astral.sh`.
+- **Plain forwarding proxy** (`connect_proxy.py`, a logging CONNECT proxy; CI Linux and Windows): uv honours `HTTPS_PROXY`; a cold CPU install through it took 4.83 s (Linux) / 22.29 s (Windows). Hosts contacted for a pack install: `pypi.org`, `files.pythonhosted.org`, `download.pytorch.org`, `download-r2.pytorch.org`. With a Python download (section 3.10) additionally `releases.astral.sh`.
 - **Proxy down:** fails in 4.28 s (Linux) / 14.36 s (Windows) with `tunnel error: failed to create underlying connection … Connection refused` (exit 2). No silent direct connection.
 - **No proxy variable where one is required** (cloud): DNS error after 11.29 s.
 - **TLS-inspecting proxy** (cloud machine; the proxy re-signs HTTPS with its own CA):

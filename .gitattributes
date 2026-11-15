@@ -1,1 +1,2 @@
 *.epub binary
+packs/**/locks/*.txt text eol=lf

@@ -2,7 +2,22 @@
 # Spike T03.4, round 2: re-measures the side observations quoted in engine-packs.md and prints the raw output.
 # Usage (Linux, from the repo root):  bash docs/spikes/scripts/notes.sh <empty work folder> [cu12] > results/cloud-linux-notes.txt 2>&1
 set -uo pipefail
-WORK=$(realpath "$1"); mkdir -p "$WORK"
+if [ $# -lt 1 ] || [ -z "${1:-}" ]; then
+  echo "Usage: bash docs/spikes/scripts/notes.sh <empty work folder> [cu12]" >&2
+  exit 1
+fi
+WORK=$(realpath "$1")
+if [ -e "$WORK" ]; then
+  if [ ! -d "$WORK" ]; then
+    echo "error: work path exists and is not a directory: $WORK" >&2
+    exit 1
+  fi
+  if [ -n "$(ls -A "$WORK")" ]; then
+    echo "error: work folder already exists and is not empty: $WORK" >&2
+    exit 1
+  fi
+fi
+mkdir -p "$WORK"
 HERE=docs/spikes/scripts
 UV=vendor/uv/linux64/uv; PY=vendor/python/linux64/bin/python3
 for v in $(env | grep -o '^UV_[A-Z_]*'); do unset "$v"; done

@@ -41,15 +41,22 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Cache uv and vendor
+      - name: Cache vendor
         uses: actions/cache@v6
         with:
           path: |
-            .cache/uv
             vendor/ffmpeg
             vendor/uv
             vendor/python
           key: ${{ runner.os }}-vendor-${{ hashFiles('scripts/deps.lock.json') }}
+
+      - name: Cache uv
+        uses: actions/cache@v6
+        with:
+          path: .cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('scripts/deps.lock.json', 'packs/**/locks/*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
 
       - name: Run setup (Linux)
         if: runner.os == 'Linux'
@@ -75,6 +82,18 @@ jobs:
         shell: powershell
         run: |
           & .\core\.venv\Scripts\python.exe -m unittest discover -s scripts/tests -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify pack lockfiles (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: core/.venv/bin/python scripts/make_locks.py --check
+
+      - name: Verify pack lockfiles (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          & .\core\.venv\Scripts\python.exe scripts\make_locks.py --check
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Run core checks (Linux)
@@ -142,15 +161,22 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Cache uv and vendor
+      - name: Cache vendor
         uses: actions/cache@v6
         with:
           path: |
-            .cache/uv
             vendor/ffmpeg
             vendor/uv
             vendor/python
           key: ${{ runner.os }}-vendor-${{ hashFiles('scripts/deps.lock.json') }}
+
+      - name: Cache uv
+        uses: actions/cache@v6
+        with:
+          path: .cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('scripts/deps.lock.json', 'packs/**/locks/*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
 
       - name: Run setup (Linux)
         if: runner.os == 'Linux'
