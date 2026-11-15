@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-15 21:20 (Asia/Colombo) · last entry: E-0115
+Last updated: 2026-11-15 22:00 (Asia/Colombo) · last entry: E-0116
 Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -10,20 +10,20 @@ Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 …
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
 - **Phase 1 complete** (T01.1–T01.6 merged; E-0096). T02.1 and T03.4 also merged.
 - `master` at `c3fe5c8`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: #16 T03.5 (round 2 at 8e938be, CI green; re-review, E-0115).
+- Open PRs: #16 T03.5 (APPROVED round 2 at 8e938be, CI green; owner to merge, E-0116).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7), T02.1 (PR #8), T03.4 (PR #11), T01.4 (PR #10), T01.6 (PR #9), T01.5 (PR #12), T01.3 (PR #13), T02.2 (PR #14), T03.1 (PR #15).
-- T03.5 pack builder: PR #16, round 2 fixes R1-1…R1-6, R1-8 pushed at 8e938be (E-0114); re-review by the same Opus session (E-0115). After merge: owner dispatches slow.yml once.
+- T03.5 pack builder: PR #16, round 2 fixes R1-1…R1-6, R1-8 APPROVED round 2 (E-0116); owner to merge, then dispatch slow.yml once. After merge: owner dispatches slow.yml once.
 - Available, not started (prompt only when the owner asks; E-0057): T02.3 XHTML → paragraphs, T03.2 catalog fetch/cache/compatibility, T03.3 hardware probe + fit rating, T03.7 worker protocol, T03.9 [SPIKE][REVIEW], T06.1.
 - T03.2 prompt: checkpoint/revision ids are unique per parent, not globally (E-0107); add a test asserting catalog.validate deletes each downloaded file after verification (T03.1 R2-1, E-0109).
 - T03.3 prompt: driver ≥ minor-version floor (525.60.13 / 528.33) but < 12.6 toolkit driver (560.28.03 / 560.76) → "may not work" (PTX-JIT caveat), not a clean fit (E-0114).
 - T03.7 prompt: adapter registry = `ADAPTER_VERSIONS = {...}` dict literal in worker/skald_worker/adapters/__init__.py (read by T03.1 via ast.literal_eval) (E-0097).
 
 ## Waiting on the owner
-1. Paste the T03.5 round-2 review prompt into the same Opus Reviewer session; send back the verdict (E-0115).
+1. Merge PR #16 (T03.5, normal merge), then run slow.yml once from the Actions tab and send the result (E-0116).
 2. Later, before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs
@@ -69,6 +69,8 @@ None (T03.4 proposal 12: owner said yes, E-0070).
 - T06.2 prompt: core.ts passes SKALD_STORAGE_DIR only when the user chose a storage folder (F1, E-0071).
 - T03.5 prompt also carries T01.3 R2-1: a PID-reuse simulation test (Popen stand-in returncode=0 + captured live sleeper must survive _kill_process_tree) (E-0095).
 - T03.5 prompt also carries T03.4 R2 leftovers (E-0072): R2-1 guard in docs/spikes/scripts/notes.sh (refuse an existing non-empty folder); R2-2 T07.10 add "move (or re-copy) python/"; R2-3 engine-packs.md:139 "section 3.9" → 3.10; R2-4 cite NVIDIA CUDA 13 notes in the Appendix 3 Pascal row; (a) T06.2 env line per F1; (b) C4 dev pack location → `<SKALD_DEV_DATA>/storage/`.
+- T07.10 prompt: T03.5 R2-1/R2-2 — "Free up space" retries cleans that remove() skipped while other ops ran; add a test for the skip-pruning branch; consider a storage-wide lock while pruning (E-0116).
+- T03.6 prompt: models.remove must surface PackManager's "already in progress" SkaldError (T03.5 R2-3) (E-0116).
 - T07.10: storage-folder move per G11; default storage = %LOCALAPPDATA%\Skald / ~/.local/share/Skald (G3) (E-0070).
 - T06.3: ProjectManifest allows extra keys (TS index signature); the UI ignores unknown keys and never sends them back modified (E-0088).
 - T05.x: a JobContext notify callback that raises fails the job (accepted, E-0092).
@@ -91,4 +93,4 @@ None (T03.4 proposal 12: owner said yes, E-0070).
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-Process the T03.5 round-2 verdict. T03.1 and T03.5 reviews: Opus (licences, catalog, packs). After merge, list available tasks (T03.5 becomes available). After merge, list available tasks without prompts (E-0057).
+Confirm the PR #16 merge + the first slow.yml run (real Windows install). T03.1 and T03.5 reviews: Opus (licences, catalog, packs). After merge, list available tasks (T03.5 becomes available). After merge, list available tasks without prompts (E-0057).
