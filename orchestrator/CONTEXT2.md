@@ -368,3 +368,13 @@ Context: Reviewer (same Opus session) round 3 on PR #14 @8b65474: APPROVED. 174 
 Findings: R3-1 [Minor] the relative position of a 0-char dangling entry in the chapter list isn't pinned (moving it to the end passes).
 Decision: Merge PR #14 (normal merge; CI PR run 43683373112 green at 8b65474, checked by the Orchestrator in E-0102). R3-1 → T02.3 prompt (one assertion on nav a, gone, c, b). After merge, T02.3 (XHTML → paragraphs) becomes available; its prompt reuses resolve_body_slices/walk_body_slice unchanged, and "paragraph text count = D2 count (± boundary spaces)" is one of its acceptance checks.
 Follow-up: owner merges PR #14.
+
+### E-0104 · 2026-11-15 15:20 (Asia/Colombo) · T02.2 · MERGED
+Context: Owner: "Merged #14". master now `2dead6e` = "Merge pull request #14 from Guna210/task/T02.2-epub-structure" (normal merge). T02.3 now available (prompt on request).
+Follow-up: none.
+
+### E-0105 · 2026-11-15 15:20 (Asia/Colombo) · T03.1 · NOTE
+Context: T03.1 round-1 handoff (Antigravity / Gemini 2.5 Pro). Checked: PR [Guna210/Skald#15](https://github.com/Guna210/Skald/pull/15), head `5a813d7` (1 commit) based on 2934f8e. 12 files +1720/−4: catalog.yml (PRs on catalog/**, weekly Mon 06:00 UTC, workflow_dispatch; permissions contents: read; official actions; fetch-depth 0; runs validate --network), AGENTS.md Part 5 (validate command), SPEC (tick + rows), catalog/{CHANGELOG.md, catalog.json (models: []), catalog.schema.json 440}, catalog/schema.py 297 (allowlist exactly as decided; formats incl. pickle + approved_exception; HF 40-hex), validate.py 256, net.py +head(), tests (test_catalog 572, test_net +48). CI runs 43680560104 (ci.yml) + 43680560271 (catalog.yml) green on the old base. Builder: 158 passed. Decisions: CatalogLicense.acknowledgement (required when commercial=false); export inside schema.py; --adapters-file flag + injectable paths for tests.
+Problem: conflicts with master 2dead6e in SPEC.md (T02.2 rows).
+Decision: rebase-only prompt (round 1), then review by a fresh Claude Opus (catalog + licences; Builder Gemini).
+Follow-up: rebase handoff → REVIEW-PROMPT.
