@@ -398,3 +398,8 @@ Decision: fix ALL in round 2:
  - ★ duplicate file paths within one revision → error.
  Record ★ rulings in Appendix 3. Note for T03.2: checkpoint/revision ids are unique per parent, not globally.
 Follow-up: round-2 handoff → same Opus Reviewer.
+
+### E-0108 · 2026-11-15 17:40 (Asia/Colombo) · T03.1 · REVIEW-PROMPT
+Context: T03.1 round-2 handoff (Antigravity / Gemini 2.5 Pro). Verified: PR #15 head `79289bf`, one new commit on 25de321; master 2dead6e ancestor, merges cleanly. 5 files +309/−12 (schema.py ±63, validate.py ±12, schema JSON +11, tests +234, SPEC +1 row). ci.yml run 43689637033 + catalog.yml run 43689637077 success at 79289bf. Builder: 204 passed.
+Decision: round-2 re-review by the same Opus session; re-run the 3 surviving mutants (cap >=, retired counted, changed-entry = new id only) and check each R1 fix.
+Follow-up: VERDICT.
