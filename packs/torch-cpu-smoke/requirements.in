@@ -1,0 +1,3 @@
+# skald-backends: cpu
+# CPU smoke pack for tests and verification (not used by production models).
+torch==2.14.1

@@ -1,0 +1,3 @@
+# skald-backends: cu126
+# CUDA smoke pack for GPU self-test and lock verification (not installed in CPU CI).
+torch==2.14.1
