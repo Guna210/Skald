@@ -414,3 +414,13 @@ Follow-up: owner merges PR #15.
 Context: E-0109's last line contains a garbled aside ("model file installer… wait:").
 Decision: Correct reading — after PR #15 merges, T03.2 "Catalog fetch, cache and compatibility" (deps T03.1, T01.6) and T03.3 "Hardware probe and fit rating" (dep T03.1) become available.
 Follow-up: none.
+
+### E-0111 · 2026-11-15 19:00 (Asia/Colombo) · T03.1 · MERGED
+Context: Owner: "Merged #15". master now `c3fe5c8` = "Merge pull request #15 from Guna210/task/T03.1-catalog-schema" (normal merge). T03.2 (catalog fetch, cache, compatibility) and T03.3 (hardware probe, fit rating) now available.
+Follow-up: none.
+
+### E-0112 · 2026-11-15 19:00 (Asia/Colombo) · T03.5 · NOTE
+Context: T03.5 round-1 handoff (agent: Antigravity / Gemini — not the Claude strongest model recommended in E-0097; owner's choice). Checked: PR [Guna210/Skald#16](https://github.com/Guna210/Skald/pull/16), head `73e80bd` (5 commits) based on 2934f8e. 23 files +3700/−17: packs/manager.py 960, storage.py 53, make_locks.py 354, smoke packs (requirements.in, check.py, 4 locks), slow.yml 104, ci.yml ±34 (lock check, split .cache/uv key incl. pack locks), .gitattributes (+locks eol=lf), tests (test_packs 772, test_storage 60, test_make_locks 167, job_manager +28 PID-reuse test), notes.sh guard, engine-packs.md ref fix, SPEC (B1 diagram, B3 layout, C4.2, T06.2, T07.10, Appendix 3 incl. CUDA 13 citation and decisions 1–7), AGENTS Part 5 lockfiles row. Lock headers checked: linux-cpu `skald-required-bytes: 1041600000` (= 868 MB × 1.2), windows-cu12 5191200000 (= 4,326 MB × 1.2); `# from` annotations present. No secrets. CI PR run 43682444745 green on the old base. Builder: 151 passed (old base), make_locks --check OK, local slow install first 11.33 s / second 0.00 s. Driver: min_nvidia_driver = CUDA 12.x minor-version floor 525.60.13 (Linux) / 528.33 (Windows), also recording the 12.6 toolkit driver 560.28.03 / 560.76, cited from NVIDIA docs. Decisions: storage.py helpers; PackMetadata driver fields; selective `uv cache clean <pkg>` verified with uv 0.13.8 and used; short temp dirs in Windows tests; split cache keys. slow.yml can't be dispatched until it is on master (404) — owner dispatches after merge.
+Problem: conflicts with master c3fe5c8 in SPEC.md and AGENTS.md (Part 5 rows edited by T03.1 too).
+Decision: rebase-only prompt (round 1), then review by a fresh Claude Opus (packs, supply chain, licences, Windows paths). After merge: owner runs slow.yml once via Actions → Run workflow.
+Follow-up: rebase handoff → REVIEW-PROMPT.
