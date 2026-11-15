@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-15 13:30 (Asia/Colombo) · last entry: E-0101
+Last updated: 2026-11-15 14:10 (Asia/Colombo) · last entry: E-0102
 Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -10,7 +10,7 @@ Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 …
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
 - **Phase 1 complete** (T01.1–T01.6 merged; E-0096). T02.1 and T03.4 also merged.
 - `master` at `2934f8e`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: #14 T02.2 (R2 CHANGES REQUESTED; round-3 prompt sent, E-0101). T03.1 and T03.5 branches pushed; handoffs pending.
+- Open PRs: #14 T02.2 (round 3 at 8b65474, CI green; re-review, E-0102). T03.1 and T03.5 branches pushed; handoffs pending.
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
@@ -22,7 +22,7 @@ Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 …
 - T03.7 prompt: adapter registry = `ADAPTER_VERSIONS = {...}` dict literal in worker/skald_worker/adapters/__init__.py (read by T03.1 via ast.literal_eval) (E-0097).
 
 ## Waiting on the owner
-1. Paste the T02.2 round-3 fix prompt to the Builder; send back its handoff (E-0101).
+1. Paste the T02.2 round-3 review prompt into the same Opus Reviewer session; send back the verdict (E-0102).
 2. Send the T03.1 and T03.5 handoffs when ready (E-0097).
 3. Later, before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
@@ -90,4 +90,4 @@ None (T03.4 proposal 12: owner said yes, E-0070).
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-Process the T02.2 round-3 handoff (→ same Opus) and the T03.1 / T03.5 handoffs. T03.1 and T03.5 reviews: Opus (licences, catalog, packs). After merge, list available tasks (T03.5 becomes available). After merge, list available tasks without prompts (E-0057).
+Process the T02.2 round-3 verdict and the T03.1 / T03.5 handoffs. T03.1 and T03.5 reviews: Opus (licences, catalog, packs). After merge, list available tasks (T03.5 becomes available). After merge, list available tasks without prompts (E-0057).

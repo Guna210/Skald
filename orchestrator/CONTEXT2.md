@@ -357,3 +357,8 @@ Decision: round 3:
  - R2-5 ★: a remote (http/https) spine item → epub_invalid, intentionally; one sentence in the lazy-resolution row.
 Round-limit note: this is round 3; if round 3 is CHANGES REQUESTED again, stop and rethink (stronger Builder model or re-split) per CLAUDE.md.
 Follow-up: round-3 handoff → same Opus Reviewer.
+
+### E-0102 · 2026-11-15 14:10 (Asia/Colombo) · T02.2 · REVIEW-PROMPT
+Context: T02.2 round-3 handoff (Antigravity / Gemini 3.1 Pro). Verified: PR #14 head `8b65474`, one new commit on 6b3a12d; master 2934f8e ancestor, merges cleanly. 3 files +309/−14 (epub.py ±36: document-order sort, BodySlice.anchor; tests +285; SPEC row updated). No fixture data changed. CI PR run 43683373112 success. Builder: 174 passed (39 epub tests).
+Decision: round-3 re-review by the same Opus session: re-run the 4 round-2 surviving mutants + the reversed-nav probe; confirm Appendix 3 wording.
+Follow-up: VERDICT (a third CHANGES REQUESTED → rethink per CLAUDE.md).
