@@ -11,8 +11,10 @@ import secrets
 import shutil
 import stat
 import subprocess
+import threading
 from collections import deque
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -45,26 +47,11 @@ _ERROR_LOG_TAIL_LINES = 30
 # (https://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html, Tables 3 & 4).
 # PyTorch cu126 wheels bundle the CUDA 12.6 runtime, so the CUDA 12.x minor-version compatibility
 # floor applies; the native 12.6 toolkit driver is recorded alongside it.
-CUDA_DRIVER_REQUIREMENTS: dict[str, dict[str, dict[str, str]]] = {
+CUDA_DRIVER_REQUIREMENTS: dict[str, dict[str, Any]] = {
     "cu126": {
-        "linux": {
-            "min_driver": "525.60.13",
-            "toolkit_driver": "560.28.03",
-            "source_url": "https://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html",
-            "reason": (
-                "CUDA 12.x minor-version compatibility floor; "
-                "PyTorch wheels bundle the CUDA 12.6 runtime."
-            ),
-        },
-        "windows": {
-            "min_driver": "528.33",
-            "toolkit_driver": "560.76",
-            "source_url": "https://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html",
-            "reason": (
-                "CUDA 12.x minor-version compatibility floor; "
-                "PyTorch wheels bundle the CUDA 12.6 runtime."
-            ),
-        },
+        "source_url": "https://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html",
+        "linux": {"min_driver": "525.60.13", "toolkit_driver": "560.28.03"},
+        "windows": {"min_driver": "528.33", "toolkit_driver": "560.76"},
     }
 }
 
@@ -74,6 +61,8 @@ _PIN_RE = re.compile(r"^([A-Za-z0-9_.-]+)(?:\[[^\]]+\])?==")
 _PYVENV_HOME_RE = re.compile(r"^\s*home\s*=\s*(.+?)\s*$")
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
+_PACK_OPS_LOCK = threading.Lock()
+_ACTIVE_PACK_OPS: set[tuple[str, str, str | None]] = set()
 _OFFLINE_PATTERNS = (
     "connection refused",
     "dns error",
@@ -115,7 +104,6 @@ class PackMetadata(BaseModel):
     uv_version: str
     worker_version: str | None = None
     min_nvidia_driver: str | None = None
-    min_nvidia_driver_reason: str | None = None
     nvidia_driver_source: str | None = None
     cuda_toolkit_driver: str | None = None
     created_at: str
@@ -139,12 +127,6 @@ def _backend_to_accel(backend: str) -> str:
     if backend.startswith("cu12"):
         return "cu12"
     return backend
-
-
-def lock_sha256(lockfile: Path) -> str:
-    """Compute the SHA-256 hex digest of a lockfile after LF normalisation."""
-    raw = lockfile.read_bytes()
-    return hashlib.sha256(raw.replace(b"\r\n", b"\n")).hexdigest()
 
 
 def parse_lockfile(lockfile: Path) -> LockInfo:
@@ -233,6 +215,12 @@ def build_uv_env(
     if offline:
         env["UV_OFFLINE"] = "1"
     return env
+
+
+def build_python_env(base_env: Mapping[str, str] | None = None) -> dict[str, str]:
+    """Build env for pack Python checks/probes with all PYTHON* and UV_* variables removed."""
+    source = os.environ if base_env is None else base_env
+    return {k: v for k, v in source.items() if not k.upper().startswith(("PYTHON", "UV_"))}
 
 
 def _lp(path: Path) -> str:
@@ -484,13 +472,38 @@ class PackManager:
         except (OSError, json.JSONDecodeError, ValidationError):
             return None
 
-    def is_valid_pack(self, pack_dir: Path, expected_lock_sha256: str | None = None) -> bool:
-        meta = self.read_pack_metadata(pack_dir)
-        if meta is None:
-            return False
-        if expected_lock_sha256 is not None and meta.lock_sha256 != expected_lock_sha256:
-            return False
-        return True
+    def is_valid_pack(self, pack_dir: Path) -> bool:
+        return self.read_pack_metadata(pack_dir) is not None
+
+    @contextmanager
+    def _pack_op_lock(self, storage: Path, family: str, accel: str | None) -> Iterator[None]:
+        storage_key = os.path.normcase(os.path.abspath(storage))
+        key = (storage_key, family, accel)
+        with _PACK_OPS_LOCK:
+            for act_storage, act_family, act_accel in _ACTIVE_PACK_OPS:
+                if (
+                    act_storage == storage_key
+                    and act_family == family
+                    and (act_accel is None or accel is None or act_accel == accel)
+                ):
+                    raise SkaldError(
+                        "pack_install_failed",
+                        f"Pack operation for '{family}' is already in progress.",
+                        details={"family": family, "accel": accel},
+                        hint="Another operation for this pack is already in progress.",
+                    )
+            _ACTIVE_PACK_OPS.add(key)
+        try:
+            yield
+        finally:
+            with _PACK_OPS_LOCK:
+                _ACTIVE_PACK_OPS.discard(key)
+
+    def _has_other_active_ops(self, storage: Path, family: str, accel: str | None) -> bool:
+        storage_key = os.path.normcase(os.path.abspath(storage))
+        key = (storage_key, family, accel)
+        with _PACK_OPS_LOCK:
+            return any(op[0] == storage_key and op != key for op in _ACTIVE_PACK_OPS)
 
     def list_packs(self, storage_dir: Path | None = None) -> dict[Path, PackMetadata]:
         """Return all valid packs (those with a valid `pack.json`) under `<storage>/packs/`."""
@@ -658,6 +671,32 @@ class PackManager:
         )
         lock_info = parse_lockfile(resolved_lock)
 
+        with self._pack_op_lock(storage, family, lock_info.accel):
+            return self._install_locked(
+                ctx,
+                family,
+                storage=storage,
+                target_os=target_os,
+                resolved_lock=resolved_lock,
+                lock_info=lock_info,
+                expected_lock_sha256=expected_lock_sha256,
+                worker_wheel=worker_wheel,
+                offline=offline,
+            )
+
+    def _install_locked(
+        self,
+        ctx: JobContext,
+        family: str,
+        *,
+        storage: Path,
+        target_os: str,
+        resolved_lock: Path,
+        lock_info: LockInfo,
+        expected_lock_sha256: str | None = None,
+        worker_wheel: Path | None = None,
+        offline: bool = False,
+    ) -> dict[str, Any]:
         if expected_lock_sha256 is not None and lock_info.sha256 != expected_lock_sha256:
             raise SkaldError(
                 "checksum_mismatch",
@@ -787,10 +826,11 @@ class PackManager:
                 check_cmd = [str(pack_python), str(custom_check)]
             else:
                 check_cmd = [str(pack_python), "-m", "skald_worker", "--adapter", family, "--check"]
+            py_env = build_python_env()
             check_lines = self._run_subprocess(
                 ctx,
                 check_cmd,
-                env=os.environ,
+                env=py_env,
                 stage="check",
                 recent_logs=recent_logs,
             )
@@ -798,7 +838,7 @@ class PackManager:
             ctx.checkpoint()
             ctx.progress(0.95, f"Writing {PACK_META_FILENAME}", "finalize")
             uv_ver = self._probe_version([*uv_prefix, "--version"], env, "unknown")
-            py_ver = self._probe_version([str(pack_python), "--version"], os.environ, pbs_version)
+            py_ver = self._probe_version([str(pack_python), "--version"], py_env, pbs_version)
             worker_ver: str | None = None
             for line in reversed(check_lines):
                 try:
@@ -809,7 +849,8 @@ class PackManager:
                 except json.JSONDecodeError:
                     continue
 
-            driver_info = CUDA_DRIVER_REQUIREMENTS.get(lock_info.backend, {}).get(target_os)
+            backend_drivers = CUDA_DRIVER_REQUIREMENTS.get(lock_info.backend, {})
+            driver_info = backend_drivers.get(target_os)
             meta = PackMetadata(
                 family=family,
                 os=target_os,
@@ -823,8 +864,7 @@ class PackManager:
                 uv_version=uv_ver,
                 worker_version=worker_ver,
                 min_nvidia_driver=driver_info["min_driver"] if driver_info else None,
-                min_nvidia_driver_reason=driver_info["reason"] if driver_info else None,
-                nvidia_driver_source=driver_info["source_url"] if driver_info else None,
+                nvidia_driver_source=backend_drivers.get("source_url") if driver_info else None,
                 cuda_toolkit_driver=driver_info["toolkit_driver"] if driver_info else None,
                 created_at=_utc_now_iso(),
             )
@@ -856,17 +896,20 @@ class PackManager:
         )
         lock_info = parse_lockfile(resolved_lock)
         pack_dir = self.pack_dir_for(family, lock_info, storage_dir=storage, os_name=target_os)
-        if pack_dir.exists():
-            ctx.log("info", f"Removing pack folder for repair: {pack_dir}")
-            _rmtree(pack_dir)
-        return self.install_job(
-            ctx,
-            family,
-            accel=accel,
-            lockfile=resolved_lock,
-            worker_wheel=worker_wheel,
-            offline=offline,
-        )
+        with self._pack_op_lock(storage, family, lock_info.accel):
+            if pack_dir.exists():
+                ctx.log("info", f"Removing pack folder for repair: {pack_dir}")
+                _rmtree(pack_dir)
+            return self._install_locked(
+                ctx,
+                family,
+                storage=storage,
+                target_os=target_os,
+                resolved_lock=resolved_lock,
+                lock_info=lock_info,
+                worker_wheel=worker_wheel,
+                offline=offline,
+            )
 
     def remove(
         self,
@@ -880,68 +923,72 @@ class PackManager:
         p_root = packs_dir(storage)
         os_name = _current_pack_os()
 
-        removed_dirs: list[Path] = []
-        removed_packages: set[str] = set()
+        with self._pack_op_lock(storage, family, accel):
+            removed_dirs: list[Path] = []
+            removed_packages: set[str] = set()
 
-        half_built_pattern = (
-            re.compile(
-                rf"^{re.escape(family)}-{re.escape(os_name)}-{re.escape(accel)}-[0-9a-f]{{8}}$"
+            half_built_pattern = (
+                re.compile(
+                    rf"^{re.escape(family)}-{re.escape(os_name)}-{re.escape(accel)}-[0-9a-f]{{8}}$"
+                )
+                if accel is not None
+                else re.compile(
+                    rf"^{re.escape(family)}-{re.escape(os_name)}-[a-z0-9]+-[0-9a-f]{{8}}$"
+                )
             )
-            if accel is not None
-            else re.compile(rf"^{re.escape(family)}-{re.escape(os_name)}-[a-z0-9]+-[0-9a-f]{{8}}$")
-        )
-        if p_root.is_dir():
-            for entry in sorted(p_root.iterdir()):
-                if not entry.is_dir():
-                    continue
-                meta = self.read_pack_metadata(entry)
-                if meta is not None:
-                    matches = meta.family == family and (accel is None or meta.accel == accel)
-                else:
-                    matches = bool(half_built_pattern.match(entry.name))
-                if matches:
+            if p_root.is_dir():
+                for entry in sorted(p_root.iterdir()):
+                    if not entry.is_dir():
+                        continue
+                    meta = self.read_pack_metadata(entry)
                     if meta is not None:
-                        removed_packages.update(meta.packages)
-                    _rmtree(entry)
-                    removed_dirs.append(entry)
+                        matches = meta.family == family and (accel is None or meta.accel == accel)
+                    else:
+                        matches = bool(half_built_pattern.match(entry.name))
+                    if matches:
+                        if meta is not None:
+                            removed_packages.update(meta.packages)
+                        _rmtree(entry)
+                        removed_dirs.append(entry)
 
-        remaining = self.list_packs(storage)
-        used_python_dirs = {
-            os.path.normcase(os.path.abspath(m.base_python_dir)) for m in remaining.values()
-        }
-        removed_pythons: list[Path] = []
-        py_root = python_dir(storage)
-        if py_root.is_dir():
-            for entry in sorted(py_root.iterdir()):
-                if (
-                    entry.is_dir()
-                    and os.path.normcase(os.path.abspath(entry)) not in used_python_dirs
-                ):
-                    _rmtree(entry)
-                    removed_pythons.append(entry)
+            other_active = self._has_other_active_ops(storage, family, accel)
+            remaining = self.list_packs(storage)
+            used_python_dirs = {
+                os.path.normcase(os.path.abspath(m.base_python_dir)) for m in remaining.values()
+            }
+            removed_pythons: list[Path] = []
+            py_root = python_dir(storage)
+            if not other_active and py_root.is_dir():
+                for entry in sorted(py_root.iterdir()):
+                    if (
+                        entry.is_dir()
+                        and os.path.normcase(os.path.abspath(entry)) not in used_python_dirs
+                    ):
+                        _rmtree(entry)
+                        removed_pythons.append(entry)
 
-        cache_cleaned: str = "none"
-        cache_dir = uv_cache_dir(storage)
-        if removed_dirs and cache_dir.exists():
-            uv_prefix = self.uv_command_prefix()
-            env = build_uv_env(storage)
-            if not remaining:
-                self._run_cache_clean(uv_prefix, [], env)
-                cache_cleaned = "all"
-            else:
-                keep_packages: set[str] = set()
-                for meta in remaining.values():
-                    keep_packages.update(meta.packages)
-                orphaned = sorted(removed_packages - keep_packages)
-                if orphaned:
-                    self._run_cache_clean(uv_prefix, orphaned, env)
-                    cache_cleaned = "packages"
+            cache_cleaned: str = "none"
+            cache_dir = uv_cache_dir(storage)
+            if not other_active and removed_dirs and cache_dir.exists():
+                uv_prefix = self.uv_command_prefix()
+                env = build_uv_env(storage)
+                if not remaining:
+                    self._run_cache_clean(uv_prefix, [], env)
+                    cache_cleaned = "all"
+                else:
+                    keep_packages: set[str] = set()
+                    for meta in remaining.values():
+                        keep_packages.update(meta.packages)
+                    orphaned = sorted(removed_packages - keep_packages)
+                    if orphaned:
+                        self._run_cache_clean(uv_prefix, orphaned, env)
+                        cache_cleaned = "packages"
 
-        return {
-            "removed_packs": [str(p) for p in removed_dirs],
-            "removed_python_dirs": [str(p) for p in removed_pythons],
-            "cache_cleaned": cache_cleaned,
-        }
+            return {
+                "removed_packs": [str(p) for p in removed_dirs],
+                "removed_python_dirs": [str(p) for p in removed_pythons],
+                "cache_cleaned": cache_cleaned,
+            }
 
     def _run_cache_clean(
         self, uv_prefix: Sequence[str], packages: Sequence[str], env: Mapping[str, str]

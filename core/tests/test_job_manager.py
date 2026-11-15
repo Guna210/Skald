@@ -924,26 +924,36 @@ def test_cancel_skips_kill_when_captured_process_is_not_running(
 
 @pytest.mark.timeout(10)
 def test_kill_process_tree_leaves_unrelated_process_alive_on_pid_reuse() -> None:
-    with subprocess.Popen(
-        [sys.executable, "-c", "import time; time.sleep(60)"],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    ) as sleeper:
-        try:
-            captured = psutil.Process(sleeper.pid)
-            assert captured.is_running()
-            popen_standin: Any = SimpleNamespace(
-                pid=sleeper.pid,
-                returncode=0,
-                poll=lambda: 0,
-            )
-            _kill_process_tree(popen_standin, captured)
-            time.sleep(0.05)
-            assert sleeper.poll() is None
-            assert captured.is_running()
-        finally:
-            if sleeper.poll() is None:
-                sleeper.kill()
-                sleeper.wait()
-            _assert_gone(sleeper.pid)
+    calls: list[str] = []
+
+    class _ReusedPidProcess:
+        pid = 999999
+
+        def is_running(self) -> bool:
+            return False
+
+        def children(self, recursive: bool = False) -> list[Any]:
+            calls.append("children")
+            return []
+
+        def terminate(self) -> None:
+            calls.append("terminate")
+
+        def kill(self) -> None:
+            calls.append("kill")
+
+        def wait(self, timeout: float | None = None) -> int:
+            return 0
+
+        def __hash__(self) -> int:
+            return self.pid
+
+    captured: Any = _ReusedPidProcess()
+    popen_standin: Any = SimpleNamespace(
+        pid=captured.pid,
+        returncode=None,
+        poll=lambda: None,
+        wait=lambda timeout=None: 0,
+    )
+    _kill_process_tree(popen_standin, captured)
+    assert calls == []

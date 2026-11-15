@@ -48,9 +48,7 @@ REQUIRED_BYTES_BY_OS_BACKEND: dict[tuple[str, str], int] = {
 
 PYTORCH_INDEX_ALLOWLIST: frozenset[str] = frozenset({"torch", "triton"})
 PYPI_HOSTS: frozenset[str] = frozenset({"pypi.org", "files.pythonhosted.org"})
-PYTORCH_HOSTS: frozenset[str] = frozenset(
-    {"download.pytorch.org", "download-r2.pytorch.org"}
-)
+PYTORCH_HOSTS: frozenset[str] = frozenset({"download.pytorch.org", "download-r2.pytorch.org"})
 
 _PIN_RE = re.compile(r"^([A-Za-z0-9_.-]+)(?:\[[^\]]+\])?==")
 _FROM_RE = re.compile(r"^\s*#\s*from\s+(\S+)\s*$")
@@ -112,9 +110,7 @@ def parse_pack_backends(requirements_in: Path) -> list[str]:
                 raise LockValidationError(f"{requirements_in}: empty skald-backends header")
             for backend in backends:
                 if backend not in BACKEND_TO_ACCEL:
-                    raise LockValidationError(
-                        f"{requirements_in}: unsupported backend {backend!r}"
-                    )
+                    raise LockValidationError(f"{requirements_in}: unsupported backend {backend!r}")
             return backends
     return ["cpu", "cu126"]
 
@@ -183,10 +179,7 @@ def validate_lock_content(
 
 def render_lock_text(compiled_text: str, os_name: str, backend: str) -> str:
     required_bytes = REQUIRED_BYTES_BY_OS_BACKEND[(os_name, backend)]
-    header = (
-        f"# skald-backend: {backend}\n"
-        f"# skald-required-bytes: {required_bytes}\n"
-    )
+    header = f"# skald-backend: {backend}\n# skald-required-bytes: {required_bytes}\n"
     body = compiled_text.replace("\r\n", "\n")
     if not body.endswith("\n"):
         body += "\n"
@@ -232,8 +225,7 @@ def compile_lock(
             cmd,
             env=dict(env),
             stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
             encoding="utf-8",
             errors="replace",
@@ -295,9 +287,7 @@ def process_packs(
             accel = BACKEND_TO_ACCEL[backend]
             for os_name in UV_PLATFORM_BY_OS:
                 target = locks_dir / f"{os_name}-{accel}.txt"
-                generated = compile_lock(
-                    uv_exe, req_in, os_name, backend, env=env
-                )
+                generated = compile_lock(uv_exe, req_in, os_name, backend, env=env)
                 if check:
                     if not target.is_file():
                         print(f"MISSING {target}", file=sys.stderr)
@@ -308,7 +298,9 @@ def process_packs(
                         print(f"DRIFT {target}", file=sys.stderr)
                         drifted.append(target)
                     else:
-                        print(f"OK {target.relative_to(packs_dir.parent)} ({lf_sha256(existing)[:8]})")
+                        print(
+                            f"OK {target.relative_to(packs_dir.parent)} ({lf_sha256(existing)[:8]})"
+                        )
                 else:
                     target.write_bytes(generated)
                     print(

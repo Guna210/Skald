@@ -27,13 +27,24 @@ from skald_core.packs import (
     WINDOWS_MAX_PACK_PATH_LEN,
     PackManager,
     PackMetadata,
-    lock_sha256,
+    build_python_env,
     parse_lockfile,
 )
 from skald_core.rpc.server import SkaldError
+from skald_core.rpc.system import _detect_platform
 from skald_core.storage import packs_dir, python_dir, uv_cache_dir
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _has_vendored_uv() -> bool:
+    plat = _detect_platform()
+    if plat is None:
+        return False
+    vendor_dir = Path(os.environ.get("SKALD_VENDOR", "").strip() or (_REPO_ROOT / "vendor"))
+    return (vendor_dir / "uv" / plat / UV_BIN_BY_PLATFORM[plat]).is_file()
+
+
 _FAKE_UV_SCRIPT = """\
 import json
 import os
@@ -294,7 +305,7 @@ def test_lock_sha256_is_lf_normalised(tmp_path: Path) -> None:
     lf.write_bytes(content.encode("utf-8"))
     crlf.write_bytes(content.replace("\n", "\r\n").encode("utf-8"))
 
-    assert lock_sha256(lf) == lock_sha256(crlf)
+    assert parse_lockfile(lf).sha256 == parse_lockfile(crlf).sha256
     assert parse_lockfile(lf).hash8 == parse_lockfile(crlf).hash8
 
 
@@ -318,6 +329,17 @@ def test_fake_uv_install_checks_b5_env_base_python_and_idempotence(
     vendor: Path = env_info["vendor"]
     log_file: Path = env_info["log_file"]
 
+    copy_calls: list[Path] = []
+    orig_copytree = shutil.copytree
+
+    def spy_copytree(src: Any, dst: Any, *args: Any, **kwargs: Any) -> Any:
+        dst_path = Path(dst)
+        if dst_path.parent == python_dir(storage):
+            copy_calls.append(dst_path)
+        return orig_copytree(src, dst, *args, **kwargs)
+
+    monkeypatch.setattr(shutil, "copytree", spy_copytree)
+
     j1 = pm.submit_install(job_manager, "demo-pack")
     fin1 = notifier.wait_finished(j1)
     assert fin1["status"] == "succeeded"
@@ -330,6 +352,10 @@ def test_fake_uv_install_checks_b5_env_base_python_and_idempotence(
         ["pip", "sync"],
         ["--version"],
     ]
+    venv_argv = calls[0]["argv"]
+    assert venv_argv[0] == "venv"
+    assert "--no-project" in venv_argv
+    assert "--relocatable" in venv_argv
     sync_argv = calls[1]["argv"]
     assert "--require-hashes" in sync_argv
     assert "--no-build" in sync_argv
@@ -355,7 +381,9 @@ def test_fake_uv_install_checks_b5_env_base_python_and_idempotence(
     copied_base_dir = python_dir(storage) / "3.12.16+20261110"
     copied_base_exe = copied_base_dir / env_info["py_rel"]
     assert copied_base_exe.is_file()
-    venv_python_arg = Path(calls[0]["argv"][calls[0]["argv"].index("--python") + 1])
+    assert len(copy_calls) == 1
+    first_ino = copied_base_dir.stat().st_ino
+    venv_python_arg = Path(venv_argv[venv_argv.index("--python") + 1])
     assert venv_python_arg == copied_base_exe
     assert vendor not in venv_python_arg.parents
 
@@ -366,7 +394,22 @@ def test_fake_uv_install_checks_b5_env_base_python_and_idempotence(
     assert meta.worker_version == "0.1.0-test"
     assert meta.min_nvidia_driver is None
 
-    # Installing a second time is idempotent: no new venv/sync calls
+    # Installing a second pack reuses existing python/<pbs-version> without re-copying
+    other_src = env_info["packs_src"] / "other-pack"
+    (other_src / "locks").mkdir(parents=True)
+    (other_src / "locks" / f"{env_info['os_name']}-cpu.txt").write_text(
+        "# skald-backend: cpu\n# skald-required-bytes: 1024\n"
+        f"torch==2.14.1+cpu \\\n    --hash=sha256:{'b' * 64}\n",
+        encoding="utf-8",
+    )
+    (other_src / "check.py").write_text("print('ok')\n", encoding="utf-8")
+    j_other = pm.submit_install(job_manager, "other-pack")
+    fin_other = notifier.wait_finished(j_other)
+    assert fin_other["status"] == "succeeded"
+    assert len(copy_calls) == 1
+    assert copied_base_dir.stat().st_ino == first_ino
+
+    # Installing demo-pack a second time is idempotent: no new venv/sync calls
     before_count = len(_read_uv_calls(log_file))
     j2 = pm.submit_install(job_manager, "demo-pack")
     fin2 = notifier.wait_finished(j2)
@@ -676,13 +719,13 @@ def test_cu12_lockfile_records_cuda_driver_metadata_without_gpu(
 
     meta = PackMetadata.model_validate(fin["result"]["metadata"])
     expected_driver = "528.33" if env_info["os_name"] == "windows" else "525.60.13"
+    expected_toolkit = "560.76" if env_info["os_name"] == "windows" else "560.28.03"
     assert meta.min_nvidia_driver == expected_driver
+    assert meta.cuda_toolkit_driver == expected_toolkit
     assert (
         meta.nvidia_driver_source
         == "https://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html"
     )
-    assert meta.min_nvidia_driver_reason is not None
-    assert "PyTorch wheels bundle the CUDA 12.6 runtime" in meta.min_nvidia_driver_reason
 
 
 def test_repoints_base_python_when_pyvenv_cfg_home_differs(
@@ -715,7 +758,146 @@ def test_repoints_base_python_when_pyvenv_cfg_home_differs(
     assert "--relocatable" in new_calls[0]["argv"]
 
 
+def test_step4_check_and_python_version_probe_strip_python_and_uv_env(
+    short_tmp: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    job_manager: JobManager,
+    notifier: _NotifierRecorder,
+) -> None:
+    stripped = build_python_env(
+        {
+            "PYTHONHOME": "/bad/pythonhome",
+            "PYTHONPATH": "/bad/pythonpath",
+            "PYTHONSTARTUP": "/bad/startup.py",
+            "UV_INDEX_URL": "https://bad-uv-index.example",
+            "HTTPS_PROXY": "http://127.0.0.1:8111",
+            "SSL_CERT_FILE": "/tmp/test-ca.pem",
+        }
+    )
+    assert stripped == {
+        "HTTPS_PROXY": "http://127.0.0.1:8111",
+        "SSL_CERT_FILE": "/tmp/test-ca.pem",
+    }
+
+    env_dump_path = short_tmp / "check_env.json"
+    check_code = (
+        "import json, os; "
+        f"open({str(env_dump_path)!r}, 'w', encoding='utf-8')"
+        ".write(json.dumps(dict(os.environ)))\n"
+    )
+    monkeypatch.setenv("PYTHONPATH", "/bad/pythonpath")
+    monkeypatch.setenv("PYTHONSTARTUP", "/bad/startup.py")
+    monkeypatch.setenv("PYTHONNOUSERSITE", "1")
+    monkeypatch.setenv("PYTHONUSERBASE", "/bad/userbase")
+    monkeypatch.setenv("UV_INDEX_URL", "https://bad-uv-index.example")
+    monkeypatch.setenv("UV_CACHE_DIR", "/bad/uv-cache")
+    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:8111")
+    monkeypatch.setenv("SSL_CERT_FILE", "/tmp/test-ca.pem")
+
+    env_info = _setup_fake_env(short_tmp, monkeypatch, check_code=check_code)
+    pm: PackManager = env_info["pm"]
+
+    probe_envs: list[dict[str, str]] = []
+    orig_run = subprocess.run
+
+    def spy_run(cmd: Any, *args: Any, **kwargs: Any) -> Any:
+        if len(cmd) == 2 and cmd[1] == "--version" and "python" in Path(cmd[0]).name.lower():
+            probe_envs.append(dict(kwargs.get("env") or {}))
+        return orig_run(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", spy_run)
+
+    job_id = pm.submit_install(job_manager, "demo-pack")
+    fin = notifier.wait_finished(job_id)
+    assert fin["status"] == "succeeded", fin
+
+    check_env = json.loads(env_dump_path.read_text(encoding="utf-8"))
+    assert len(probe_envs) == 1
+    for seen_env in (check_env, probe_envs[0]):
+        assert not [k for k in seen_env if k.upper().startswith(("PYTHON", "UV_"))]
+        assert seen_env["HTTPS_PROXY"] == "http://127.0.0.1:8111"
+        assert seen_env["SSL_CERT_FILE"] == "/tmp/test-ca.pem"
+
+
+def test_per_pack_lock_blocks_concurrent_same_pack_and_allows_different_packs(
+    short_tmp: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    job_manager: JobManager,
+    notifier: _NotifierRecorder,
+) -> None:
+    sleep_marker = short_tmp / "sync_sleeping"
+    monkeypatch.setenv("SKALD_FAKE_UV_SLEEP_MARKER", str(sleep_marker))
+    env_info = _setup_fake_env(short_tmp, monkeypatch)
+    pm: PackManager = env_info["pm"]
+    lock_info = parse_lockfile(env_info["lock_file"])
+    pack_dir = pm.pack_dir_for("demo-pack", lock_info)
+
+    monkeypatch.setenv("SKALD_FAKE_UV_MODE", "sleep")
+    j1 = pm.submit_install(job_manager, "demo-pack")
+    deadline = time.monotonic() + 5.0
+    while not sleep_marker.is_file():
+        assert time.monotonic() < deadline
+        time.sleep(0.01)
+
+    marker = pack_dir / "active.marker"
+    marker.write_text("alive", encoding="utf-8")
+
+    # Concurrent install, repair, or remove of the SAME pack fails immediately without deleting dir.
+    j_dup = pm.submit_install(job_manager, "demo-pack")
+    fin_dup = notifier.wait_finished(j_dup, timeout=3.0)
+    assert fin_dup["status"] == "failed"
+    assert fin_dup["error"]["data"]["kind"] == "pack_install_failed"
+    assert "already in progress" in fin_dup["error"]["data"]["hint"].lower()
+    assert marker.is_file()
+
+    j_rep = pm.submit_repair(job_manager, "demo-pack")
+    fin_rep = notifier.wait_finished(j_rep, timeout=3.0)
+    assert fin_rep["status"] == "failed"
+    assert fin_rep["error"]["data"]["kind"] == "pack_install_failed"
+    assert "already in progress" in fin_rep["error"]["data"]["hint"].lower()
+    assert marker.is_file()
+
+    with pytest.raises(SkaldError) as rem_exc:
+        pm.remove("demo-pack")
+    assert rem_exc.value.kind == "pack_install_failed"
+    assert "already in progress" in (rem_exc.value.hint or "").lower()
+    assert marker.is_file()
+
+    job_manager.cancel(j1)
+    assert notifier.wait_finished(j1, timeout=3.0)["status"] == "cancelled"
+
+    # Different packs can run in parallel cleanly.
+    monkeypatch.setenv("SKALD_FAKE_UV_MODE", "ok")
+    packs_src: Path = env_info["packs_src"]
+    os_name: str = env_info["os_name"]
+    ready_a = short_tmp / "ready_a"
+    ready_b = short_tmp / "ready_b"
+    for name, my_flag, peer_flag in (("pack-a", ready_a, ready_b), ("pack-b", ready_b, ready_a)):
+        p_src = packs_src / name
+        (p_src / "locks").mkdir(parents=True)
+        (p_src / "locks" / f"{os_name}-cpu.txt").write_text(
+            "# skald-backend: cpu\n# skald-required-bytes: 1024\n"
+            f"torch==2.14.1+cpu \\\n    --hash=sha256:{'c' * 64}\n",
+            encoding="utf-8",
+        )
+        (p_src / "check.py").write_text(
+            "import pathlib, time\n"
+            f"pathlib.Path({str(my_flag)!r}).write_text('1', encoding='utf-8')\n"
+            "deadline = time.monotonic() + 5.0\n"
+            f"while not pathlib.Path({str(peer_flag)!r}).is_file():\n"
+            "    assert time.monotonic() < deadline\n"
+            "    time.sleep(0.01)\n",
+            encoding="utf-8",
+        )
+
+    ja = pm.submit_install(job_manager, "pack-a")
+    jb = pm.submit_install(job_manager, "pack-b")
+    assert notifier.wait_finished(ja, timeout=10.0)["status"] == "succeeded"
+    assert notifier.wait_finished(jb, timeout=10.0)["status"] == "succeeded"
+
+
 @pytest.mark.slow
+@pytest.mark.skipif(not _has_vendored_uv(), reason="vendored uv binary is not present")
 @pytest.mark.timeout(300)
 def test_real_cpu_smoke_pack_install_idempotent_and_remove(
     short_tmp: Path,
