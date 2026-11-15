@@ -424,3 +424,8 @@ Context: T03.5 round-1 handoff (agent: Antigravity / Gemini — not the Claude s
 Problem: conflicts with master c3fe5c8 in SPEC.md and AGENTS.md (Part 5 rows edited by T03.1 too).
 Decision: rebase-only prompt (round 1), then review by a fresh Claude Opus (packs, supply chain, licences, Windows paths). After merge: owner runs slow.yml once via Actions → Run workflow.
 Follow-up: rebase handoff → REVIEW-PROMPT.
+
+### E-0113 · 2026-11-15 19:40 (Asia/Colombo) · T03.5 · REVIEW-PROMPT
+Context: T03.5 rebase handoff (Antigravity / Gemini). Verified: PR #16 head `bd5df8a` (5 commits) on master c3fe5c8; every change outside SPEC.md/AGENTS.md identical to the pre-rebase 73e80bd (diff compared); AGENTS.md Part 5 keeps T03.1's catalog row and fills the lockfiles row. CI PR run 43711321312 success at bd5df8a. Builder: 220 passed, 17 scripts tests, make_locks --check OK, catalog validate OK.
+Decision: Reviewer = fresh Claude Opus. Focus: B5 + G1–G14 exactly (env, base-Python copy, steps 1–5, Windows 150/40, clean-only-when-empty, selective clean, lockhash LF, allowlist, --check); supply-chain (allowlist really fails; `# from` annotations; required-bytes headers = measured × 1.2); job/subprocess rules (registered, stdout PIPE, last 30 lines on failure, half-built packs never valid; kill/repair); fake-uv tests meaningful (mutations); storage resolution F1; driver figures checked against NVIDIA's docs (minor-version floor vs toolkit driver, and whether 528.33 is right for Windows); CI/slow.yml T00.4 rules and cache keys; carry-overs (PID-reuse test, notes.sh guard, spec edits); scope; size (manager.py 960 lines — is it the smallest complete change?).
+Follow-up: VERDICT.

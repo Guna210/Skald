@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-15 19:00 (Asia/Colombo) · last entry: E-0112
+Last updated: 2026-11-15 19:40 (Asia/Colombo) · last entry: E-0113
 Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -10,19 +10,19 @@ Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 …
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
 - **Phase 1 complete** (T01.1–T01.6 merged; E-0096). T02.1 and T03.4 also merged.
 - `master` at `c3fe5c8`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: #16 T03.5 (head 73e80bd, conflicts with master in SPEC.md + AGENTS.md → rebase-only prompt sent, E-0112).
+- Open PRs: #16 T03.5 (rebased, head bd5df8a, CI green; in review, E-0113).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7), T02.1 (PR #8), T03.4 (PR #11), T01.4 (PR #10), T01.6 (PR #9), T01.5 (PR #12), T01.3 (PR #13), T02.2 (PR #14), T03.1 (PR #15).
-- T03.5 pack builder: PR #16, round 1, rebase-only prompt sent; then review by a fresh Claude Opus (E-0112). After merge: owner dispatches slow.yml once.
+- T03.5 pack builder: PR #16, round 1, rebased; in review by a fresh Claude Opus (E-0113). After merge: owner dispatches slow.yml once.
 - Available, not started (prompt only when the owner asks; E-0057): T02.3 XHTML → paragraphs, T03.2 catalog fetch/cache/compatibility, T03.3 hardware probe + fit rating, T03.7 worker protocol, T03.9 [SPIKE][REVIEW], T06.1.
 - T03.2 prompt: checkpoint/revision ids are unique per parent, not globally (E-0107); add a test asserting catalog.validate deletes each downloaded file after verification (T03.1 R2-1, E-0109).
 - T03.7 prompt: adapter registry = `ADAPTER_VERSIONS = {...}` dict literal in worker/skald_worker/adapters/__init__.py (read by T03.1 via ast.literal_eval) (E-0097).
 
 ## Waiting on the owner
-1. Paste the rebase prompt to the T03.5 Builder; send back its reply (E-0112).
+1. Run the T03.5 Reviewer (fresh Claude Opus) and send back the verdict (E-0113).
 2. Later, before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs
@@ -90,4 +90,4 @@ None (T03.4 proposal 12: owner said yes, E-0070).
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-After the T03.5 rebase: verify + Reviewer prompt (fresh Opus). T03.1 and T03.5 reviews: Opus (licences, catalog, packs). After merge, list available tasks (T03.5 becomes available). After merge, list available tasks without prompts (E-0057).
+Process the T03.5 verdict. T03.1 and T03.5 reviews: Opus (licences, catalog, packs). After merge, list available tasks (T03.5 becomes available). After merge, list available tasks without prompts (E-0057).
