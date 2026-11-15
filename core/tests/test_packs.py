@@ -8,6 +8,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from collections.abc import Iterator
@@ -61,7 +62,9 @@ if args and args[0] == "venv":
         py_bin = pack_dir / "Scripts" / "python.exe"
         py_bin.parent.mkdir(parents=True, exist_ok=True)
         if not py_bin.exists():
-            py_bin.write_bytes(Path(sys.executable).read_bytes())
+            launcher = base_py.parent / "Lib" / "venv" / "scripts" / "nt" / "python.exe"
+            src = launcher if launcher.is_file() else Path(sys.executable)
+            py_bin.write_bytes(src.read_bytes())
     else:
         py_bin = pack_dir / "bin" / "python"
         py_bin.parent.mkdir(parents=True, exist_ok=True)
@@ -165,8 +168,14 @@ def job_manager(notifier: _NotifierRecorder) -> Iterator[JobManager]:
         jm.shutdown(timeout=3.0)
 
 
+@pytest.fixture
+def short_tmp() -> Iterator[Path]:
+    with tempfile.TemporaryDirectory(prefix="sk_", ignore_cleanup_errors=True) as tmp:
+        yield Path(tmp)
+
+
 def _setup_fake_env(
-    tmp_path: Path,
+    root_dir: Path,
     monkeypatch: pytest.MonkeyPatch,
     *,
     family: str = "demo-pack",
@@ -176,11 +185,11 @@ def _setup_fake_env(
     required_bytes: int = 1024,
     packages: tuple[str, ...] = ("torch==2.14.1+cpu", "filelock==4.2.10"),
 ) -> dict[str, Any]:
-    storage = tmp_path / "storage"
-    vendor = tmp_path / "vendor"
-    packs_src = tmp_path / "packs_src"
-    log_file = tmp_path / "fake_uv_calls.jsonl"
-    fake_uv_script = tmp_path / "fake_uv.py"
+    storage = root_dir / "s"
+    vendor = root_dir / "v"
+    packs_src = root_dir / "p"
+    log_file = root_dir / "fake_uv_calls.jsonl"
+    fake_uv_script = root_dir / "fake_uv.py"
     fake_uv_script.write_text(_FAKE_UV_SCRIPT, encoding="utf-8")
 
     plat = "win64" if platform.system().lower() == "windows" else "linux64"
@@ -190,10 +199,22 @@ def _setup_fake_env(
     vendor_py_bin = vendor_py_dir / py_rel
     vendor_py_bin.parent.mkdir(parents=True, exist_ok=True)
     if os.name == "nt":
-        shutil.copy2(sys.executable, vendor_py_bin)
-        # Copy dll if present next to sys.executable for standalone fake-vendor invocation.
-        for dll in Path(sys.executable).parent.glob("python3*.dll"):
-            shutil.copy2(dll, vendor_py_dir / dll.name)
+        ignore = shutil.ignore_patterns(
+            "site-packages",
+            "test",
+            "idlelib",
+            "tkinter",
+            "ensurepip",
+            "__pycache__",
+            "Tools",
+            "include",
+            "libs",
+            "Scripts",
+            "Doc",
+            "tcl",
+            "pydoc_data",
+        )
+        shutil.copytree(Path(sys.base_prefix), vendor_py_dir, dirs_exist_ok=True, ignore=ignore)
     else:
         vendor_py_bin.symlink_to(sys.executable)
     (vendor_py_dir / ".installed.json").write_text(
@@ -278,7 +299,7 @@ def test_lock_sha256_is_lf_normalised(tmp_path: Path) -> None:
 
 
 def test_fake_uv_install_checks_b5_env_base_python_and_idempotence(
-    tmp_path: Path,
+    short_tmp: Path,
     monkeypatch: pytest.MonkeyPatch,
     job_manager: JobManager,
     notifier: _NotifierRecorder,
@@ -291,7 +312,7 @@ def test_fake_uv_install_checks_b5_env_base_python_and_idempotence(
     monkeypatch.setenv("NO_PROXY", "localhost,127.0.0.1")
     monkeypatch.setenv("SSL_CERT_FILE", "/tmp/custom-ca.pem")
 
-    env_info = _setup_fake_env(tmp_path, monkeypatch)
+    env_info = _setup_fake_env(short_tmp, monkeypatch)
     pm: PackManager = env_info["pm"]
     storage: Path = env_info["storage"]
     vendor: Path = env_info["vendor"]
@@ -355,14 +376,14 @@ def test_fake_uv_install_checks_b5_env_base_python_and_idempotence(
 
 
 def test_worker_wheel_installed_and_default_check_command(
-    tmp_path: Path,
+    short_tmp: Path,
     monkeypatch: pytest.MonkeyPatch,
     job_manager: JobManager,
     notifier: _NotifierRecorder,
 ) -> None:
-    env_info = _setup_fake_env(tmp_path, monkeypatch, write_check_py=False)
+    env_info = _setup_fake_env(short_tmp, monkeypatch, write_check_py=False)
     pm: PackManager = env_info["pm"]
-    fake_wheel = tmp_path / "skald_worker-0.1.0-py3-none-any.whl"
+    fake_wheel = short_tmp / "skald_worker-0.1.0-py3-none-any.whl"
     fake_wheel.write_text("wheel", encoding="utf-8")
 
     seen_cmds: list[list[str]] = []
@@ -423,12 +444,12 @@ def test_worker_wheel_installed_and_default_check_command(
 
 
 def test_lock_hash_mismatch_and_tampered_sync_fail_without_valid_pack(
-    tmp_path: Path,
+    short_tmp: Path,
     monkeypatch: pytest.MonkeyPatch,
     job_manager: JobManager,
     notifier: _NotifierRecorder,
 ) -> None:
-    env_info = _setup_fake_env(tmp_path, monkeypatch)
+    env_info = _setup_fake_env(short_tmp, monkeypatch)
     pm: PackManager = env_info["pm"]
 
     # 1. Expected lockfile SHA-256 mismatch fails before touching disk
@@ -449,13 +470,13 @@ def test_lock_hash_mismatch_and_tampered_sync_fail_without_valid_pack(
 
 
 def test_sync_succeeds_but_step4_check_fails_leaves_no_valid_pack(
-    tmp_path: Path,
+    short_tmp: Path,
     monkeypatch: pytest.MonkeyPatch,
     job_manager: JobManager,
     notifier: _NotifierRecorder,
 ) -> None:
     env_info = _setup_fake_env(
-        tmp_path,
+        short_tmp,
         monkeypatch,
         check_code='import sys; print("simulated DLL path failure"); sys.exit(1)\n',
     )
@@ -472,14 +493,14 @@ def test_sync_succeeds_but_step4_check_fails_leaves_no_valid_pack(
 
 
 def test_kill_midway_leaves_no_valid_pack_and_repair_rebuilds(
-    tmp_path: Path,
+    short_tmp: Path,
     monkeypatch: pytest.MonkeyPatch,
     job_manager: JobManager,
     notifier: _NotifierRecorder,
 ) -> None:
-    sleep_marker = tmp_path / "sync_sleeping"
+    sleep_marker = short_tmp / "sync_sleeping"
     monkeypatch.setenv("SKALD_FAKE_UV_SLEEP_MARKER", str(sleep_marker))
-    env_info = _setup_fake_env(tmp_path, monkeypatch)
+    env_info = _setup_fake_env(short_tmp, monkeypatch)
     pm: PackManager = env_info["pm"]
     monkeypatch.setenv("SKALD_FAKE_UV_MODE", "sleep")
 
@@ -511,13 +532,13 @@ def test_kill_midway_leaves_no_valid_pack_and_repair_rebuilds(
 
 
 def test_clean_only_when_no_pack_remains_and_unused_python_removed(
-    tmp_path: Path,
+    short_tmp: Path,
     monkeypatch: pytest.MonkeyPatch,
     job_manager: JobManager,
     notifier: _NotifierRecorder,
 ) -> None:
     env_info = _setup_fake_env(
-        tmp_path,
+        short_tmp,
         monkeypatch,
         family="pack-one",
         packages=("torch==2.14.1+cpu", "unique-one==1.0.0"),
@@ -570,12 +591,12 @@ def test_clean_only_when_no_pack_remains_and_unused_python_removed(
 
 
 def test_error_mapping_log_tail_limit_and_disk_check(
-    tmp_path: Path,
+    short_tmp: Path,
     monkeypatch: pytest.MonkeyPatch,
     job_manager: JobManager,
     notifier: _NotifierRecorder,
 ) -> None:
-    env_info = _setup_fake_env(tmp_path, monkeypatch)
+    env_info = _setup_fake_env(short_tmp, monkeypatch)
     pm: PackManager = env_info["pm"]
 
     # 1. >30 log lines -> pack_install_failed keeps only the last 30 lines
@@ -635,13 +656,13 @@ def test_windows_150_char_path_limit_and_name_limit(
 
 
 def test_cu12_lockfile_records_cuda_driver_metadata_without_gpu(
-    tmp_path: Path,
+    short_tmp: Path,
     monkeypatch: pytest.MonkeyPatch,
     job_manager: JobManager,
     notifier: _NotifierRecorder,
 ) -> None:
     env_info = _setup_fake_env(
-        tmp_path,
+        short_tmp,
         monkeypatch,
         family="torch-cu12-smoke",
         backend="cu126",
@@ -651,7 +672,7 @@ def test_cu12_lockfile_records_cuda_driver_metadata_without_gpu(
 
     job_id = pm.submit_install(job_manager, "torch-cu12-smoke")
     fin = notifier.wait_finished(job_id)
-    assert fin["status"] == "succeeded"
+    assert fin["status"] == "succeeded", fin
 
     meta = PackMetadata.model_validate(fin["result"]["metadata"])
     expected_driver = "528.33" if env_info["os_name"] == "windows" else "525.60.13"
@@ -665,18 +686,18 @@ def test_cu12_lockfile_records_cuda_driver_metadata_without_gpu(
 
 
 def test_repoints_base_python_when_pyvenv_cfg_home_differs(
-    tmp_path: Path,
+    short_tmp: Path,
     monkeypatch: pytest.MonkeyPatch,
     job_manager: JobManager,
     notifier: _NotifierRecorder,
 ) -> None:
-    env_info = _setup_fake_env(tmp_path, monkeypatch)
+    env_info = _setup_fake_env(short_tmp, monkeypatch)
     pm: PackManager = env_info["pm"]
     log_file: Path = env_info["log_file"]
 
     j1 = pm.submit_install(job_manager, "demo-pack")
     fin1 = notifier.wait_finished(j1)
-    assert fin1["status"] == "succeeded"
+    assert fin1["status"] == "succeeded", fin1
     pack_dir = Path(fin1["result"]["pack_dir"])
 
     # Simulate stale base Python path in pyvenv.cfg (e.g. after app update or move)
@@ -686,7 +707,7 @@ def test_repoints_base_python_when_pyvenv_cfg_home_differs(
     before = len(_read_uv_calls(log_file))
     j2 = pm.submit_install(job_manager, "demo-pack")
     fin2 = notifier.wait_finished(j2)
-    assert fin2["status"] == "succeeded"
+    assert fin2["status"] == "succeeded", fin2
 
     new_calls = _read_uv_calls(log_file)[before:]
     assert len(new_calls) == 1
@@ -697,16 +718,16 @@ def test_repoints_base_python_when_pyvenv_cfg_home_differs(
 @pytest.mark.slow
 @pytest.mark.timeout(300)
 def test_real_cpu_smoke_pack_install_idempotent_and_remove(
-    tmp_path: Path,
+    short_tmp: Path,
     monkeypatch: pytest.MonkeyPatch,
     job_manager: JobManager,
     notifier: _NotifierRecorder,
 ) -> None:
-    monkeypatch.setenv("SKALD_STORAGE_DIR", str(tmp_path))
+    monkeypatch.setenv("SKALD_STORAGE_DIR", str(short_tmp))
     monkeypatch.setenv("SKALD_VENDOR", str(_REPO_ROOT / "vendor"))
 
     pm = PackManager(
-        storage_dir=tmp_path,
+        storage_dir=short_tmp,
         packs_source_dir=_REPO_ROOT / "packs",
         vendor_dir=_REPO_ROOT / "vendor",
     )
@@ -723,7 +744,7 @@ def test_real_cpu_smoke_pack_install_idempotent_and_remove(
     assert meta is not None and meta.accel == "cpu"
 
     storage_before_remove = sum(
-        p.stat().st_size for p in tmp_path.rglob("*") if p.is_file() and not p.is_symlink()
+        p.stat().st_size for p in short_tmp.rglob("*") if p.is_file() and not p.is_symlink()
     )
 
     # Second install must be idempotent and fast
@@ -738,7 +759,7 @@ def test_real_cpu_smoke_pack_install_idempotent_and_remove(
     # Removing the sole pack deletes pack, copied base python, and cleans uv-cache
     rem = pm.remove("torch-cpu-smoke")
     storage_after_remove = sum(
-        p.stat().st_size for p in tmp_path.rglob("*") if p.is_file() and not p.is_symlink()
+        p.stat().st_size for p in short_tmp.rglob("*") if p.is_file() and not p.is_symlink()
     )
     print(
         f"CPU smoke install: first={first_s:.2f}s, second={second_s:.2f}s, "
@@ -748,4 +769,4 @@ def test_real_cpu_smoke_pack_install_idempotent_and_remove(
     assert rem["cache_cleaned"] == "all"
     assert pm.list_packs() == {}
     assert not pack_dir.exists()
-    assert not any((tmp_path / "python").glob("*")) if (tmp_path / "python").exists() else True
+    assert not any((short_tmp / "python").glob("*")) if (short_tmp / "python").exists() else True
