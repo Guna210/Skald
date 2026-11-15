@@ -383,3 +383,18 @@ Follow-up: rebase handoff → REVIEW-PROMPT.
 Context: T03.1 rebase handoff (Antigravity / Gemini 2.5 Pro). Verified: PR #15 head `25de321` on master 2dead6e (single commit); everything except SPEC.md identical to the pre-rebase 5a813d7 (diff compared); SPEC diff vs master = tick + 3 T03.1 rows. CI ci.yml run 43688685035 + catalog.yml run 43688685059 success at 25de321. Builder: 197 passed; validator passes on the empty catalog.
 Decision: Reviewer = fresh Claude Opus (catalog + licence allowlist; Builder Gemini). Focus: B4/V5 rules each with a failing-catalog test (incl. the decided table); allowlist + acknowledgement for non-commercial; pickle/approved_exception; URL construction per C2; registry read via ast only (no worker import), missing → empty, malformed → clear error; semver parse; --network: changed-entry diff vs origin/master, download verify via net.download into temp, head() mapping; no real internet in tests; catalog.yml (T00.4 rules; note its paths filter doesn't include the validator code — is that OK?); committed schema no-diff; AGENTS Part 5 edit; scope.
 Follow-up: VERDICT.
+
+### E-0107 · 2026-11-15 17:00 (Asia/Colombo) · T03.1 · VERDICT + FIX-PROMPT
+Context: Reviewer (fresh Claude Opus) round 1 on PR #15 @25de321: CHANGES REQUESTED. 197 passed; clean; validate exits 0 (and 1 with --release: 0 active); schema re-export identical; B4.2 example validates (also with acknowledgement); net.head() OK live against HF and a GitHub release asset (probe only). Mutations: 7 caught; survived: cap `>`→`>=`, retired counted toward the cap, changed-entry detection reduced to "new id only". Exact licence matching confirmed fail-safe ("Apache 2.0", "mit" etc. rejected) — keep exact. Registry parsing ast-only and robust. catalog.yml OK (paths catalog/** is enough; ci.yml covers validator code).
+Findings: R1-1 [Major] changed-entry diff tested only for a new model id (in-place hash change unchecked); git base loader untested; R1-2 [Major] missing/unparseable origin/master base → silent "everything changed" multi-GB download; R1-3 [Minor] downloads kept until the run ends (disk); R1-4 [Minor] cap boundaries untested (exactly 5; 5 active + retired); R1-5 [Minor] `$` regexes accept a trailing newline (semver, sha256, HF commit); R1-6 [Minor] no extra="forbid" (typos silently dropped); R1-7 [Nit] whitespace-only url/path; updated_at accepts 20261114. Also: duplicate file paths within a revision not rejected; checkpoint ids unique per model (not global) — T03.2 must not assume global uniqueness.
+Decision: fix ALL in round 2:
+ - R1-1: unit tests for _changed_revision_keys: unchanged / same revision with a different sha256 or size / new revision in an existing checkpoint / new model; one test for the git base loader (temp git repo or patched subprocess.run).
+ - R1-2 ★: if the base catalog can't be loaded, print a one-line warning to stderr and treat all entries as changed (documented in --help) — tested.
+ - R1-3: delete each downloaded file right after it verifies.
+ - R1-4: tests: exactly 5 active pass; 5 active + retired pass; 6 active fail.
+ - R1-5: fullmatch (or \Z) for every pattern; tests with a trailing newline.
+ - R1-6 ★: extra="forbid" on every catalog model; regenerate catalog.schema.json; test a typo'd key fails.
+ - R1-7 ★: non-empty-after-strip for license url (when present/required) and file path; updated_at must match YYYY-MM-DD exactly.
+ - ★ duplicate file paths within one revision → error.
+ Record ★ rulings in Appendix 3. Note for T03.2: checkpoint/revision ids are unique per parent, not globally.
+Follow-up: round-2 handoff → same Opus Reviewer.
