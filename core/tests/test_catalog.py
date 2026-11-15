@@ -6,6 +6,7 @@ import copy
 import hashlib
 import http.server
 import json
+import subprocess
 import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -13,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from pydantic import ValidationError
 
 from skald_core import net
 from skald_core.catalog import validate as catalog_validate
@@ -570,3 +572,235 @@ def test_network_bad_hash_and_changed_only_download(
         )
         assert len(errors_404) == 1
         assert "URL unreachable" in errors_404[0]
+
+
+def test_changed_revision_keys_diff_cases() -> None:
+    base_model = _make_model("m1", sha256="a" * 64, size=100)
+    base_catalog = Catalog.model_validate(_make_catalog([base_model]))
+
+    # (a) unchanged -> not in changed keys
+    same_catalog = Catalog.model_validate(_make_catalog([copy.deepcopy(base_model)]))
+    assert catalog_validate._changed_revision_keys(same_catalog, base_catalog) == set()
+
+    # (b) same revision id with different sha256 -> in changed keys
+    diff_sha_model = _make_model("m1", sha256="b" * 64, size=100)
+    diff_sha_catalog = Catalog.model_validate(_make_catalog([diff_sha_model]))
+    assert catalog_validate._changed_revision_keys(diff_sha_catalog, base_catalog) == {
+        ("m1", "m1-cp1", "r1")
+    }
+
+    # (c) same revision id with different size -> in changed keys
+    diff_size_model = _make_model("m1", sha256="a" * 64, size=200)
+    diff_size_catalog = Catalog.model_validate(_make_catalog([diff_size_model]))
+    assert catalog_validate._changed_revision_keys(diff_size_catalog, base_catalog) == {
+        ("m1", "m1-cp1", "r1")
+    }
+
+    # (d) new revision id in existing checkpoint -> only new revision in changed keys
+    new_rev_model = copy.deepcopy(base_model)
+    new_rev = copy.deepcopy(new_rev_model["checkpoints"][0]["revisions"][0])
+    new_rev["id"] = "r2"
+    new_rev_model["checkpoints"][0]["revisions"].append(new_rev)
+    new_rev_catalog = Catalog.model_validate(_make_catalog([new_rev_model]))
+    assert catalog_validate._changed_revision_keys(new_rev_catalog, base_catalog) == {
+        ("m1", "m1-cp1", "r2")
+    }
+
+    # (e) new model -> in changed keys
+    new_model = _make_model("m2", sha256="c" * 64, size=50)
+    new_model_catalog = Catalog.model_validate(
+        _make_catalog([copy.deepcopy(base_model), new_model])
+    )
+    assert catalog_validate._changed_revision_keys(new_model_catalog, base_catalog) == {
+        ("m2", "m2-cp1", "r1")
+    }
+
+
+def test_load_base_catalog_from_git(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    catalog_path = tmp_path / "catalog.json"
+    sample_json = json.dumps(_make_catalog([]))
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(
+            args=args[0], returncode=0, stdout=sample_json, stderr=""
+        ),
+    )
+    loaded = catalog_validate._load_base_catalog_from_git(catalog_path)
+    assert loaded is not None
+    assert loaded.models == []
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(
+            args=args[0], returncode=128, stdout="", stderr="fatal: not found"
+        ),
+    )
+    assert catalog_validate._load_base_catalog_from_git(catalog_path) is None
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(
+            args=args[0], returncode=0, stdout="{not-valid", stderr=""
+        ),
+    )
+    assert catalog_validate._load_base_catalog_from_git(catalog_path) is None
+
+
+def test_network_warns_and_checks_all_when_base_unavailable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    local_net_env: None,
+) -> None:
+    payload = b"fallback-weights"
+    payload_sha = hashlib.sha256(payload).hexdigest()
+    requests_seen: list[tuple[str, str]] = []
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, format: str, *args: Any) -> None:
+            return
+
+        def _handle(self, send_body: bool) -> None:
+            requests_seen.append((self.command, self.path))
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            if send_body:
+                self.wfile.write(payload)
+
+        def do_HEAD(self) -> None:
+            self._handle(send_body=False)
+
+        def do_GET(self) -> None:
+            self._handle(send_body=True)
+
+    with _run_server(Handler) as base_url:
+        monkeypatch.setattr(
+            catalog_validate,
+            "build_file_url",
+            lambda _src, path: f"{base_url}/{path}",
+        )
+        monkeypatch.setattr(
+            catalog_validate,
+            "_load_base_catalog_from_git",
+            lambda _path: None,
+        )
+
+        model = _make_model("m1", sha256=payload_sha, size=len(payload))
+        catalog_path = tmp_path / "catalog.json"
+        catalog_path.write_text(json.dumps(_make_catalog([model])), encoding="utf-8")
+        adapters_file = _write_adapters(tmp_path, {"kokoro": "1.0.0"})
+        docs_dir = _write_cards(tmp_path, ["m1"])
+
+        errors = validate_catalog(
+            catalog_path,
+            network=True,
+            adapters_path=adapters_file,
+            models_doc_dir=docs_dir,
+            use_git_diff=True,
+        )
+        assert errors == []
+        captured = capsys.readouterr()
+        assert (
+            "origin/master catalog not available; treating all entries as changed" in captured.err
+        )
+        assert ("HEAD", "/m1.bin") in requests_seen
+        assert ("GET", "/m1.bin") in requests_seen
+
+
+def test_active_model_cap_boundaries(tmp_path: Path) -> None:
+    adapters_file = _write_adapters(tmp_path, {"kokoro": "1.0.0"})
+    docs_dir = _write_cards(tmp_path, [f"a{i}" for i in range(5)])
+
+    # Exactly 5 active passes
+    five_active = [_make_model(f"a{i}") for i in range(5)]
+    p5 = tmp_path / "five.json"
+    p5.write_text(json.dumps(_make_catalog(five_active)), encoding="utf-8")
+    assert (
+        validate_catalog(
+            p5,
+            adapters_path=adapters_file,
+            models_doc_dir=docs_dir,
+            use_git_diff=False,
+        )
+        == []
+    )
+
+    # 5 active + 2 retired passes
+    five_plus_two = five_active + [
+        _make_model("r0", status="retired"),
+        _make_model("r1", status="retired"),
+    ]
+    p5_2 = tmp_path / "five_plus_two.json"
+    p5_2.write_text(json.dumps(_make_catalog(five_plus_two)), encoding="utf-8")
+    assert (
+        validate_catalog(
+            p5_2,
+            adapters_path=adapters_file,
+            models_doc_dir=docs_dir,
+            use_git_diff=False,
+        )
+        == []
+    )
+
+
+def test_trailing_newline_rejected_in_patterns() -> None:
+    with pytest.raises(ValueError):
+        parse_semver("1.0.0\n")
+
+    bad_sha_catalog = _make_catalog([_make_model("m0", sha256=f"{_VALID_SHA256}\n")])
+    with pytest.raises(ValidationError):
+        Catalog.model_validate(bad_sha_catalog)
+
+    bad_hf_catalog = _make_catalog([_make_model("m0")])
+    bad_hf_catalog["models"][0]["checkpoints"][0]["revisions"][0]["source"]["ref"] = (
+        f"{_VALID_HF_REF}\n"
+    )
+    with pytest.raises(ValidationError):
+        Catalog.model_validate(bad_hf_catalog)
+
+    bad_date_catalog = _make_catalog([])
+    bad_date_catalog["updated_at"] = "2026-11-14\n"
+    with pytest.raises(ValidationError):
+        Catalog.model_validate(bad_date_catalog)
+
+
+def test_extra_forbid_rejects_typo_keys() -> None:
+    payload = _make_catalog([_make_model("m0")])
+    payload["models"][0]["license"]["comercial"] = True
+    with pytest.raises(ValidationError):
+        Catalog.model_validate(payload)
+
+
+def test_whitespace_and_updated_at_format_and_duplicate_file_paths() -> None:
+    # Whitespace-only license url
+    bad_url = _make_catalog([_make_model("m0")])
+    bad_url["models"][0]["license"]["url"] = "   "
+    with pytest.raises(ValidationError):
+        Catalog.model_validate(bad_url)
+
+    # Whitespace-only file path
+    bad_path = _make_catalog([_make_model("m0")])
+    bad_path["models"][0]["checkpoints"][0]["revisions"][0]["files"][0]["path"] = "   "
+    with pytest.raises(ValidationError):
+        Catalog.model_validate(bad_path)
+
+    # Compact YYYYMMDD updated_at rejected
+    bad_updated = _make_catalog([])
+    bad_updated["updated_at"] = "20261114"
+    with pytest.raises(ValidationError):
+        Catalog.model_validate(bad_updated)
+
+    # Duplicate file paths within one revision rejected
+    dup_files = _make_catalog([_make_model("m0")])
+    rev = dup_files["models"][0]["checkpoints"][0]["revisions"][0]
+    rev["files"].append(copy.deepcopy(rev["files"][0]))
+    with pytest.raises(ValidationError):
+        Catalog.model_validate(dup_files)

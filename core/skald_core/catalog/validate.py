@@ -180,6 +180,11 @@ def validate_catalog(
         effective_base = base_catalog
         if effective_base is None and use_git_diff:
             effective_base = _load_base_catalog_from_git(catalog_path)
+        if effective_base is None:
+            print(
+                "WARNING: origin/master catalog not available; treating all entries as changed.",
+                file=sys.stderr,
+            )
         changed_keys = _changed_revision_keys(catalog, effective_base)
 
         with tempfile.TemporaryDirectory(prefix="skald-catalog-check-") as tmp_dir:
@@ -208,6 +213,8 @@ def validate_catalog(
                                         f"Download verification failed for {model.id}/{cp.id}/"
                                         f"{rev.id} file {f_entry.path!r} ({url}): {exc.message}"
                                     )
+                                finally:
+                                    dest.unlink(missing_ok=True)
 
     return errors
 
@@ -223,7 +230,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--network",
         action="store_true",
-        help="Verify URLs are reachable and download/hash-check changed entries.",
+        help=(
+            "Verify URLs are reachable and download/hash-check entries changed vs "
+            "origin/master (if origin/master catalog is unavailable, warns and checks all)."
+        ),
     )
     parser.add_argument(
         "--release",

@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 COMMERCIAL_LICENSE_ALLOWLIST: frozenset[str] = frozenset(
     {
@@ -24,10 +24,11 @@ COMMERCIAL_LICENSE_ALLOWLIST: frozenset[str] = frozenset(
 MAX_ACTIVE_MODELS: int = 5
 MIN_RELEASE_ACTIVE_MODELS: int = 3
 
-_SEMVER_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
-_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
-_HF_COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
-_REPO_RE = re.compile(r"^[^/\s]+/[^/\s]+$")
+_SEMVER_RE = re.compile(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)")
+_SHA256_RE = re.compile(r"[0-9a-f]{64}")
+_HF_COMMIT_RE = re.compile(r"[0-9a-f]{40}")
+_REPO_RE = re.compile(r"[^/\s]+/[^/\s]+")
+_UPDATED_AT_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CATALOG_SCHEMA_PATH = (
@@ -43,7 +44,7 @@ ModelStatus = Literal["active", "retired"]
 
 def parse_semver(version: str) -> tuple[int, int, int]:
     """Parse an X.Y.Z semver string into a comparable 3-tuple of ints."""
-    match = _SEMVER_RE.match(version)
+    match = _SEMVER_RE.fullmatch(version)
     if match is None:
         raise ValueError(f"Invalid semver version {version!r}; expected 'X.Y.Z'.")
     return int(match.group(1)), int(match.group(2)), int(match.group(3))
@@ -51,6 +52,8 @@ def parse_semver(version: str) -> tuple[int, int, int]:
 
 class CatalogFile(BaseModel):
     """A single downloadable model or metadata file pinned by size and SHA-256."""
+
+    model_config = ConfigDict(extra="forbid")
 
     path: str = Field(min_length=1)
     format: FileFormat
@@ -61,6 +64,8 @@ class CatalogFile(BaseModel):
     @field_validator("path")
     @classmethod
     def _validate_path(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("File path must be non-empty.")
         if value.startswith("/") or "\\" in value:
             raise ValueError(f"File path {value!r} must be a relative POSIX path.")
         if ".." in value.split("/"):
@@ -70,7 +75,7 @@ class CatalogFile(BaseModel):
     @field_validator("sha256")
     @classmethod
     def _validate_sha256(cls, value: str) -> str:
-        if _SHA256_RE.match(value) is None:
+        if _SHA256_RE.fullmatch(value) is None:
             raise ValueError(f"Invalid sha256 {value!r}; expected 64 lowercase hex characters.")
         return value
 
@@ -88,6 +93,8 @@ class CatalogFile(BaseModel):
 class CatalogSource(BaseModel):
     """Upstream hosting location and pinned revision/tag for a catalog revision."""
 
+    model_config = ConfigDict(extra="forbid")
+
     host: SourceHost
     repo: str = Field(min_length=1)
     ref: str = Field(min_length=1)
@@ -95,13 +102,13 @@ class CatalogSource(BaseModel):
     @field_validator("repo")
     @classmethod
     def _validate_repo(cls, value: str) -> str:
-        if _REPO_RE.match(value) is None:
+        if _REPO_RE.fullmatch(value) is None:
             raise ValueError(f"Invalid repo {value!r}; expected 'owner/name'.")
         return value
 
     @model_validator(mode="after")
     def _validate_ref(self) -> CatalogSource:
-        if self.host == "huggingface" and _HF_COMMIT_RE.match(self.ref) is None:
+        if self.host == "huggingface" and _HF_COMMIT_RE.fullmatch(self.ref) is None:
             raise ValueError(
                 f"Hugging Face source ref {self.ref!r} must be a 40-char lowercase hex commit SHA."
             )
@@ -119,10 +126,19 @@ def build_file_url(source: CatalogSource, file_path: str) -> str:
 class CatalogLicense(BaseModel):
     """License metadata and commercial-use flag for a catalog model."""
 
+    model_config = ConfigDict(extra="forbid")
+
     name: str = Field(min_length=1)
     url: str = Field(min_length=1)
     commercial: bool
     acknowledgement: str | None = None
+
+    @field_validator("url")
+    @classmethod
+    def _validate_url(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("License url must be non-empty.")
+        return value
 
     @model_validator(mode="after")
     def _validate_commercial_and_ack(self) -> CatalogLicense:
@@ -132,8 +148,6 @@ class CatalogLicense(BaseModel):
                 f"License {self.name!r} requires commercial={expected}, got {self.commercial}."
             )
         if not self.commercial:
-            if not self.url.strip():
-                raise ValueError("Non-commercial license requires a non-empty url.")
             if self.acknowledgement is None or not self.acknowledgement.strip():
                 raise ValueError("Non-commercial license requires non-empty acknowledgement text.")
         return self
@@ -142,12 +156,16 @@ class CatalogLicense(BaseModel):
 class CpuHardware(BaseModel):
     """CPU hardware requirements and reference speed for a model."""
 
+    model_config = ConfigDict(extra="forbid")
+
     min_ram_gb: float = Field(gt=0)
     rtf_reference: float | None = Field(default=None, gt=0)
 
 
 class CudaHardware(BaseModel):
     """NVIDIA CUDA hardware requirements and reference speed for a model."""
+
+    model_config = ConfigDict(extra="forbid")
 
     min_vram_gb: float = Field(gt=0)
     min_ram_gb: float | None = Field(default=None, gt=0)
@@ -157,6 +175,8 @@ class CudaHardware(BaseModel):
 class CatalogHardware(BaseModel):
     """Supported hardware tiers for a catalog model."""
 
+    model_config = ConfigDict(extra="forbid")
+
     cpu: CpuHardware | None = None
     cuda: CudaHardware | None = None
 
@@ -164,11 +184,15 @@ class CatalogHardware(BaseModel):
 class CatalogNotes(BaseModel):
     """Additional model notes such as watermark disclosure."""
 
+    model_config = ConfigDict(extra="forbid")
+
     watermark: str | None = None
 
 
 class CatalogRevision(BaseModel):
     """A pinned upstream revision of a checkpoint."""
+
+    model_config = ConfigDict(extra="forbid")
 
     id: str = Field(min_length=1)
     bundled: bool = False
@@ -183,9 +207,20 @@ class CatalogRevision(BaseModel):
         parse_semver(value)
         return value
 
+    @model_validator(mode="after")
+    def _validate_unique_file_paths(self) -> CatalogRevision:
+        seen: set[str] = set()
+        for f_entry in self.files:
+            if f_entry.path in seen:
+                raise ValueError(f"Duplicate file path {f_entry.path!r} in revision {self.id!r}.")
+            seen.add(f_entry.path)
+        return self
+
 
 class CatalogCheckpoint(BaseModel):
     """A selectable model checkpoint with one or more pinned revisions."""
+
+    model_config = ConfigDict(extra="forbid")
 
     id: str = Field(min_length=1)
     max_chars: int = Field(gt=0)
@@ -208,6 +243,8 @@ class CatalogCheckpoint(BaseModel):
 
 class CatalogModel(BaseModel):
     """A model family entry in the Skald catalog."""
+
+    model_config = ConfigDict(extra="forbid")
 
     id: str = Field(min_length=1)
     name: str = Field(min_length=1)
@@ -235,6 +272,8 @@ class CatalogModel(BaseModel):
 class Catalog(BaseModel):
     """Top-level Skald model catalog document."""
 
+    model_config = ConfigDict(extra="forbid")
+
     schema_version: Literal[1] = 1
     min_app_version: str
     updated_at: str
@@ -249,6 +288,8 @@ class Catalog(BaseModel):
     @field_validator("updated_at")
     @classmethod
     def _validate_updated_at(cls, value: str) -> str:
+        if _UPDATED_AT_RE.fullmatch(value) is None:
+            raise ValueError(f"Invalid updated_at {value!r}; expected 'YYYY-MM-DD'.")
         datetime.date.fromisoformat(value)
         return value
 

@@ -1,6 +1,7 @@
 {
   "$defs": {
     "CatalogCheckpoint": {
+      "additionalProperties": false,
       "description": "A selectable model checkpoint with one or more pinned revisions.",
       "properties": {
         "id": {
@@ -37,6 +38,7 @@
       "type": "object"
     },
     "CatalogFile": {
+      "additionalProperties": false,
       "description": "A single downloadable model or metadata file pinned by size and SHA-256.",
       "properties": {
         "path": {
@@ -89,6 +91,7 @@
       "type": "object"
     },
     "CatalogHardware": {
+      "additionalProperties": false,
       "description": "Supported hardware tiers for a catalog model.",
       "properties": {
         "cpu": {
@@ -118,6 +121,7 @@
       "type": "object"
     },
     "CatalogLicense": {
+      "additionalProperties": false,
       "description": "License metadata and commercial-use flag for a catalog model.",
       "properties": {
         "name": {
@@ -156,6 +160,7 @@
       "type": "object"
     },
     "CatalogModel": {
+      "additionalProperties": false,
       "description": "A model family entry in the Skald catalog.",
       "properties": {
         "id": {
@@ -246,6 +251,7 @@
       "type": "object"
     },
     "CatalogNotes": {
+      "additionalProperties": false,
       "description": "Additional model notes such as watermark disclosure.",
       "properties": {
         "watermark": {
@@ -265,6 +271,7 @@
       "type": "object"
     },
     "CatalogRevision": {
+      "additionalProperties": false,
       "description": "A pinned upstream revision of a checkpoint.",
       "properties": {
         "id": {
@@ -308,6 +315,7 @@
       "type": "object"
     },
     "CatalogSource": {
+      "additionalProperties": false,
       "description": "Upstream hosting location and pinned revision/tag for a catalog revision.",
       "properties": {
         "host": {
@@ -338,6 +346,7 @@
       "type": "object"
     },
     "CpuHardware": {
+      "additionalProperties": false,
       "description": "CPU hardware requirements and reference speed for a model.",
       "properties": {
         "min_ram_gb": {
@@ -366,6 +375,7 @@
       "type": "object"
     },
     "CudaHardware": {
+      "additionalProperties": false,
       "description": "NVIDIA CUDA hardware requirements and reference speed for a model.",
       "properties": {
         "min_vram_gb": {
@@ -407,6 +417,7 @@
       "type": "object"
     }
   },
+  "additionalProperties": false,
   "description": "Top-level Skald model catalog document.",
   "properties": {
     "schema_version": {
