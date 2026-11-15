@@ -9,7 +9,7 @@ Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 …
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
 - **Phase 1 complete** (T01.1–T01.6 merged; E-0096). T02.1 and T03.4 also merged.
-- `master` at the PR #16 merge. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
+- `master` at `3228b4a` (PR #16 merge). Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
 - Open PRs: none. Nothing in progress.
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
