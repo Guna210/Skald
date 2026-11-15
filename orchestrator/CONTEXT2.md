@@ -403,3 +403,9 @@ Follow-up: round-2 handoff → same Opus Reviewer.
 Context: T03.1 round-2 handoff (Antigravity / Gemini 2.5 Pro). Verified: PR #15 head `79289bf`, one new commit on 25de321; master 2dead6e ancestor, merges cleanly. 5 files +309/−12 (schema.py ±63, validate.py ±12, schema JSON +11, tests +234, SPEC +1 row). ci.yml run 43689637033 + catalog.yml run 43689637077 success at 79289bf. Builder: 204 passed.
 Decision: round-2 re-review by the same Opus session; re-run the 3 surviving mutants (cap >=, retired counted, changed-entry = new id only) and check each R1 fix.
 Follow-up: VERDICT.
+
+### E-0109 · 2026-11-15 18:20 (Asia/Colombo) · T03.1 · VERDICT
+Context: Reviewer (same Opus session) round 2 on PR #15 @79289bf: APPROVED. 204 passed; clean; schema re-export identical; 11 models = 11 extra="forbid" = 11 additionalProperties:false; no .match/.search left; B4.2 example + acknowledgement validates; unknown keys rejected at every nested level. All 3 round-1 survivors now fail; warning-branch, dup-path and fullmatch mutations caught; `dest.unlink` → pass survives.
+Findings: R2-1 [Minor] deletion-after-verify not asserted by a test; R2-2 [Nit] base-unavailable warning also prints on the very first catalog PR (no base on master yet) — harmless.
+Decision: Merge PR #15 (normal merge; ci.yml run 43689637033 + catalog.yml run 43689637077 green at 79289bf, checked by the Orchestrator in E-0108). R2-1 → T03.2 prompt (add the assertion when touching the download path). R2-2 dropped. After merge: T03.2 (model file installer… wait: T03.2 = catalog fetch/cache per the dependency list; deps T03.1 + T01.6) and T03.3 (deps T03.1) become available.
+Follow-up: owner merges PR #15.
