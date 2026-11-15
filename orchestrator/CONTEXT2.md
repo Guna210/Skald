@@ -320,3 +320,8 @@ T03.5 pack builder:
  - Weekly + on-demand slow job: new .github/workflows/slow.yml (schedule + workflow_dispatch), both OSes, T00.4 rules.
 Agents: T03.5 → Claude Code cloud, strongest model (pack hosts already allowed there; complex); T02.2 and T03.1 → any agent.
 Follow-up: three handoffs.
+
+### E-0098 · 2026-11-15 11:00 (Asia/Colombo) · T02.2 · REVIEW-PROMPT
+Context: T02.2 round-1 handoff (Antigravity / Gemini 3.1 Pro). Verified: PR [Guna210/Skald#14](https://github.com/Guna210/Skald/pull/14), head `a360e1f` (1 commit) on current master 2934f8e, merges cleanly. 4 files +960: book/epub.py 639, book/__init__.py 17, test_epub_structure.py 302 (parametrised over all synthetic fixtures + Gutenberg smoke + zip-slip, URL-encoded href, 500 MB, billion laughs, corrupt zip / missing container), SPEC (tick + 1 Appendix 3 row). Parser flags: resolve_entities=False, huge_tree=False (+ no_network/load_dtd), recover parser for D1; unquote + fragment split. Limit coded as 500*1024*1024 (MiB; spec says "500 MB" — trivial). CI PR run 43680505679 success. Builder: 160 passed (25 new). Decisions: parse_epub() → frozen dataclasses EpubStructure/EpubMetadata/EpubChapterEntry/EpubCover; Chapter.linear unchanged; lxml type-ignore; 500 MB test via patched infolist().
+Decision: Reviewer = fresh Claude Opus (Builder Gemini; C1.1 defaults + parser security). Focus: every fixture's [expected] really asserted field by field (not just a subset); D1–D4 and rule 1–4/6/7 exactly; nav > NCX > heading > "Chapter N"; anchor splits; DRM rule; path safety (encoded "..", backslash, absolute, case, symlink-ish names); entity/DTD safety in every parser path incl. recover; Gutenberg smoke meaningful; scope.
+Follow-up: VERDICT.

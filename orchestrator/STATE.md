@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-15 09:40 (Asia/Colombo) · last entry: E-0097
+Last updated: 2026-11-15 11:00 (Asia/Colombo) · last entry: E-0098
 Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -10,19 +10,21 @@ Current log file: `CONTEXT2.md` (E-0058 onward). Older: `CONTEXT.md` (E-0001 …
 - **Phase 0 complete** (T00.1–T00.4 merged; E-0046). CI runs on every push/PR on windows-latest + ubuntu-latest.
 - **Phase 1 complete** (T01.1–T01.6 merged; E-0096). T02.1 and T03.4 also merged.
 - `master` at `2934f8e`. Default branch `master`; spec v1.0 approved (E-0005). Merge method: normal merge (E-0021).
-- Open PRs: none yet (T02.2, T03.1, T03.5 Builders starting, E-0097).
+- Open PRs: #14 T02.2 (head a360e1f, on master, CI green; in review, E-0098). T03.1 branch exists; T03.5 not pushed yet.
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036).
 - Milestones reached: none (next: M1 after T05.8).
 
 ## Tasks
 - Merged: T00.1 (PR #2), T00.2 (PR #3), T00.3 (PR #4), T00.4 (PR #5), T01.1 (PR #6), T01.2 (PR #7), T02.1 (PR #8), T03.4 (PR #11), T01.4 (PR #10), T01.6 (PR #9), T01.5 (PR #12), T01.3 (PR #13).
-- Building (round 1, E-0097): T02.2 EPUB structure (`task/T02.2-epub-structure`), T03.1 catalog schema (`task/T03.1-catalog-schema`), T03.5 pack builder (`task/T03.5-pack-builder`, Claude cloud, strongest model). Later merges rebase (Appendix 3).
+- In review: T02.2 EPUB structure, PR #14, round 1, fresh Claude Opus (E-0098).
+- Building (round 1, E-0097): T03.1 catalog schema (`task/T03.1-catalog-schema`), T03.5 pack builder (`task/T03.5-pack-builder`, Claude cloud, strongest model). Later merges rebase (Appendix 3).
 - Available, not started (prompt only when the owner asks; E-0057): T03.7 worker protocol, T03.9 [SPIKE][REVIEW], T06.1.
 - T03.7 prompt: adapter registry = `ADAPTER_VERSIONS = {...}` dict literal in worker/skald_worker/adapters/__init__.py (read by T03.1 via ast.literal_eval) (E-0097).
 
 ## Waiting on the owner
-1. Run the T02.2, T03.1 and T03.5 Builders and send back their handoffs (E-0097).
-2. Later, before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
+1. Run the T02.2 Reviewer (fresh Claude Opus) and send back the verdict (E-0098).
+2. Send the T03.1 and T03.5 handoffs when ready (E-0097).
+3. Later, before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs
 None.
@@ -85,4 +87,4 @@ None (T03.4 proposal 12: owner said yes, E-0070).
 - T09.2: confirm the CLEANUP.md user-data paths once productName is set (E-0009).
 
 ## Recommended next step
-Process the T02.2 / T03.1 / T03.5 handoffs. T03.1 and T03.5 reviews: Opus (licences, catalog, packs). After merge, list available tasks (T03.5 becomes available). After merge, list available tasks without prompts (E-0057).
+Process the T02.2 verdict and the T03.1 / T03.5 handoffs. T03.1 and T03.5 reviews: Opus (licences, catalog, packs). After merge, list available tasks (T03.5 becomes available). After merge, list available tasks without prompts (E-0057).
