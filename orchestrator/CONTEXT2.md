@@ -288,3 +288,8 @@ Context: Reviewer (same Opus session) round 2 on PR #13 @f2871ef: APPROVED. test
 Findings: R2-1 [Minor] the "already waited" test doesn't discriminate the returncode guards (defence in depth); suggested a real reuse simulation (returncode=0 stand-in + captured live sleeper must survive). R2-2 [Nit] returncode pruning only drops polled children; bounded by job lifetime; untested.
 Decision: Merge PR #13 (normal merge; CI PR run 43632405252 green at f2871ef, checked by the Orchestrator in E-0094). R2-1 → T03.5 prompt (first task that registers real subprocesses: add the reuse-simulation test). R2-2 dropped. After merge: Phase 1 complete (T01.1–T01.6); T03.5 newly available.
 Follow-up: owner merges PR #13; list available tasks without prompts.
+
+### E-0096 · 2026-11-15 09:00 (Asia/Colombo) · T01.3 · MERGED
+Context: Owner: "Merged #13". master now `2934f8e` = "Merge pull request #13 from Guna210/task/T01.3-job-manager" (normal merge). Phase 1 complete (T01.1–T01.6).
+Decision: available (prompts only on request, E-0057): T02.2, T03.1, T03.5, T03.7, T03.9 [SPIKE][REVIEW], T06.1. Nothing in progress; no open PRs.
+Follow-up: none.
