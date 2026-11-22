@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import os
 import re
@@ -132,18 +133,45 @@ def _check_cancel(cancel: Callable[[], bool] | None) -> None:
         raise DownloadCancelled("Download cancelled")
 
 
-def _decode_text(resp: requests.Response) -> str:
-    content_type = resp.headers.get("content-type", "")
-    if (
-        "charset" not in content_type.lower()
-        and resp.encoding
-        and resp.encoding.lower() == "iso-8859-1"
-    ):
-        resp.encoding = "utf-8"
-    return resp.text
+def _decode_bytes(raw: bytes, headers: Mapping[str, str], encoding: str | None) -> str:
+    content_type = headers.get("content-type", "")
+    enc = encoding
+    if "charset" not in content_type.lower() and (not enc or enc.lower() == "iso-8859-1"):
+        enc = "utf-8"
+    return raw.decode(enc or "utf-8", errors="replace")
 
 
-def _get_response_with_retries(
+def _read_bounded_body(resp: requests.Response, url: str, max_bytes: int) -> bytes:
+    content_length = _parse_content_length(resp.headers)
+    if content_length is not None and content_length > max_bytes:
+        raise SkaldError(
+            "http_error",
+            f"Response Content-Length {content_length} exceeds max_bytes {max_bytes}: {url}",
+            details={
+                "url": url,
+                "max_bytes": max_bytes,
+                "content_length": content_length,
+            },
+        )
+    buf = bytearray()
+    for chunk in resp.iter_content(chunk_size=DOWNLOAD_CHUNK_SIZE):
+        if not chunk:
+            continue
+        if len(buf) + len(chunk) > max_bytes:
+            raise SkaldError(
+                "http_error",
+                f"Response body exceeds max_bytes {max_bytes}: {url}",
+                details={
+                    "url": url,
+                    "max_bytes": max_bytes,
+                    "actual_bytes": len(buf) + len(chunk),
+                },
+            )
+        buf.extend(chunk)
+    return bytes(buf)
+
+
+def _request_with_retries(
     url: str,
     *,
     method: str = "GET",
@@ -153,24 +181,59 @@ def _get_response_with_retries(
     retries: int | None = None,
     backoff: float | None = None,
     session: requests.Session | None = None,
-) -> requests.Response:
+    read_body: bool = True,
+    max_bytes: int | None = None,
+) -> tuple[bytes, dict[str, str], str | None]:
+    if max_bytes is not None and max_bytes < 0:
+        raise ValueError(f"max_bytes must be non-negative, got {max_bytes}")
+
     max_retries = MAX_RETRIES if retries is None else retries
     backoff_base = BACKOFF_SECONDS if backoff is None else backoff
     req_timeout = _resolve_timeout(timeout)
     req_headers = _build_headers(headers)
+    stream = read_body and max_bytes is not None
 
     own_session = session is None
     sess = requests.Session() if session is None else session
     try:
         for attempt in range(max_retries + 1):
             try:
-                resp = sess.request(
+                with sess.request(
                     method,
                     url,
                     headers=req_headers,
                     timeout=req_timeout,
                     allow_redirects=allow_redirects,
-                )
+                    stream=stream,
+                ) as resp:
+                    status = resp.status_code
+                    if 500 <= status < 600:
+                        reason = resp.reason or ""
+                        resp.close()
+                        if attempt < max_retries:
+                            logger.warning(
+                                "HTTP %d on attempt %d/%d for %s; retrying",
+                                status,
+                                attempt + 1,
+                                max_retries + 1,
+                                url,
+                            )
+                            _sleep_backoff(attempt, backoff_base)
+                            continue
+                        raise _http_status_error(status, url, reason)
+
+                    if status >= 400 or status < 200:
+                        reason = resp.reason or ""
+                        resp.close()
+                        raise _http_status_error(status, url, reason)
+
+                    if not read_body:
+                        body = b""
+                    elif max_bytes is not None:
+                        body = _read_bounded_body(resp, url, max_bytes)
+                    else:
+                        body = resp.content
+                    return body, dict(resp.headers), resp.encoding
             except (
                 requests.exceptions.Timeout,
                 requests.exceptions.ConnectionError,
@@ -189,29 +252,6 @@ def _get_response_with_retries(
                 raise _request_exc_to_skald_error(exc, url) from exc
             except requests.exceptions.RequestException as exc:
                 raise _request_exc_to_skald_error(exc, url) from exc
-
-            status = resp.status_code
-            if 500 <= status < 600:
-                reason = resp.reason or ""
-                resp.close()
-                if attempt < max_retries:
-                    logger.warning(
-                        "HTTP %d on attempt %d/%d for %s; retrying",
-                        status,
-                        attempt + 1,
-                        max_retries + 1,
-                        url,
-                    )
-                    _sleep_backoff(attempt, backoff_base)
-                    continue
-                raise _http_status_error(status, url, reason)
-
-            if status >= 400 or status < 200:
-                reason = resp.reason or ""
-                resp.close()
-                raise _http_status_error(status, url, reason)
-
-            return resp
     finally:
         if own_session:
             sess.close()
@@ -229,7 +269,7 @@ def head(
     session: requests.Session | None = None,
 ) -> dict[str, str]:
     """Send an HTTP HEAD request (following redirects) and return response headers."""
-    with _get_response_with_retries(
+    _, resp_headers, _ = _request_with_retries(
         url,
         method="HEAD",
         allow_redirects=True,
@@ -238,8 +278,9 @@ def head(
         retries=retries,
         backoff=backoff,
         session=session,
-    ) as resp:
-        return dict(resp.headers)
+        read_body=False,
+    )
+    return resp_headers
 
 
 def get_text(
@@ -250,17 +291,19 @@ def get_text(
     retries: int | None = None,
     backoff: float | None = None,
     session: requests.Session | None = None,
+    max_bytes: int | None = None,
 ) -> str:
     """Fetch a URL and return its decoded text body."""
-    with _get_response_with_retries(
+    raw, resp_headers, encoding = _request_with_retries(
         url,
         headers=headers,
         timeout=timeout,
         retries=retries,
         backoff=backoff,
         session=session,
-    ) as resp:
-        return _decode_text(resp)
+        max_bytes=max_bytes,
+    )
+    return _decode_bytes(raw, resp_headers, encoding)
 
 
 def get_json(
@@ -271,24 +314,29 @@ def get_json(
     retries: int | None = None,
     backoff: float | None = None,
     session: requests.Session | None = None,
+    max_bytes: int | None = None,
 ) -> Any:
     """Fetch a URL and parse its response body as JSON."""
-    with _get_response_with_retries(
+    raw, resp_headers, encoding = _request_with_retries(
         url,
         headers=headers,
         timeout=timeout,
         retries=retries,
         backoff=backoff,
         session=session,
-    ) as resp:
-        try:
-            return resp.json()
-        except ValueError as exc:
-            raise SkaldError(
-                "http_error",
-                f"Invalid JSON response from {url}",
-                details={"url": url, "error": str(exc)},
-            ) from exc
+        max_bytes=max_bytes,
+    )
+    content_type = resp_headers.get("content-type", "")
+    try:
+        if "charset" in content_type.lower() and encoding:
+            return json.loads(raw.decode(encoding))
+        return json.loads(raw)
+    except (ValueError, UnicodeDecodeError, RecursionError) as exc:
+        raise SkaldError(
+            "http_error",
+            f"Invalid JSON response from {url}",
+            details={"url": url, "error": str(exc)},
+        ) from exc
 
 
 def _file_size_and_sha256(path: Path) -> tuple[int, str]:

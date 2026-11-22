@@ -6,6 +6,15 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel
 
+from skald_core.catalog.schema import (
+    CatalogFile,
+    CatalogHardware,
+    CatalogLicense,
+    CatalogNotes,
+    CatalogSource,
+    ModelStatus,
+)
+
 ErrorKind = Literal[
     "offline",
     "epub_drm",
@@ -22,6 +31,7 @@ ErrorKind = Literal[
     "ffmpeg_failed",
     "folder_not_empty",
     "project_invalid",
+    "catalog_invalid",
     "internal",
     "http_not_found",
     "http_error",
@@ -367,3 +377,77 @@ class RenderRecord(BaseModel):
     qc_summary: dict[str, int] = Field(default_factory=dict)
     ffmpeg_version: str | None = None
     ffmpeg_commands: list[list[str]] = Field(default_factory=list)
+
+
+IncompatibilityReason = Literal["adapter_missing", "adapter_too_old", "app_too_old"]
+CatalogDataSource = Literal["cache", "bundled"]
+
+
+class AnnotatedCatalogRevision(BaseModel):
+    """Catalog revision annotated with local compatibility and installation state."""
+
+    id: str
+    bundled: bool = False
+    min_adapter_version: str
+    source: CatalogSource
+    files: list[CatalogFile]
+    changelog: str = ""
+    compatible: bool
+    reason: IncompatibilityReason | None = None
+    installed: bool = False
+    update_available: bool = False
+
+
+class AnnotatedCatalogCheckpoint(BaseModel):
+    """Catalog checkpoint annotated with default-revision compatibility, install, and fit."""
+
+    id: str
+    max_chars: int
+    default_revision: str
+    revisions: list[AnnotatedCatalogRevision]
+    compatible: bool
+    reason: IncompatibilityReason | None = None
+    installed: bool = False
+    update_available: bool = False
+    fit: Any = None
+
+
+class AnnotatedCatalogModel(BaseModel):
+    """Catalog model family annotated with compatibility, install, update, and fit state."""
+
+    id: str
+    name: str
+    status: ModelStatus
+    family_adapter: str
+    pack: str | None = None
+    summary: str
+    license: CatalogLicense
+    languages: list[str]
+    capabilities: list[str] = Field(default_factory=list)
+    hardware: CatalogHardware
+    notes: CatalogNotes = Field(default_factory=CatalogNotes)
+    checkpoints: list[AnnotatedCatalogCheckpoint]
+    compatible: bool
+    reason: IncompatibilityReason | None = None
+    installed: bool = False
+    update_available: bool = False
+    fit: Any = None
+
+
+class CatalogView(BaseModel):
+    """Response payload returned by `catalog.get` with local annotations."""
+
+    schema_version: int
+    min_app_version: str
+    updated_at: str
+    source: CatalogDataSource
+    models: list[AnnotatedCatalogModel] = Field(default_factory=list)
+
+
+class CatalogRefreshResult(BaseModel):
+    """Result payload produced by the `catalog.refresh` background job."""
+
+    updated_at: str
+    model_count: int
+    source: CatalogDataSource = "cache"
+    catalog: CatalogView

@@ -12,12 +12,25 @@ from typing import get_args
 import pytest
 from pydantic import BaseModel, ValidationError
 
+from skald_core.catalog.schema import (
+    CatalogFile,
+    CatalogHardware,
+    CatalogLicense,
+    CatalogNotes,
+    CatalogSource,
+    CpuHardware,
+)
 from skald_core.schemas import (
     EXPORTED_MODELS,
+    AnnotatedCatalogCheckpoint,
+    AnnotatedCatalogModel,
+    AnnotatedCatalogRevision,
     Assignment,
     BlendPart,
     BlendVoiceSpec,
     Book,
+    CatalogRefreshResult,
+    CatalogView,
     Chapter,
     Chunk,
     ChunkStatus,
@@ -73,6 +86,8 @@ _EXPECTED_MODEL_NAMES = {
     "JobFinished",
     "JobStatus",
     "SkaldErrorData",
+    "CatalogView",
+    "CatalogRefreshResult",
 }
 
 _EXPECTED_ERROR_KINDS = {
@@ -91,6 +106,7 @@ _EXPECTED_ERROR_KINDS = {
     "ffmpeg_failed",
     "folder_not_empty",
     "project_invalid",
+    "catalog_invalid",
     "internal",
     "http_not_found",
     "http_error",
@@ -112,6 +128,9 @@ def test_exported_models_cover_spec_and_have_docstrings_and_snake_case_fields() 
         CloneVoiceSpec,
         DesignSource,
         PinnedModelRecord,
+        AnnotatedCatalogRevision,
+        AnnotatedCatalogCheckpoint,
+        AnnotatedCatalogModel,
     )
     for model in all_models:
         assert model.__doc__ and model.__doc__.strip(), f"{model.__name__} missing docstring"
@@ -306,6 +325,79 @@ def test_core_models_round_trip_json() -> None:
         message="Working",
         stage="parse",
     )
+    catalog_view = CatalogView(
+        schema_version=1,
+        min_app_version="0.1.0",
+        updated_at="2026-11-15",
+        source="bundled",
+        models=[
+            AnnotatedCatalogModel(
+                id="kokoro",
+                name="Kokoro",
+                status="active",
+                family_adapter="kokoro",
+                pack=None,
+                summary="Fast CPU model.",
+                license=CatalogLicense(
+                    name="Apache-2.0",
+                    url="https://example.com/license",
+                    commercial=True,
+                ),
+                languages=["en-us"],
+                capabilities=["presets"],
+                hardware=CatalogHardware(cpu=CpuHardware(min_ram_gb=4.0), cuda=None),
+                notes=CatalogNotes(watermark=None),
+                checkpoints=[
+                    AnnotatedCatalogCheckpoint(
+                        id="kokoro-v1.0",
+                        max_chars=400,
+                        default_revision="r1",
+                        revisions=[
+                            AnnotatedCatalogRevision(
+                                id="r1",
+                                bundled=True,
+                                min_adapter_version="1.0.0",
+                                source=CatalogSource(
+                                    host="github-release",
+                                    repo="example/kokoro",
+                                    ref="v1.0",
+                                ),
+                                files=[
+                                    CatalogFile(
+                                        path="kokoro.onnx",
+                                        format="onnx",
+                                        size=100,
+                                        sha256="a" * 64,
+                                    )
+                                ],
+                                changelog="Initial",
+                                compatible=True,
+                                reason=None,
+                                installed=False,
+                                update_available=False,
+                            )
+                        ],
+                        compatible=True,
+                        reason=None,
+                        installed=False,
+                        update_available=False,
+                        fit=None,
+                    )
+                ],
+                compatible=True,
+                reason=None,
+                installed=False,
+                update_available=False,
+                fit=None,
+            )
+        ],
+    )
+    catalog_refresh = CatalogRefreshResult(
+        updated_at="2026-11-15",
+        model_count=1,
+        source="cache",
+        catalog=catalog_view,
+    )
 
     for instance in (
         manifest,
@@ -324,6 +416,8 @@ def test_core_models_round_trip_json() -> None:
         job_log,
         job_finished,
         job_status,
+        catalog_view,
+        catalog_refresh,
     ):
         round_tripped = type(instance).model_validate_json(instance.model_dump_json())
         assert round_tripped == instance
