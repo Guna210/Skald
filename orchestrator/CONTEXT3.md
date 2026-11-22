@@ -41,3 +41,29 @@ Context: T02.3 Builder Q1: fixture 02_epub2_ncx_only.toml body_xhtml line 31 has
 Decision: Option (a): add "cold " to line 71 only. Record it in Appendix 3 as a fixture-expectation correction approved by the Orchestrator.
 Why: the expectation contradicts its own input, so this is a transcription typo, not a golden value edited to make a test pass. The input is right and its EPUB is committed. Its D2 counts were verified independently in the T02.1/T02.2 reviews, and changing the input would churn those bytes and counts for no gain. The Reviewer will check that the diff to the defs is exactly this one line.
 Follow-up: tell the T02.3 Reviewer to confirm that no other expected value changed.
+
+### E-0121 · 2026-11-22 19:40 (Asia/Colombo) · T02.3 · REVIEW-PROMPT
+Context: T02.3 round-1 handoff (Antigravity / Gemini 2.5 Pro), PR #18 `task/T02.3-xhtml-paragraphs` @c44f4ce. Checked by the Orchestrator:
+ - three commits on master 3228b4a, which is an ancestor;
+ - 7 files, +724/−3: xhtml.py +287, test_xhtml_paragraphs.py +372, test_epub_structure.py +57 (R3-1), book/__init__ +2, SPEC.md (3 Appendix 3 rows + index tick), docs/defaults.md item 5, fixture 02 line 71;
+ - epub.py UNCHANGED; the only fixture change is the approved line-71 "cold " fix (E-0120);
+ - all 12 CI checks green at c44f4ce;
+ - no secrets in the diff.
+The Builder reports 243 passed. PR #17 (T03.2) is also open; its handoff has not been pasted yet.
+Builder's own decisions:
+ - `<br>` normalization also inside table cells; empty and &nbsp;-only cells are omitted before joining;
+ - a final buffer flush, in xhtml.py's walker callbacks, so a slice that starts mid-`<p>` (an anchor inside a paragraph) still emits its text.
+Builder's follow-ups on the public-domain EPUBs:
+ - Gutenberg header, credits and licence chapters; untagged Contents and ILLUSTRATIONS tables;
+ - Christmas Carol illustration captions (div.fig span) read mid-stave, duplicating the headings;
+ - no class="pagenum" spans in either book.
+Decision: Send to a fresh Claude Opus Reviewer (the Builder was Gemini; parser of untrusted input). FOCUS:
+ - mid-paragraph anchor start and end: no duplicate or lost text across adjacent chapters;
+ - skipped subtrees keep their tails (noteref, aside, img, pagebreak, rt);
+ - mixed-content containers;
+ - the id hash input is the final text;
+ - the tests are meaningful (paragraph equality for every fixture, D2 sanity, noteref beside punctuation, id uniqueness);
+ - nesting depth vs recursion;
+ - Appendix 3 rows faithful to E-0119/E-0120.
+Not findings (planned follow-ups): Gutenberg boilerplate and licence chapters are content for T02.8's text-review skim and T07.4's skip toggles. Figure captions (figcaption, Gutenberg div.fig) are not covered by C1.1 → decide at T02.8 whether to skip captions by default.
+Follow-up: owner runs the Reviewer.
