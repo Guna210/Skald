@@ -761,6 +761,63 @@ def test_dangling_anchors_first_middle_last_and_consecutive(
     assert abs(sum(ch.char_count for ch in res.chapters) - whole_count) <= len(anchors)
 
 
+def test_dangling_anchor_position_out_of_order_nav(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """T02.2 R3-1: nav order a, gone, c, b places 'gone' after 'a' and before 'b'."""
+    opf = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<package xmlns="http://www.idpf.org/2007/opf" version="3.0"'
+        ' unique-identifier="pub-id">\n'
+        '  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">\n'
+        '    <dc:identifier id="pub-id">urn:uuid:0000</dc:identifier>\n'
+        "    <dc:title>Dangling Order</dc:title>\n"
+        "  </metadata>\n"
+        "  <manifest>\n"
+        '    <item id="nav" href="nav.xhtml"'
+        ' media-type="application/xhtml+xml" properties="nav"/>\n'
+        '    <item id="ch1" href="ch1.xhtml" media-type="application/xhtml+xml"/>\n'
+        "  </manifest>\n"
+        '  <spine><itemref idref="ch1"/></spine>\n'
+        "</package>\n"
+    )
+    ch1 = (
+        b'<?xml version="1.0" encoding="UTF-8"?>\n'
+        b'<html xmlns="http://www.w3.org/1999/xhtml"><body>\n'
+        b'  <section id="a"><p>Alpha section text.</p></section>\n'
+        b'  <section id="b"><p>Bravo section text.</p></section>\n'
+        b'  <section id="c"><p>Charlie section text.</p></section>\n'
+        b"</body></html>\n"
+    )
+    nav = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<html xmlns="http://www.w3.org/1999/xhtml"'
+        ' xmlns:epub="http://www.idpf.org/2007/ops">\n'
+        '<body><nav epub:type="toc"><ol>'
+        '<li><a href="ch1.xhtml#a">A</a></li>'
+        '<li><a href="ch1.xhtml#gone">Gone</a></li>'
+        '<li><a href="ch1.xhtml#c">C</a></li>'
+        '<li><a href="ch1.xhtml#b">B</a></li>'
+        "</ol></nav></body></html>\n"
+    )
+    epub_path = _build_minimal_epub(
+        tmp_path / "dangling_order.epub",
+        opf_xml=opf,
+        nav_xml=nav,
+        extra_files={"OEBPS/ch1.xhtml": ch1},
+    )
+    with caplog.at_level(logging.WARNING):
+        res = parse_epub(epub_path)
+
+    assert [ch.anchor for ch in res.chapters] == ["a", "gone", "b", "c"]
+    assert res.chapters[1].char_count == 0
+    assert res.chapters[0].char_count == len("Alpha section text.")
+    assert res.chapters[2].char_count == len("Bravo section text.")
+    assert res.chapters[3].char_count == len("Charlie section text.")
+    assert any("OEBPS/ch1.xhtml#gone" in rec.message for rec in caplog.records)
+
+
 def test_rule4_epub_type_scope_positive_and_negative(tmp_path: Path) -> None:
     prose = "word " * 50  # 250 chars -> never "short"
     opf = (
