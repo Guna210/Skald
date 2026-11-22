@@ -67,3 +67,23 @@ Decision: Send to a fresh Claude Opus Reviewer (the Builder was Gemini; parser o
  - Appendix 3 rows faithful to E-0119/E-0120.
 Not findings (planned follow-ups): Gutenberg boilerplate and licence chapters are content for T02.8's text-review skim and T07.4's skip toggles. Figure captions (figcaption, Gutenberg div.fig) are not covered by C1.1 → decide at T02.8 whether to skip captions by default.
 Follow-up: owner runs the Reviewer.
+
+### E-0122 · 2026-11-22 20:30 (Asia/Colombo) · T02.3 · VERDICT
+Context: Reviewer (fresh Claude Opus) round 1 on PR #18 @c44f4ce: APPROVED.
+ - Checks: ruff and format clean; mypy clean (26 files); the targeted tests pass (60). The full suite was not run in the Reviewer's sandbox (psutil and pytest-timeout missing); CI is green (12/12, E-0121).
+ - Confirmed: epub.py unchanged; the only fixture change is line 71 of fixture 02; the paragraph-equality test is parametrized over all 12 defs.
+ - 10 mutations were all caught (noteref text kept, rt kept, cells without a space, flush removed, <br> joined by a space, index dropped from the id hash, heading_depth never cleared, suggested_skip ignored, both page-break checks).
+ - Ad-hoc cases OK: an anchor mid-<p> or mid-inline gives no duplicated or lost text (Builder decision 2 is correct); an anchor on a noteref loses nothing; tails are kept; 200 nesting levels work; 3000 levels hit lxml's 256-level limit, recover to an empty chapter with a warning, and never crash.
+Findings:
+ - R1-1 [Minor] an anchor inside a heading (<h2><a id/>Title</h2>) → the title gets is_heading=False, because on_enter(h2) never fires; no text is lost; the shipped Gutenberg books are not affected.
+ - R1-2 [Nit] <pre> collapses to one line.
+ - R1-3 [Nit] a nested table's cells come out of order; stray text in a table.
+ - R1-4 [Nit] a document deeper than 256 levels → empty chapter plus a warning.
+Decision: Merge PR #18 (normal merge; mergeable, clean, head c44f4ce, CI green).
+ - R1-1 → deferred to T02.8 (golden text tests): initialise heading_depth from start_el's h1–h6 ancestors, plus a test.
+ - R1-2 → deferred to T02.8: decide whether <pre> keeps its line breaks like <br> (verse), and record it.
+ - R1-3 dropped (rare).
+ - R1-4 noted (no code change; useful if a user reports an "empty chapter").
+Why: no blockers or majors; R1-1 affects only the heading flag (used later for pauses), so T02.8 is early enough.
+After merge: T02.4 (TXT/MD import) and T02.5 (normalization + lexicon) become available (both depend only on T02.3). Owner rule E-0057: announce them, no prompts until asked. PR #17 (T03.2) will need a rebase on the new master before its review (both PRs append Appendix 3).
+Follow-up: owner merges PR #18.

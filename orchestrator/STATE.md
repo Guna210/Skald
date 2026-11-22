@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-22 19:40 (Asia/Colombo) · last entry: E-0121
+Last updated: 2026-11-22 20:30 (Asia/Colombo) · last entry: E-0122
 Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 … E-0117), `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -10,7 +10,7 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 - **Phase 0 complete** (T00.1–T00.4; E-0046). **Phase 1 complete** (T01.1–T01.6; E-0096).
 - Also merged: T02.1, T02.2 (Phase 2); T03.1, T03.4, T03.5 (Phase 3).
 - `master` at `3228b4a` (PR #16 merge). Default branch `master`. Merge method: **normal merge** (E-0021) — never tell the owner to squash.
-- Open PRs: **#18 T02.3** (round 1 @c44f4ce, CI green, in review with a fresh Opus, E-0121); **#17 T03.2** (open, handoff not yet pasted). Both from 3228b4a; the second to merge rebases (both append Appendix 3).
+- Open PRs: **#18 T02.3** — APPROVED round 1 (E-0122), waiting for the owner to merge (normal merge); **#17 T03.2** (open, handoff not yet pasted). Both from 3228b4a; the second to merge rebases (both append Appendix 3).
 - CI: ci.yml (core/worker/app on windows-latest + ubuntu-latest), catalog.yml (PRs on catalog/** + weekly), slow.yml (weekly + workflow_dispatch; real CPU smoke-pack install — first run 43719877209 passed on both OSes, E-0117).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036). Milestones: none yet (M1 after T05.8).
 
@@ -20,7 +20,7 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 - Unlock map: T03.6 ← T03.2 + T01.6 + T01.3; T03.8 ← T03.7 + T03.5 + T01.3; T02.4/T02.5 ← T02.3; T06.2 ← T06.1 + T01.3; T04.1 ← T03.7 + T03.9 + T03.6.
 
 ## Waiting on the owner
-1. Run the T02.3 Reviewer (Opus) and paste the verdict; paste the T03.2 handoff when ready.
+1. Merge PR #18 (T02.3); paste the T03.2 handoff when ready (it needs a rebase on the new master first).
 2. Before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs / open questions
@@ -43,7 +43,7 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 - **T06.2:** core.ts passes SKALD_STORAGE_DIR only when the user chose a storage folder (F1, E-0071).
 - **T06.3:** ProjectManifest allows extra keys (TS index signature); the UI ignores unknown keys and never sends them back modified (E-0088).
 - **T07.10:** storage-folder move per G11 incl. python/ (E-0070, E-0072); default storage %LOCALAPPDATA%\Skald / ~/.local/share/Skald (G3); "Free up space" retries cleans remove() skipped while other ops ran + a test for that branch; consider a storage-wide lock while pruning (T03.5 R2-1/R2-2, E-0116).
-- **T02.8:** decide whether figure captions (figcaption, Gutenberg div.fig) are skipped by default; Gutenberg header/licence chapters and untagged Contents/ILLUSTRATIONS tables go into the text-review skim (E-0121).
+- **T02.8:** fix T02.3 R1-1 (heading_depth from start_el's h1–h6 ancestors when an anchor sits inside a heading, plus a test) and decide R1-2 (<pre> keeps its line breaks like <br>?) (E-0122); decide whether figure captions (figcaption, Gutenberg div.fig) are skipped by default; Gutenberg header/licence chapters and untagged Contents/ILLUSTRATIONS tables go into the text-review skim (E-0121).
 - **T09.1:** the frozen core needs `catalog/catalog.json` and `worker/skald_worker/adapters/__init__.py` as data files under sys._MEIPASS (T03.2 resource-root helper, E-0119); test fixtures (incl. Gutenberg EPUBs) are never packaged (E-0060); exclude vendor/*/.tmp-*, .old-*, vendor/.downloads, ffplay/doc/man (E-0027).
 - **T09.2 / T06.1:** Electron app name must be "Skald" so userData matches the core's fallback (%APPDATA%\Skald, ~/.config/Skald; E-0119). CLEANUP.md must list userData paths and the default storage folder (E-0009, E-0070).
 - **T09.4:** ffmpeg LGPL-3.0-or-later text + source link (E-0024); soundfile/libsndfile LGPL-2.1 (E-0048); NVIDIA terms for GPU packs (G12, E-0070).
