@@ -35,3 +35,9 @@ T03.2 Catalog fetch, cache, compatibility:
  - Carry T03.1 R2-1: test that catalog.validate --network deletes each downloaded file after verification.
 Reviewer plan: fresh Claude Opus for both (untrusted-input parsers), different model from each Builder.
 Follow-up: owner opens two Builder sessions.
+
+### E-0120 · 2026-11-22 19:10 (Asia/Colombo) · T02.3 · QUESTION + ANSWER
+Context: T02.3 Builder Q1: fixture 02_epub2_ncx_only.toml body_xhtml line 31 has "…whenever the cold evening rain…", but expected.chapters[1].paragraphs[2] (line 71) omits "cold ". All other fixtures match 100%; every fixture without notes/tables/<br>/page breaks matches the D2 count exactly. Orchestrator confirmed both lines on master 3228b4a. Until now no test compared the expected paragraph text (test_epub_fixtures.py only asserts the list is non-empty), so the typo was never caught.
+Decision: Option (a): add "cold " to line 71 only. Record it in Appendix 3 as a fixture-expectation correction approved by the Orchestrator.
+Why: the expectation contradicts its own input, so this is a transcription typo, not a golden value edited to make a test pass. The input is right and its EPUB is committed. Its D2 counts were verified independently in the T02.1/T02.2 reviews, and changing the input would churn those bytes and counts for no gain. The Reviewer will check that the diff to the defs is exactly this one line.
+Follow-up: tell the T02.3 Reviewer to confirm that no other expected value changed.

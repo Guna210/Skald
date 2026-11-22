@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-22 18:30 (Asia/Colombo) · last entry: E-0119
+Last updated: 2026-11-22 19:10 (Asia/Colombo) · last entry: E-0120
 Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 … E-0117), `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -32,7 +32,7 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 ## Standing notes for prompts (by task)
 - **All Builder prompts:** owner authorizes pushing to `task/<ID>-<slug>` and opening the PR even from a `claude/…` session branch (E-0004); source `scripts/dev-env.*` first, venv Python (`core/.venv`), no `.npmrc` (E-0016); fetch_deps.py via the venv Python (E-0027); every subprocess passes stdout explicitly, never inherits it (E-0052); one -32602 mechanism = `SkaldError(kind, …, code=INVALID_PARAMS)` (E-0086); RPC methods are registered in `rpc/methods.py:register_all` (E-0090); spec "YAML" fixture defs = TOML via tomllib (E-0049); pysbd SyntaxWarning needs a scoped ignore under `filterwarnings = error` (E-0048).
 - **Reviewer prompts:** read-only, no pushes or PR comments; verify handoffs against the PR (E-0009, E-0030).
-- **T02.3 (in progress; prompt decisions E-0119):** reuse T02.2's `resolve_body_slices`/`walk_body_slice` unchanged (slices in document order, paired `anchor`, dangling slices empty; pre-anchor text in the first chapter; comments/PIs skipped) (E-0099, E-0101, E-0103); acceptance check "paragraph text count = D2 count (± boundary spaces)"; carry T02.2 R3-1 (pin a dangling entry's position: nav a, gone, c, b) and T00.1 R1-1 (docs/defaults.md C1.1 item 5: alt text / note bodies skipped "by default") (E-0011); Paragraph.is_heading is provisional (E-0076); D1–D4 in Appendix 3 apply.
+- **T02.3 (in progress; prompt decisions E-0119; Q1 fixture 02 typo → fix expectation line 71 only, E-0120 — Reviewer checks the defs diff is that one line):** reuse T02.2's `resolve_body_slices`/`walk_body_slice` unchanged (slices in document order, paired `anchor`, dangling slices empty; pre-anchor text in the first chapter; comments/PIs skipped) (E-0099, E-0101, E-0103); acceptance check "paragraph text count = D2 count (± boundary spaces)"; carry T02.2 R3-1 (pin a dangling entry's position: nav a, gone, c, b) and T00.1 R1-1 (docs/defaults.md C1.1 item 5: alt text / note bodies skipped "by default") (E-0011); Paragraph.is_heading is provisional (E-0076); D1–D4 in Appendix 3 apply.
 - **T02.7:** EPUB 2 `<guide>` and `role="doc-*"` are not used for suggested skips (E-0099); remote spine item → epub_invalid and pre-anchor sections don't flag the first chapter (ruled, Appendix 3).
 - **T03.2 (in progress; prompt decisions E-0119 — userData via SKALD_DATA_DIR, new kind catalog_invalid, 5 MiB cap, schema-only validation):** checkpoint/revision ids are unique per parent, not globally (E-0107); add a test that catalog.validate deletes each downloaded file after verification (T03.1 R2-1, E-0109).
 - **T03.3:** a driver ≥ the CUDA 12.x minor-version floor (525.60.13 / 528.33) but < the 12.6 toolkit driver (560.28.03 / 560.76) → "may not work" (PTX-JIT caveat), not a clean fit (E-0114); don't promise Pascal (sm_61) until confirmed on a real card; a future cu13 accelerator drops Maxwell/Pascal/Volta (D9) (E-0069).
