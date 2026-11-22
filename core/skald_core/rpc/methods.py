@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
+from skald_core.catalog.client import get_catalog, submit_catalog_refresh
 from skald_core.jobs import JobManager
 from skald_core.project.rpc import register as register_project_methods
 from skald_core.rpc.server import RpcServer
 from skald_core.rpc.system import get_system_info
-from skald_core.schemas import JobStatus, SystemInfo
+from skald_core.schemas import CatalogView, JobRef, JobStatus, SystemInfo
 
 
 class JobIdParams(BaseModel):
@@ -22,6 +23,12 @@ def register_all(server: RpcServer, job_manager: JobManager | None = None) -> Jo
     manager = JobManager(notify_fn=server.notify) if job_manager is None else job_manager
 
     server.register("system.info", get_system_info, result_model=SystemInfo)
+    server.register("catalog.get", get_catalog, result_model=CatalogView)
+    server.register(
+        "catalog.refresh",
+        lambda: JobRef(job_id=submit_catalog_refresh(manager)),
+        result_model=JobRef,
+    )
     register_project_methods(server)
     server.register("job.cancel", lambda p: manager.cancel(p.job_id), JobIdParams, JobStatus)
     server.register("job.pause", lambda p: manager.pause(p.job_id), JobIdParams, JobStatus)
