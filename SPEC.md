@@ -628,7 +628,7 @@ Agents tick `[x]` when a task is done.
 **Phase 2 — Book import and text**
 - [x] T02.1 EPUB fixture generator and public-domain fixtures
 - [x] T02.2 EPUB container, spine, navigation and metadata
-- [ ] T02.3 XHTML to paragraphs
+- [x] T02.3 XHTML to paragraphs
 - [ ] T02.4 TXT and Markdown import
 - [ ] T02.5 Text normalization and pronunciation lexicon
 - [ ] T02.6 Sentence splitting, chunking and dialogue detection
@@ -1517,6 +1517,9 @@ Answers from the Orchestrator (or owner) that clarify or change this spec are re
 | 2026-11-15 | T03.5 | How is the `slow` pack install test scheduled and cached in CI? | Added `.github/workflows/slow.yml` (`schedule` weekly + `workflow_dispatch`, both OSes, `permissions: contents: read`, official `actions/*` actions only, PowerShell 5.1 safe stderr handling) and updated `.cache/uv` keys in `ci.yml` and `slow.yml` to include `packs/**/locks/*.txt`. | Orchestrator |
 | 2026-11-15 | T03.5 | What environment do step 4 (`check` / `check.py`) and the Python version probe run with (R1-3)? | Build their env from `os.environ` with every `PYTHON*` variable (`PYTHONPATH`, `PYTHONHOME`, `PYTHONSTARTUP`, …) and every `UV_*` variable removed (`build_python_env`). | Orchestrator |
 | 2026-11-15 | T03.5 | How are concurrent operations on the same pack handled in `PackManager` (R1-4)? | `PackManager` holds a per-pack in-process lock across `install_job`, `repair_job` (before deleting any folder), and `remove`. A second install, repair, or remove of the same pack fails immediately with `SkaldError` kind `pack_install_failed` and hint containing `"already in progress"`, without deleting the active job's folder; different packs may run in parallel. | Orchestrator |
+| 2026-11-22 | T02.3 | What is the entry point, `Book`/`Chapter` mapping, and deterministic ID rule (amending B9) for EPUB paragraph extraction? | `load_epub_book(path) -> Book` calls `parse_epub` and reuses `resolve_body_slices`, `walk_body_slice`, and `_collapse_ws` unchanged; `Book.cover_path` and `Book.source_path` stay `None` (filled by T02.7); `Chapter.included = linear and not suggested_skip`. Amending B9's 8-char ID rule to avoid collisions in large books: `chapter_id = "ch_" + sha256(f"{index}\0{full_href}")[:8]` and `paragraph_id = "p_" + sha256(f"{chapter_id}\0{paragraph_index}\0{text}")[:16]` (16 hex chars, not 8). | Orchestrator |
+| 2026-11-22 | T02.3 | Which XHTML extraction, note, page-break, and ruby rules apply in `book/xhtml.py`? | Block elements become paragraphs; `h1`–`h6` become their own paragraph with `is_heading=True`; inline elements flatten with `_collapse_ws`; `<br>` becomes `"\n"` with per-line stripping and empty-line dropping; tables are read row by row (cells joined by one space); lists/blockquotes emit one paragraph per item or inner block; direct container text next to child blocks becomes its own paragraph. Remove `noteref` (`epub:type="noteref"`, `role="doc-noteref"`) with its text while keeping tails; skip note bodies (`epub:type` `footnote`/`endnote`, `role` `doc-footnote`/`doc-endnote`), `img` (alt text never read), `script`, `style`, page-break markers (`epub:type="pagebreak"`, `role="doc-pagebreak"`), and ruby `<rt>`/`<rp>`. | Orchestrator |
+| 2026-11-22 | T02.3 | Fixture 02's expected paragraph omits 'cold' present in its body_xhtml — which is right? | The body_xhtml is right; the expectation (02_epub2_ncx_only.toml line 71) was a transcription typo and is corrected. No other expected value or fixture input changes. | Orchestrator |
 
 ## Appendix 4 — Claude Code cloud environment
 
