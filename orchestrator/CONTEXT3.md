@@ -87,3 +87,25 @@ Decision: Merge PR #18 (normal merge; mergeable, clean, head c44f4ce, CI green).
 Why: no blockers or majors; R1-1 affects only the heading flag (used later for pauses), so T02.8 is early enough.
 After merge: T02.4 (TXT/MD import) and T02.5 (normalization + lexicon) become available (both depend only on T02.3). Owner rule E-0057: announce them, no prompts until asked. PR #17 (T03.2) will need a rebase on the new master before its review (both PRs append Appendix 3).
 Follow-up: owner merges PR #18.
+
+### E-0123 · 2026-11-23 09:30 (Asia/Colombo) · T02.3 · MERGED
+Context: Owner: "Merged #18". master is now `2e178c5` = "Merge pull request #18 from Guna210/task/T02.3-xhtml-paragraphs" (normal merge).
+Decision: T02.3 is done. T02.4 (TXT/MD import) and T02.5 (normalization + lexicon) are now available; announced only (E-0057).
+Follow-up: none.
+
+### E-0124 · 2026-11-23 09:35 (Asia/Colombo) · T03.2 · FIX-PROMPT (before review)
+Context: T03.2 round-1 handoff (Antigravity / Gemini 3.1 Pro), PR #17 `task/T03.2-catalog-client` @9fcf034. It has three commits on 3228b4a. The Builder reports 239 passed locally on Linux.
+Problems found by the Orchestrator:
+ (1) CI is red: `core (windows-latest)` failed in both the push and the PR run; every other job is green. The failing test is test_catalog_client.py::test_first_offline_launch_serves_bundled_copy_when_refresh_fails: "Timed out waiting for job.finished" after 5 s.
+     Cause: the test simulates "offline" with a real closed localhost port (_unused_local_port). On Windows each refused connect takes about 2 s (TCP SYN retries), so 3 attempts (2 retries) exceed the 5 s wait.
+     The "1 lockfile(s) out of date" line in the log is the expected output of test_make_locks' drift test, not a failure.
+ (2) Since #18 merged, PR #17 conflicts with master in SPEC.md (both PRs append Appendix 3 rows and tick the Part D index).
+Decision: send it back to the Builder before review, with one prompt for both problems.
+ - Rebase onto master 2e178c5. Keep both sets of Appendix 3 rows (T02.3's rows first, then T03.2's) and both index ticks. Push with --force-with-lease.
+ - Fix the test so "offline" is mocked: patch the client's fetch or the net layer to raise SkaldError("offline"), or use a session that raises requests.ConnectionError immediately.
+ - Do NOT raise the timeout, skip on Windows or mark the test flaky. Use no closed-port tricks in any test. The local fake HTTP server used by the other tests passed on Windows and may stay.
+Why: SPEC C2 says tests mock the network; a real-socket timing test is OS-dependent and flaky. One combined round avoids an extra rebase pass.
+Follow-up: once CI is green on both OSes, send the review to a fresh Claude Opus (the Builder was Gemini; untrusted remote input). FOCUS to include:
+ - the Builder's three decisions: get_text plus parse in the client; empty RPC params so the fetch URL can't be redirected over RPC; the .complete path guard against unsafe id segments;
+ - net.get_json's RecursionError mapping to http_error vs catalog_invalid in the client;
+ - B8 and ErrorKind consistency.
