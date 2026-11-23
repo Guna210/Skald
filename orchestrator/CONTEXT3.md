@@ -152,3 +152,18 @@ Decision: Round 2, test-only plus one comment.
  - R1-4: a code comment plus an Appendix 3 row (UTF-8 with replacement when no charset; a BOM-prefixed catalog is rejected as catalog_invalid; raw.githubusercontent sends charset=utf-8). No behaviour change.
 Why: the cap is the main defence against a hostile or huge catalog and must be proven by a test that fails without it. The rest is cheap and in the same files.
 Follow-up: the same Reviewer session for round 2.
+
+### E-0127 · 2026-11-23 14:10 (Asia/Colombo) · T03.2 · REVIEW-PROMPT (round 2)
+Context: T03.2 round-2 handoff (Gemini 3.1 Pro), PR #17 @1aa9275. Verified by the Orchestrator:
+ - one new commit on bdc3bea (no force-push); master 2e178c5 unchanged; mergeable and clean;
+ - 4 files, +127/−9: test_net.py +107, test_catalog_client.py ±27, SPEC.md +1 Appendix 3 row, net.py +1 comment line only (no production behaviour change);
+ - CI green 12/12 at 1aa9275 (push run 45140380840, PR run 45140391224).
+The Builder reports 269 passed and says both new cap tests fail with the streaming check disabled.
+Builder decision: the "Content-Length under the cap, real body over it" case uses gzip (compressed length < max_bytes < decompressed length). This is the realistic case: a server can't send more than its Content-Length over HTTP/1.1, but a gzip bomb can expand.
+Decision: round 2 goes to the same Opus Reviewer session. FOCUS:
+ - re-run the two mutations that survived (cap disabled, backslash clause removed), plus the \x00 and empty-segment clauses;
+ - with gzip, does the read stop early, keeping memory bounded by the cap rather than by the decompressed size?
+ - the R1-3 tests (retry recovers; exhaustion → offline after 3 attempts);
+ - the R1-4 comment and Appendix 3 row;
+ - nothing else changed.
+Follow-up: owner pastes into the round-1 Reviewer session.
