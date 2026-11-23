@@ -132,3 +132,23 @@ Decision: Send to a fresh Claude Opus Reviewer (Builder Gemini; untrusted remote
  10. The tests are meaningful (mutation-check a few).
  11. Appendix 3 and B8 match E-0119.
 Follow-up: owner runs the Reviewer.
+
+### E-0126 · 2026-11-23 12:00 (Asia/Colombo) · T03.2 · VERDICT + FIX-PROMPT
+Context: Reviewer (fresh Claude Opus) round 1 on PR #17 @bdc3bea: CHANGES REQUESTED.
+ - Checks: ruff, format and mypy clean; 260 passed; the validator reports the catalog valid.
+ - Hostile payloads (100k-deep list and object, NaN, [], null, a bare string, an empty string, schema_version 2 / 99.0 / "9" / a 5000-digit integer, an extra key, a BOM): all give catalog_invalid; nothing escapes.
+ - Mutations caught: reason precedence, cache write, max_bytes in refresh, bundled source label, the update_available "default compatible" rule.
+ - Mutations survived: the streaming cap disabled; the backslash clause of the safe-segment guard.
+ - Confirmed: the cache is untouched on every failure; the write is atomic; both-unusable → a clean catalog_invalid; no RPC path to the URL override; get_data_dir is correct and tested; the schema export is complete; Appendix 3 and B8 match E-0119; the net.py refactor preserves the T01.6 rules.
+Findings:
+ - R1-1 [Major] the only no-Content-Length cap test sends non-JSON through get_json, so it passes on "Invalid JSON", not on the cap; disabling the streaming check leaves all tests green.
+ - R1-2 [Minor] the safe-segment guard is tested only with "../outside" (the \, \x00 and empty clauses are untested).
+ - R1-3 [Minor] a mid-body drop is now retried for get_text/get_json (bounded by MAX_RETRIES; accepted), but untested.
+ - R1-4 [Nit] _decode_bytes uses UTF-8 errors="replace" when no charset is declared (the old path used chardet); a BOM-prefixed catalog → catalog_invalid.
+Decision: Round 2, test-only plus one comment.
+ - Fix R1-1: a valid-JSON over-cap body without Content-Length through get_text; a Content-Length under the cap with a real body over it; assert details max_bytes/actual_bytes or the "exceeds max_bytes" message.
+ - Fix R1-2: a parametrized test of _is_safe_id_segment ("", ".", "..", "a/b", "a\\b", "a\x00b", a normal id) plus one case through annotate_catalog.
+ - Fix R1-3: a mid-body drop through get_text succeeds on retry; exhausted retries → the mapped kind.
+ - R1-4: a code comment plus an Appendix 3 row (UTF-8 with replacement when no charset; a BOM-prefixed catalog is rejected as catalog_invalid; raw.githubusercontent sends charset=utf-8). No behaviour change.
+Why: the cap is the main defence against a hostile or huge catalog and must be proven by a test that fails without it. The rest is cheap and in the same files.
+Follow-up: the same Reviewer session for round 2.
