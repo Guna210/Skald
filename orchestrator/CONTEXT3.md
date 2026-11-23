@@ -109,3 +109,26 @@ Follow-up: once CI is green on both OSes, send the review to a fresh Claude Opus
  - the Builder's three decisions: get_text plus parse in the client; empty RPC params so the fetch URL can't be redirected over RPC; the .complete path guard against unsafe id segments;
  - net.get_json's RecursionError mapping to http_error vs catalog_invalid in the client;
  - B8 and ErrorKind consistency.
+
+### E-0125 · 2026-11-23 10:30 (Asia/Colombo) · T03.2 · REVIEW-PROMPT
+Context: T03.2 pre-review fix handoff (Antigravity / Gemini 3.1 Pro), PR #17 @bdc3bea. Verified by the Orchestrator:
+ - The PR is rebased on master 2e178c5 (master is an ancestor) and is mergeable and clean.
+ - range-diff: commits 1–2 identical (=); commit 3 differs only in SPEC context (the T02.3 rows now sit above the T03.2 rows); the new commit 4 holds the O-1 test fix.
+ - 12 files, +1687/−55: client.py +411, net.py ±152, methods.py, schemas (+84 models, +16 exports), storage.py +26, five test files (no lines removed from test_net.py), SPEC.md (+4 Appendix 3 rows, B8 catalog_invalid, index tick).
+ - CI: all 12 checks green at bdc3bea (push run 45128982364 and PR run 45128988017; core windows-latest now passes).
+ - No secrets in the diff.
+ - O-1 fixed (requests.Session.request mocked to raise ConnectionError; closed-port helper removed); O-2 fixed.
+Note: net.py was refactored, not just extended. _get_response_with_retries became _request_with_retries(read_body, max_bytes); _decode_text became _decode_bytes; a new _read_bounded_body reads the body inside the retry loop. The T01.6 behaviour must be preserved.
+Decision: Send to a fresh Claude Opus Reviewer (Builder Gemini; untrusted remote input; touches defaults/paths). FOCUS:
+ 1. Behaviour of the net.py refactor vs the T01.6 Appendix 3 rules: retry rules (2 retries, never on 4xx), error kinds, download/resume/Range untouched, and whether a mid-body read error is now retried (acceptable if bounded and tested).
+ 2. The max_bytes cap is enforced while streaming (Content-Length is not trusted).
+ 3. catalog_invalid vs http_error: the client parses the JSON itself, so a malformed or deeply nested remote catalog must reach catalog_invalid; no core crash.
+ 4. The cache is never overwritten on any failure, and the write is atomic.
+ 5. Bundled fallback and a corrupt cache.
+ 6. Annotation rules and the update_available matrix exactly as in E-0119 and Appendix 3; ids unique only per parent.
+ 7. get_data_dir order and its OS defaults.
+ 8. The Builder's decisions: empty RPC params, so the fetch URL can't be redirected over RPC (agree); the .complete path guard against unsafe id segments.
+ 9. Schema export includes the new models.
+ 10. The tests are meaningful (mutation-check a few).
+ 11. Appendix 3 and B8 match E-0119.
+Follow-up: owner runs the Reviewer.

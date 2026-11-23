@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-23 09:35 (Asia/Colombo) · last entry: E-0124
+Last updated: 2026-11-23 10:30 (Asia/Colombo) · last entry: E-0125
 Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 … E-0117), `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -10,7 +10,7 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 - **Phase 0 complete** (T00.1–T00.4; E-0046). **Phase 1 complete** (T01.1–T01.6; E-0096).
 - Also merged: T02.1, T02.2, T02.3 (Phase 2); T03.1, T03.4, T03.5 (Phase 3).
 - `master` at `2e178c5` (PR #18 merge). Default branch `master`. Merge method: **normal merge** (E-0021) — never tell the owner to squash.
-- Open PRs: **#17 T03.2**, round 1 @9fcf034. Sent back BEFORE review (E-0124): Windows core CI is red (the offline test uses a real closed port and times out on Windows), and the PR conflicts in SPEC.md after #18 → combined rebase + test-fix prompt. Then a fresh Opus Reviewer.
+- Open PRs: **#17 T03.2**, round 1 @bdc3bea: rebased on 2e178c5, CI green 12/12, O-1/O-2 fixed; in review with a fresh Opus (E-0125). Watch the net.py refactor.
 - CI: ci.yml (core/worker/app on windows-latest + ubuntu-latest), catalog.yml (PRs on catalog/** + weekly), slow.yml (weekly + workflow_dispatch; real CPU smoke-pack install — first run 43719877209 passed on both OSes, E-0117).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036). Milestones: none yet (M1 after T05.8).
 
@@ -20,7 +20,7 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 - Unlock map: T03.6 ← T03.2 + T01.6 + T01.3; T03.8 ← T03.7 + T03.5 + T01.3; T02.4/T02.5 ← T02.3; T06.2 ← T06.1 + T01.3; T04.1 ← T03.7 + T03.9 + T03.6.
 
 ## Waiting on the owner
-1. Paste the T03.2 rebase + test-fix prompt (E-0124) into the T03.2 Builder session, then paste the new handoff.
+1. Run the T03.2 Reviewer (fresh Opus) and paste the verdict.
 2. Before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs / open questions
@@ -53,4 +53,4 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 - **Open item:** who creates `core/requirements.lock` (B3)? Decide by T04.1/T09.1 (E-0020).
 
 ## Recommended next step
-Wait for the T03.2 round-1b handoff (rebased, CI green) → Opus review prompt. Available on request: T02.4, T02.5, T03.3, T03.7 (unlocks the model path), T03.9, T06.1 (E-0057).
+Wait for the T03.2 verdict. Available on request: T02.4, T02.5, T03.3, T03.7 (unlocks the model path), T03.9, T06.1 (E-0057).
