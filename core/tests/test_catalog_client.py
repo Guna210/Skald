@@ -6,7 +6,6 @@ import http.server
 import io
 import json
 import logging
-import socket
 import sys
 import threading
 from collections.abc import Iterator
@@ -15,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import requests
 from pydantic import BaseModel
 
 from skald_core import __version__, net
@@ -89,12 +89,6 @@ def _run_server(
         server.shutdown()
         server.server_close()
         thread.join(timeout=2)
-
-
-def _unused_local_port() -> int:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.bind(("127.0.0.1", 0))
-        return int(sock.getsockname()[1])
 
 
 class _RecordingNotifier:
@@ -268,8 +262,10 @@ def test_url_resolution_and_resource_root(tmp_path: Path, monkeypatch: pytest.Mo
 def test_first_offline_launch_serves_bundled_copy_when_refresh_fails(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    closed_port = _unused_local_port()
-    monkeypatch.setenv("SKALD_CATALOG_URL", f"http://127.0.0.1:{closed_port}/catalog.json")
+    def raise_offline(*_args: Any, **_kwargs: Any) -> Any:
+        raise requests.ConnectionError("Simulated offline network")
+
+    monkeypatch.setattr(requests.Session, "request", raise_offline)
 
     notifier = _RecordingNotifier()
     manager = JobManager(max_workers=1, notify_fn=notifier)
