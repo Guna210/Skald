@@ -134,6 +134,7 @@ def _check_cancel(cancel: Callable[[], bool] | None) -> None:
 
 
 def _decode_bytes(raw: bytes, headers: Mapping[str, str], encoding: str | None) -> str:
+    # Default to UTF-8 with replacement when no charset is declared (no chardet).
     content_type = headers.get("content-type", "")
     enc = encoding
     if "charset" not in content_type.lower() and (not enc or enc.lower() == "iso-8859-1"):

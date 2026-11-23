@@ -22,6 +22,7 @@ from skald_core.catalog import client as catalog_client
 from skald_core.catalog.client import (
     DEFAULT_CATALOG_URL,
     MAX_CATALOG_BYTES,
+    _is_safe_id_segment,
     annotate_catalog,
     get_adapters_path,
     get_bundled_catalog_path,
@@ -686,28 +687,46 @@ def test_compatibility_and_update_matrix(tmp_path: Path) -> None:
     assert mc.checkpoints[0].revisions[0].compatible is True
 
 
+@pytest.mark.parametrize(
+    ("segment", "expected"),
+    [
+        ("", False),
+        (".", False),
+        ("..", False),
+        ("a/b", False),
+        ("a\\b", False),
+        ("a\x00b", False),
+        ("kokoro-v1.0", True),
+    ],
+)
+def test_is_safe_id_segment(segment: str, expected: bool) -> None:
+    assert _is_safe_id_segment(segment) is expected
+
+
 def test_parse_catalog_json_deep_recursion_and_unsafe_id_segments(tmp_path: Path) -> None:
     deep = ("{" * 15000) + "}" * 15000
     with pytest.raises(SkaldError) as exc_info:
         parse_catalog_json(deep)
     assert exc_info.value.kind == "catalog_invalid"
 
-    # Unsafe path segment in model id cannot probe outside models_root.
+    # Unsafe path segments never reach Path(...) (a NUL byte would raise ValueError if probed).
     outside_marker = tmp_path / "outside" / "cp1" / "r1" / ".complete"
     outside_marker.parent.mkdir(parents=True)
     outside_marker.write_text("", encoding="utf-8")
     models_root = tmp_path / "models"
     models_root.mkdir()
 
-    tricky_catalog = Catalog.model_validate(_make_catalog([_make_model("../outside")]))
+    tricky_catalog = Catalog.model_validate(
+        _make_catalog([_make_model("../outside"), _make_model("a\x00b")])
+    )
     view = annotate_catalog(
         tricky_catalog,
         source="cache",
         adapter_versions={"kokoro": "1.0.0"},
         models_root=models_root,
     )
-    assert view.models[0].installed is False
-    assert view.models[0].checkpoints[0].revisions[0].installed is False
+    assert all(not m.installed for m in view.models)
+    assert all(not cp.revisions[0].installed for m in view.models for cp in m.checkpoints)
 
 
 def test_rpc_catalog_get_and_refresh_end_to_end(monkeypatch: pytest.MonkeyPatch) -> None:
