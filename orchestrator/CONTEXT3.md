@@ -284,3 +284,18 @@ Decision: round 2.
  - R1-6 → fix the UTF-32 BOM (part of R1-1 step 1) and replace the production assert with explicit handling. Drop the footnote "^1" (out of scope), odd-length UTF-16 and the defaults.md heading.
 Why: silent mis-decoding is user-visible garbage; the C0-control signature separates real UTF-16 (CJK: about 12% of chars give a low byte below 0x20) from 8-bit text with stray NULs, which a NUL-count threshold alone cannot. R1-4 is a real Gutenberg risk, cheap to tighten.
 Follow-up: the same Reviewer session for round 2.
+
+### E-0133 · 2026-11-25 14:07 (Asia/Colombo) · T02.4 · REVIEW-PROMPT (round 2)
+Context: T02.4 round-2 handoff (Gemini), PR #19 @8a54fe2. Verified by the Orchestrator:
+ - one new commit on 69fdf1e (no force-push); master 327927d unchanged and an ancestor; mergeable and clean;
+ - 4 files, +280/−100: text_import.py ±180, tests ±184, SPEC.md, defaults.md;
+ - CI green 12/12 (PR run 45577455442, push run 45577444043).
+The Builder reports 299 passed (30 under -O) and that local mutations made the stray-NUL tests (old heuristic) and the R1-4 tests (limits removed) fail.
+Builder decision: also reject a book whose chapters all have no paragraphs (e.g. "# ![](pic.png)") → accepted.
+One shortcut comment: "LE tried before BE, BOM-less BE CJK may decode as LE" → the documented known limit (E-0132); a decision, not a finding.
+Decision: round 2 goes to the same Opus Reviewer session. FOCUS:
+ - the algorithm matches E-0132 step by step (C0 definition, the cadence thresholds and which parity maps to LE/BE, strict decoding, the guessed flag on every branch);
+ - re-run the round-1 crafted inputs and surviving mutants;
+ - the R1-2/R1-3/R1-4/R1-5 tests; no regressions in the round-1 confirmations;
+ - the Appendix 3 rows were replaced, not duplicated.
+Follow-up: owner pastes into the round-1 Reviewer session. PR #20 (T02.5) is still open; its handoff has not been pasted yet.
