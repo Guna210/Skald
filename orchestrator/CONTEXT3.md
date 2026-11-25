@@ -254,3 +254,33 @@ Decision: Send to a fresh Claude Opus Reviewer (the Builder was Gemini; parser o
  - Appendix 3 and defaults.md match E-0130;
  - tests are meaningful (mutations).
 Follow-up: owner runs the Reviewer.
+
+### E-0132 · 2026-11-25 13:58 (Asia/Colombo) · T02.4 · VERDICT + FIX-PROMPT
+Context: Reviewer (fresh Claude Opus) round 1 on PR #19 @69fdf1e: CHANGES REQUESTED.
+ - Checks: 289 passed; ruff clean; mypy stub errors local to the venv only; deps MIT and pinned exactly.
+ - About 60 crafted inputs; 30 mutations, 25 caught.
+ - Pathological inputs are linear with no RecursionError (4 MB single line 0.04 s; 1M blank lines 0.05 s; 400k paragraphs TXT 2.7 s, MD 9.5 s; 5000-deep lists 2 s).
+Findings:
+ - R1-1 [Major] the BOM-less UTF-16 heuristic misfires both ways, silently:
+     (a) ASCII/UTF-8 with a few stray NULs (64 bytes/4 NULs, 160/10, 1600/100) → UTF-16 garbage;
+     (b) BOM-less CJK UTF-16 with no NULs and all bytes < 0x80 → UTF-8 with C0 controls and guessed=False.
+     The mutants threshold=1 and the dominance change survive.
+ - R1-2 [Minor] an image-only, code-only or over-nesting-limit Markdown file → a Book with 0 chapters and no error.
+ - R1-3 [Minor] inline <br> is dropped with no separator ("worldnext").
+ - R1-4 [Minor, Orchestrator call] rule (a) checks only the first line, which in wrapped prose is always ≤ 80 chars, so "Part of the…" / "Book lovers…" paragraphs become chapters.
+ - R1-5 [Minor] missing tests: NUL threshold; a heading inside a blockquote (tok.level == 0); the size boundary.
+ - R1-6 [Nits] footnote "^1"; a UTF-32-LE BOM read as UTF-16; odd-length UTF-16; an assert in production code; a second "C1.1 Import" heading in defaults.md.
+Decision: round 2.
+ - R1-1 → replace the heuristic with an Orchestrator-specified algorithm based on which C0 control bytes appear in the raw bytes:
+     1. BOM: UTF-32 BOMs are checked before UTF-16; decode with it; not a guess.
+     2. The raw bytes have no C0 controls except \t\n\r\f → 8-bit path: strict UTF-8 → not a guess; else cp1252 → latin-1, guessed.
+     3. Only NULs among the C0 controls → NUL cadence (even length; at least 30% of one parity's positions are NUL and at most 5% of the other's) → UTF-16 LE/BE, strict, guessed; else the 8-bit path with NULs stripped, guessed.
+     4. Other C0 controls present → the cadence test; else strict utf-16-le, then -be, accepted only if the decoded text has no C0 controls except whitespace (LE first: Notepad's "Unicode"; a BOM-less BE CJK file may be misread as LE — accepted and documented); else the 8-bit path with C0 controls stripped, guessed.
+   guessed=False only for a BOM or for clean UTF-8 (no C0 controls). Tests: every case above, the Reviewer's crafted inputs (a)/(b), and Cyrillic and CJK UTF-16 LE.
+ - R1-2 → zero chapters → unsupported_format in both loaders, with tests.
+ - R1-3 → an html_inline <br>, <br/> or <br /> (case-insensitive) → hardbreak "\n" (consistent with EPUB); every other html_inline stays skipped; with a test.
+ - R1-4 → tighten rule (a): additionally the heading block has at most 3 lines and its first line has at most 8 words (wrapped prose lines are about 10–12 words; Gutenberg headings like "CHAPTER I." / "BOOK THE FIRST" or "BOOK ONE\nRECALLED TO LIFE" still match). Record this in Appendix 3 and defaults.md, with tests both ways.
+ - R1-5 → tests: a heading inside a blockquote doesn't start a chapter; the size limit at its boundary (patched constant: exactly at the limit OK, limit+1 → error); plus the R1-1 tests.
+ - R1-6 → fix the UTF-32 BOM (part of R1-1 step 1) and replace the production assert with explicit handling. Drop the footnote "^1" (out of scope), odd-length UTF-16 and the defaults.md heading.
+Why: silent mis-decoding is user-visible garbage; the C0-control signature separates real UTF-16 (CJK: about 12% of chars give a low byte below 0x20) from 8-bit text with stray NULs, which a NUL-count threshold alone cannot. R1-4 is a real Gutenberg risk, cheap to tighten.
+Follow-up: the same Reviewer session for round 2.
