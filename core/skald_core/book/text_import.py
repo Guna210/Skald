@@ -17,8 +17,13 @@ from skald_core.schemas.models import Book, Chapter, Paragraph
 
 MAX_TEXT_BYTES = 100_000_000  # 100 MB (SPEC T02.4)
 MAX_HEADING_LINE_CHARS = 80
+MAX_HEADING_LINES = 3
+MAX_HEADING_FIRST_LINE_WORDS = 8
 
 _TXT_HEADING_RE = re.compile(r"^(?:chapter|part|book)\b", re.IGNORECASE)
+_HTML_BR_RE = re.compile(r"^<br\s*/?>$", re.IGNORECASE)
+_C0_CHAR_RE = re.compile(r"[\x00-\x08\x0b\x0e-\x1f]")
+_C0_BYTES = bytes(b for b in range(0x20) if b not in (0x09, 0x0A, 0x0C, 0x0D))
 _MD_PARSER = MarkdownIt("commonmark").enable("table")
 
 
@@ -52,70 +57,85 @@ def _unsupported_format(
     )
 
 
-def _decode_text_bytes(raw: bytes) -> tuple[str, str, bool]:
-    if raw.startswith(codecs.BOM_UTF8):
-        try:
-            return raw[len(codecs.BOM_UTF8) :].decode("utf-8", errors="strict"), "utf-8", False
-        except UnicodeDecodeError as exc:
-            raise _unsupported_format(
-                "Text file has a UTF-8 BOM but is not valid UTF-8.",
-                details=str(exc),
-                hint="Re-save the file as valid UTF-8.",
-            ) from exc
-
-    if raw.startswith(codecs.BOM_UTF16_LE):
-        try:
-            return (
-                raw[len(codecs.BOM_UTF16_LE) :].decode("utf-16-le", errors="strict"),
-                "utf-16-le",
-                False,
-            )
-        except UnicodeDecodeError as exc:
-            raise _unsupported_format(
-                "Text file has a UTF-16 LE BOM but is not valid UTF-16 LE.",
-                details=str(exc),
-                hint="Re-save the file as UTF-8 or valid UTF-16.",
-            ) from exc
-
-    if raw.startswith(codecs.BOM_UTF16_BE):
-        try:
-            return (
-                raw[len(codecs.BOM_UTF16_BE) :].decode("utf-16-be", errors="strict"),
-                "utf-16-be",
-                False,
-            )
-        except UnicodeDecodeError as exc:
-            raise _unsupported_format(
-                "Text file has a UTF-16 BE BOM but is not valid UTF-16 BE.",
-                details=str(exc),
-                hint="Re-save the file as UTF-8 or valid UTF-16.",
-            ) from exc
-
-    # Check NUL-byte cadence before strict UTF-8 because ASCII UTF-16 bytes also decode as UTF-8.
-    if b"\x00" in raw and len(raw) >= 2 and len(raw) % 2 == 0:
-        even_nuls = raw[0::2].count(0)
-        odd_nuls = raw[1::2].count(0)
-        threshold = max(1, len(raw) // 16)
-        if odd_nuls >= threshold and odd_nuls > even_nuls * 2:
-            try:
-                return raw.decode("utf-16-le", errors="strict"), "utf-16-le", True
-            except UnicodeDecodeError:
-                pass
-        elif even_nuls >= threshold and even_nuls > odd_nuls * 2:
-            try:
-                return raw.decode("utf-16-be", errors="strict"), "utf-16-be", True
-            except UnicodeDecodeError:
-                pass
-
+def _decode_8bit(raw: bytes) -> tuple[str, str, bool]:
     try:
         return raw.decode("utf-8", errors="strict"), "utf-8", False
     except UnicodeDecodeError:
         pass
-
     try:
         return raw.decode("cp1252", errors="strict"), "cp1252", True
     except UnicodeDecodeError:
         return raw.decode("latin-1", errors="strict"), "latin-1", True
+
+
+def _nul_cadence_decode(raw: bytes) -> tuple[str, str] | None:
+    if len(raw) < 2 or len(raw) % 2 != 0:
+        return None
+    n = len(raw) // 2
+    even_nuls = raw[0::2].count(0)
+    odd_nuls = raw[1::2].count(0)
+    if even_nuls * 100 >= 30 * n and odd_nuls * 100 <= 5 * n:
+        try:
+            return raw.decode("utf-16-be", errors="strict"), "utf-16-be"
+        except UnicodeDecodeError:
+            return None
+    if odd_nuls * 100 >= 30 * n and even_nuls * 100 <= 5 * n:
+        try:
+            return raw.decode("utf-16-le", errors="strict"), "utf-16-le"
+        except UnicodeDecodeError:
+            return None
+    return None
+
+
+def _decode_text_bytes(raw: bytes) -> tuple[str, str, bool]:
+    # 1. BOMs: check UTF-32 before UTF-16 because FF FE 00 00 starts with FF FE.
+    for bom, enc in (
+        (codecs.BOM_UTF32_LE, "utf-32-le"),
+        (codecs.BOM_UTF32_BE, "utf-32-be"),
+        (codecs.BOM_UTF16_LE, "utf-16-le"),
+        (codecs.BOM_UTF16_BE, "utf-16-be"),
+        (codecs.BOM_UTF8, "utf-8"),
+    ):
+        if raw.startswith(bom):
+            try:
+                return raw[len(bom) :].decode(enc, errors="strict"), enc, False
+            except UnicodeDecodeError as exc:
+                raise _unsupported_format(
+                    f"Text file has a {enc.upper()} BOM but is not valid {enc.upper()}.",
+                    details=str(exc),
+                    hint="Re-save the file as valid UTF-8.",
+                ) from exc
+
+    # 2. No C0 bytes present -> 8-bit path.
+    cleaned_no_c0 = raw.translate(None, _C0_BYTES)
+    if len(cleaned_no_c0) == len(raw):
+        return _decode_8bit(raw)
+
+    # 3. Only C0 bytes present are NULs -> NUL-cadence test, else 8-bit without NULs.
+    cleaned_no_nul = raw.replace(b"\x00", b"")
+    if len(cleaned_no_nul) == len(cleaned_no_c0):
+        res = _nul_cadence_decode(raw)
+        if res is not None:
+            return res[0], res[1], True
+        text, enc, _ = _decode_8bit(cleaned_no_nul)
+        return text, enc, True
+
+    # 4. Other C0 bytes present -> NUL-cadence first, else strict UTF-16 LE/BE without C0 chars.
+    res = _nul_cadence_decode(raw)
+    if res is not None:
+        return res[0], res[1], True
+    if len(raw) >= 2 and len(raw) % 2 == 0:
+        # shortcut: LE is tried before BE (Notepad default), so BOM-less BE CJK may decode as LE.
+        for enc in ("utf-16-le", "utf-16-be"):
+            try:
+                decoded = raw.decode(enc, errors="strict")
+            except UnicodeDecodeError:
+                continue
+            if _C0_CHAR_RE.search(decoded) is None:
+                return decoded, enc, True
+
+    text, enc, _ = _decode_8bit(cleaned_no_c0)
+    return text, enc, True
 
 
 def _read_and_decode(path: Path | str) -> tuple[Path, str, str, bool]:
@@ -156,7 +176,7 @@ def _read_and_decode(path: Path | str) -> tuple[Path, str, str, bool]:
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     if not text.strip():
         raise _unsupported_format(
-            f"File {file_path.name} contains no readable text.",
+            f"File {file_path.name} contains no text.",
             hint="Provide a file with non-whitespace text.",
         )
     return file_path, text, encoding, guessed
@@ -219,7 +239,9 @@ def _parse_txt_drafts(text: str) -> list[_ChapterDraft]:
     for start_line, blanks_before, block_lines in blocks:
         first_stripped = block_lines[0].strip()
         is_rule_a = (
-            len(first_stripped) <= MAX_HEADING_LINE_CHARS
+            len(block_lines) <= MAX_HEADING_LINES
+            and len(first_stripped) <= MAX_HEADING_LINE_CHARS
+            and len(first_stripped.split()) <= MAX_HEADING_FIRST_LINE_WORDS
             and _TXT_HEADING_RE.match(first_stripped) is not None
         )
         is_rule_b = (
@@ -257,7 +279,9 @@ def _extract_inline_text(token: Token) -> str:
             segments[-1].append(child.content)
         elif ctype == "softbreak":
             segments[-1].append(" ")
-        elif ctype == "hardbreak":
+        elif ctype == "hardbreak" or (
+            ctype == "html_inline" and _HTML_BR_RE.match(child.content.strip()) is not None
+        ):
             segments.append([])
     return _finalize_segments(segments)
 
@@ -318,9 +342,9 @@ def _parse_markdown_drafts(text: str) -> list[_ChapterDraft]:
                 tr_cells.append(para_text)
             elif in_heading:
                 if heading_splits_chapter:
-                    assert current is not None
-                    current.title = _collapse_ws(para_text)
-                    current.paragraphs.append((para_text, True))
+                    target = _ensure_chapter(heading_start_line)
+                    target.title = _collapse_ws(para_text)
+                    target.paragraphs.append((para_text, True))
                 else:
                     _ensure_chapter(heading_start_line).paragraphs.append((para_text, True))
             else:
@@ -330,10 +354,17 @@ def _parse_markdown_drafts(text: str) -> list[_ChapterDraft]:
     return drafts
 
 
-def load_text_book(path: Path | str) -> TextImport:
-    """Import a plain text (.txt) file into a ``Book`` wrapped in ``TextImport``."""
-    file_path, text, encoding, guessed = _read_and_decode(path)
-    chapters = _build_chapters(_parse_txt_drafts(text))
+def _finalize_book(
+    file_path: Path,
+    chapters: list[Chapter],
+    encoding: str,
+    guessed: bool,
+) -> TextImport:
+    if not chapters or not any(ch.paragraphs for ch in chapters):
+        raise _unsupported_format(
+            f"File {file_path.name} contains no text.",
+            hint="Provide a file with readable text.",
+        )
     book = Book(
         title=file_path.stem,
         authors=[],
@@ -343,18 +374,17 @@ def load_text_book(path: Path | str) -> TextImport:
         chapters=chapters,
     )
     return TextImport(book=book, encoding=encoding, guessed=guessed)
+
+
+def load_text_book(path: Path | str) -> TextImport:
+    """Import a plain text (.txt) file into a ``Book`` wrapped in ``TextImport``."""
+    file_path, text, encoding, guessed = _read_and_decode(path)
+    chapters = _build_chapters(_parse_txt_drafts(text))
+    return _finalize_book(file_path, chapters, encoding, guessed)
 
 
 def load_markdown_book(path: Path | str) -> TextImport:
     """Import a Markdown (.md/.markdown) file into a ``Book`` wrapped in ``TextImport``."""
     file_path, text, encoding, guessed = _read_and_decode(path)
     chapters = _build_chapters(_parse_markdown_drafts(text))
-    book = Book(
-        title=file_path.stem,
-        authors=[],
-        language=None,
-        cover_path=None,
-        source_path=None,
-        chapters=chapters,
-    )
-    return TextImport(book=book, encoding=encoding, guessed=guessed)
+    return _finalize_book(file_path, chapters, encoding, guessed)

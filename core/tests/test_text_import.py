@@ -76,6 +76,18 @@ def _assert_book_invariants(book: Book) -> None:
             "UTF-16 BE BOM café.",
         ),
         (
+            codecs.BOM_UTF32_LE + "Chapter 1\n\nUTF-32 LE BOM café.".encode("utf-32-le"),
+            "utf-32-le",
+            False,
+            "UTF-32 LE BOM café.",
+        ),
+        (
+            codecs.BOM_UTF32_BE + "Chapter 1\n\nUTF-32 BE BOM café.".encode("utf-32-be"),
+            "utf-32-be",
+            False,
+            "UTF-32 BE BOM café.",
+        ),
+        (
             "Chapter 1\n\nASCII UTF-16 LE without BOM.".encode("utf-16-le"),
             "utf-16-le",
             True,
@@ -125,15 +137,18 @@ def test_encoding_detection_for_txt_and_markdown(
     _assert_book_invariants(txt_res.book)
 
     md_bytes = raw_bytes.replace(b"Chapter 1", b"# Chapter 1")
-    if expected_encoding in {"utf-16-le", "utf-16-be"}:
-        body = "Chapter 1\n\n" + expected_snippet
-        md_text = "# " + body
-        if raw_bytes.startswith(codecs.BOM_UTF16_LE):
-            md_bytes = codecs.BOM_UTF16_LE + md_text.encode("utf-16-le")
-        elif raw_bytes.startswith(codecs.BOM_UTF16_BE):
-            md_bytes = codecs.BOM_UTF16_BE + md_text.encode("utf-16-be")
-        else:
-            md_bytes = md_text.encode(expected_encoding)
+    if expected_encoding in {"utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"}:
+        md_text = "# Chapter 1\n\n" + expected_snippet
+        bom_map = {
+            "utf-16-le": codecs.BOM_UTF16_LE,
+            "utf-16-be": codecs.BOM_UTF16_BE,
+            "utf-32-le": codecs.BOM_UTF32_LE,
+            "utf-32-be": codecs.BOM_UTF32_BE,
+        }
+        has_bom = any(raw_bytes.startswith(b) for b in bom_map.values())
+        md_bytes = (bom_map[expected_encoding] if has_bom else b"") + md_text.encode(
+            expected_encoding
+        )
     md_path = tmp_path / "sample.md"
     md_path.write_bytes(md_bytes)
     md_res = load_markdown_book(md_path)
@@ -141,6 +156,58 @@ def test_encoding_detection_for_txt_and_markdown(
     assert md_res.guessed is expected_guessed
     assert md_res.book.chapters[0].paragraphs[1].text == expected_snippet
     _assert_book_invariants(md_res.book)
+
+
+@pytest.mark.parametrize(
+    ("total_bytes", "nul_count"),
+    [(64, 4), (160, 10), (1600, 100)],
+)
+def test_stray_nuls_strip_and_decode_as_guessed_utf8(
+    tmp_path: Path,
+    total_bytes: int,
+    nul_count: int,
+) -> None:
+    prefix = b"Chapter 1.\n\n"
+    body_len = total_bytes - len(prefix) - nul_count
+    raw = prefix + b"a\x00" * nul_count + b"a" * (body_len - nul_count)
+    assert len(raw) == total_bytes
+    assert raw.count(0) == nul_count
+
+    path = tmp_path / "stray_nuls.txt"
+    path.write_bytes(raw)
+    res = load_text_book(path)
+    assert res.encoding == "utf-8"
+    assert res.guessed is True
+    assert res.book.chapters[0].paragraphs[1].text == "a" * body_len
+    _assert_book_invariants(res.book)
+
+
+@pytest.mark.parametrize(
+    ("label", "text", "require_high_bytes"),
+    [
+        ("cjk_40", "你好世界。" * 40, False),
+        ("cyrillic", "Глава первая.\n\nПривет мир!", False),
+        ("cjk_high_bytes", "中文測試。\n\n測試內容。", True),
+    ],
+)
+def test_bomless_utf16_le_cjk_and_cyrillic(
+    tmp_path: Path,
+    label: str,
+    text: str,
+    require_high_bytes: bool,
+) -> None:
+    raw = text.encode("utf-16-le")
+    if require_high_bytes:
+        assert any(b >= 0x80 for b in raw)
+
+    path = tmp_path / f"{label}.txt"
+    path.write_bytes(raw)
+    res = load_text_book(path)
+    assert res.encoding == "utf-16-le"
+    assert res.guessed is True
+    joined = "\n\n".join(p.text for ch in res.book.chapters for p in ch.paragraphs)
+    assert joined == text
+    _assert_book_invariants(res.book)
 
 
 def test_crlf_and_cr_line_endings_normalized(tmp_path: Path) -> None:
@@ -294,6 +361,54 @@ def test_crlf_and_cr_line_endings_normalized(tmp_path: Path) -> None:
                     "z" * 80,  # 80 chars after 2 blanks: splits
                     11,
                     [("z" * 80, True)],
+                ),
+            ],
+        ),
+        (
+            "rule_a_word_and_line_limits",
+            (
+                "Part of the reason we are here today is to see\n"
+                "what happens next in the story.\n\n"
+                "Book lovers will know why this old edition matters\n"
+                "so much to collectors.\n\n"
+                "Chapter 1\n"
+                "line two\n"
+                "line three\n"
+                "line four is too many lines.\n\n"
+                "CHAPTER I.\n\n"
+                "Opening paragraph.\n\n"
+                "BOOK THE FIRST\n\n"
+                "First book body.\n\n"
+                "BOOK ONE\nRECALLED TO LIFE\n\n"
+                "Tale of Two Cities."
+            ),
+            [
+                (
+                    "Chapter 1",
+                    1,
+                    [
+                        (
+                            "Part of the reason we are here today is to see "
+                            "what happens next in the story.",
+                            False,
+                        ),
+                        (
+                            "Book lovers will know why this old edition matters "
+                            "so much to collectors.",
+                            False,
+                        ),
+                        (
+                            "Chapter 1 line two line three line four is too many lines.",
+                            False,
+                        ),
+                    ],
+                ),
+                ("CHAPTER I.", 12, [("CHAPTER I.", True), ("Opening paragraph.", False)]),
+                ("BOOK THE FIRST", 16, [("BOOK THE FIRST", True), ("First book body.", False)]),
+                (
+                    "BOOK ONE",
+                    20,
+                    [("BOOK ONE RECALLED TO LIFE", True), ("Tale of Two Cities.", False)],
                 ),
             ],
         ),
@@ -462,6 +577,25 @@ def test_markdown_pre_heading_chapter_and_no_headings(tmp_path: Path) -> None:
     _assert_book_invariants(res2.book)
 
 
+def test_markdown_inline_br_and_heading_inside_blockquote(tmp_path: Path) -> None:
+    md_path = tmp_path / "md_edge.md"
+    md_path.write_text(
+        "# Main Chapter\n\n"
+        "world<br>next<br/>again<br />once<BR />more and <span>kept</span>.\n\n"
+        "> ## Quoted Heading\n>\n> Body inside quote.\n",
+        encoding="utf-8",
+    )
+    res = load_markdown_book(md_path)
+    assert [ch.title for ch in res.book.chapters] == ["Main Chapter"]
+    assert [(p.text, p.is_heading) for p in res.book.chapters[0].paragraphs] == [
+        ("Main Chapter", True),
+        ("world\nnext\nagain\nonce\nmore and kept.", False),
+        ("Quoted Heading", True),
+        ("Body inside quote.", False),
+    ]
+    _assert_book_invariants(res.book)
+
+
 def test_short_chapter_threshold_boundary(tmp_path: Path) -> None:
     txt_path = tmp_path / "threshold.txt"
     txt_path.write_text(
@@ -481,7 +615,7 @@ def test_short_chapter_threshold_boundary(tmp_path: Path) -> None:
 
 
 def test_limits_size_empty_and_missing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    # Empty / whitespace / BOM-only files -> unsupported_format
+    # Empty / whitespace / BOM-only / zero-chapter files -> unsupported_format
     for name, data in [
         ("empty.txt", b""),
         ("ws.txt", b"   \r\n\t  \n"),
@@ -494,19 +628,35 @@ def test_limits_size_empty_and_missing(tmp_path: Path, monkeypatch: pytest.Monke
             load_text_book(p)
         assert exc_info.value.kind == "unsupported_format"
 
-    empty_md = tmp_path / "empty.md"
-    empty_md.write_bytes(b"  \n\t\r\n")
-    with pytest.raises(SkaldError) as exc_info:
-        load_markdown_book(empty_md)
-    assert exc_info.value.kind == "unsupported_format"
+    for md_name, md_raw in [
+        ("empty.md", b"  \n\t\r\n"),
+        ("image_only.md", b"![alt](pic.png)\n"),
+        ("code_only.md", b"```python\nprint(1)\n```\n"),
+        ("html_only.md", b"<div>only html</div>\n"),
+        ("heading_image_only.md", b"# ![only](pic.png)\n"),
+    ]:
+        md_p = tmp_path / md_name
+        md_p.write_bytes(md_raw)
+        with pytest.raises(SkaldError) as exc_info:
+            load_markdown_book(md_p)
+        assert exc_info.value.kind == "unsupported_format"
+        assert "contains no text" in exc_info.value.message
 
     # Missing file -> unsupported_format
     with pytest.raises(SkaldError) as exc_info:
         load_text_book(tmp_path / "does_not_exist.txt")
     assert exc_info.value.kind == "unsupported_format"
 
-    # Over 100 MB limit (patched constant) -> unsupported_format with "too large" hint
+    # Exact size limit boundary (patched constant): limit -> OK, limit + 1 -> unsupported_format
     monkeypatch.setattr(text_import_mod, "MAX_TEXT_BYTES", 64)
+    ok_txt = tmp_path / "ok.txt"
+    ok_txt.write_text("x" * 64, encoding="utf-8")
+    assert load_text_book(ok_txt).book.chapters[0].paragraphs[0].text == "x" * 64
+
+    ok_md = tmp_path / "ok.md"
+    ok_md.write_text("# " + "x" * 62, encoding="utf-8")
+    assert load_markdown_book(ok_md).book.chapters[0].title == "x" * 62
+
     big_txt = tmp_path / "big.txt"
     big_txt.write_text("x" * 65, encoding="utf-8")
     with pytest.raises(SkaldError) as exc_info:
@@ -516,7 +666,7 @@ def test_limits_size_empty_and_missing(tmp_path: Path, monkeypatch: pytest.Monke
     assert "too large" in exc_info.value.hint.lower()
 
     big_md = tmp_path / "big.md"
-    big_md.write_text("# " + "x" * 65, encoding="utf-8")
+    big_md.write_text("# " + "x" * 63, encoding="utf-8")
     with pytest.raises(SkaldError) as exc_info:
         load_markdown_book(big_md)
     assert exc_info.value.kind == "unsupported_format"
