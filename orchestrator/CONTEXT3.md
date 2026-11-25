@@ -344,3 +344,20 @@ Known drift: docs/defaults.md "C1.1 Import (TXT and Markdown)" item 1 still desc
 Decision: defaults.md sync DEFERRED to T02.7 (the next task touching import; it copies the Appendix 3 encoding row's wording). The Reviewer is told this is not a finding.
 Round 3 goes to the same Opus session, covering R2-1…R2-3 plus O-1.
 Follow-up: owner pastes into the Reviewer session.
+
+### E-0137 · 2026-11-25 15:17 (Asia/Colombo) · T02.4 · VERDICT
+Context: Reviewer (same Opus session) round 3 on PR #19 @c8230f4: APPROVED.
+ - Checks: 309 passed; the scope is the 3 files; the Appendix 3 row was replaced in place and matches the code.
+ - R2-1 and R2-2 fixed (trailing \x1a even/odd; b"caf\xe9 \x1a end"; emoji, U+0100 and U+3000 UTF-16 LE/BE).
+ - No stray-NUL regression; book-scale BOM-less CJK, Cyrillic and mixed text decode correctly as LE.
+ - 26 of 30 mutants caught.
+Findings:
+ - R3-1 [Minor] surviving mutants: the BE-side 30% boundary, and \x0b/\x0c in _C0_CHAR_RE (plus 2 equivalent even-length mutants).
+ - R3-2 [Nit] a tiny BOM-less no-NUL UTF-16 file (< about 8 C0 code units, e.g. 13 CJK chars) → 8-bit garbage, guessed=True; irrelevant for books.
+ - R3-3 [Nit] BOM-less BE CJK/Cyrillic → LE garbage, guessed=True (the accepted known limit).
+Decision: Merge PR #19 (normal merge; mergeable and clean, head c8230f4, CI green 12/12, E-0136).
+ - R3-1 → deferred to T02.7 (add a BE 29%/30% pair and a decoded-text \x0b/\f case while there).
+ - R3-2 and R3-3 → accepted limits; guessed=True lets T02.7 warn in the job log.
+After merge: T02.6 is NOT unlocked yet (it needs T02.5). PR #20 (T02.5) will need a rebase on the new master before review (both PRs append Appendix 3 and tick the index).
+Lesson for future prompts: when a fix cites a Reviewer's exact failing input, tell the Builder to test with that exact input. This avoided a third round here (O-1, E-0135).
+Follow-up: owner merges PR #19.
