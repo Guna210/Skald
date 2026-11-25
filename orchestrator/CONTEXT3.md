@@ -185,3 +185,51 @@ Context: Owner: "Merged #17". master is now 327927d = "Merge pull request #17 fr
 Decision: Answered no. The 5 MiB cap (MAX_CATALOG_BYTES) is used only by catalog/client.py when it fetches catalog.json; net.py's max_bytes is optional and off by default; model downloads use download() with the catalog's pinned size and SHA-256. EPUBs are local files with no download cap; T02.2 refuses only books over 500 MB uncompressed (MAX_UNCOMPRESSED_BYTES), and a typical novel EPUB is 0.3–5 MB.
 T03.2 is done. T03.6 is now available (announced only, E-0057). Available: T02.4, T02.5, T03.3, T03.6, T03.7, T03.9, T06.1.
 Follow-up: none.
+
+### E-0130 · 2026-11-25 12:51 (Asia/Colombo) · T02.4, T02.5 · TASK-ASSIGNED
+Context: Owner asked for the T02.4 and T02.5 prompts. Both build on master 327927d, run in parallel (separate files) and append Appendix 3 rows; the second to merge rebases.
+Decisions in the prompts (the Builders record them in Appendix 3 and docs/defaults.md):
+T02.4 TXT/MD import (book/text_import.py):
+ - Return `TextImport(book, encoding, guessed)` (a dataclass), so T02.7 can job.log the guess. No dispatcher (book.import, T02.7, picks by suffix).
+ - Encoding:
+   - a BOM (UTF-8, UTF-16 LE/BE) is used and not a guess;
+   - else strict UTF-8 success is not a guess;
+   - else guessed: NUL bytes mostly at odd/even positions → UTF-16 LE/BE, then cp1252 if it decodes, else latin-1.
+   - No new dependency for this (no chardet/charset-normalizer). Line endings → \n.
+ - Limits: files over 100 MB → unsupported_format (hint: too large); no non-whitespace text → unsupported_format.
+ - TXT paragraphs = blank-line-separated blocks. Single newlines inside a block are hard wraps → one space (Gutenberg). Whitespace collapsed.
+ - Chapter rules:
+   - (a) a block whose first line matches ^(chapter|part|book)\b (case-insensitive, after stripping) and is ≤ 80 chars;
+   - (b) a single-line block ≤ 80 chars preceded by ≥ 2 blank lines.
+   - The heading block's lines are joined by a space into the first paragraph (is_heading=True). Title = the heading's first line.
+   - Text before the first heading is its own chapter. Untitled chapters → "Chapter N". No heading at all → one chapter.
+ - Book.title = the file stem; authors []; language None (set later in T02.7).
+ - Chapters: linear True; suggested skip "short" (< 200 chars, D2 counting); included = not suggested_skip.
+ - Ids: reuse T02.3's _chapter_id/_paragraph_id with href key f"L{start_line}" (1-based start line).
+ - Markdown: NEW dependency markdown-it-py (MIT; mdurl MIT), pinned exactly; tables enabled.
+   - h1/h2 (ATX or setext) start chapters; h3–h6 are heading paragraphs.
+   - Paragraph, list-item, blockquote and table-row blocks → paragraphs (cells joined by one space).
+   - Inline: text and code_inline kept; softbreak → space; hardbreak → "\n".
+   - Skipped: images (alt text never read), html_block/html_inline tokens (the text between inline tags is kept), and fenced/indented code blocks (not narration — a default, so it goes in defaults.md).
+   - Why the dependency: CommonMark edge cases (emphasis, links, setext, lists) are error-prone by regex.
+ - Fixtures: generated in tests via tmp_path (bytes for the encodings), with expected chapters in the test tables.
+ - Reviewer: Opus (parser of untrusted input).
+T02.5 normalization + lexicon (text/normalize.py, text/lexicon.py; pure functions):
+ - normalize:
+   - NFC;
+   - remove U+00AD soft hyphen and U+200B, U+2060, U+FEFF;
+   - KEEP U+200C/U+200D (ZWNJ/ZWJ are meaningful in Indic and Persian scripts and in emoji sequences; Kokoro supports hi);
+   - every Unicode whitespace run without "\n" → one ASCII space; a run containing "\n" → one "\n"; strip the ends;
+   - quotes and dashes untouched.
+ - Synthesis text = apply_lexicon(normalize(display)); the display text (Paragraph.text) is never changed. The cache key and T02.6 chunking use the synthesis text.
+ - Lexicon matching:
+   - rule words are normalized the same way; one compiled alternation, longest word first, ties broken by rule order (earlier wins);
+   - per-alternative case flag ((?i:…) unless case_sensitive); re.escape every word;
+   - whole-word boundaries = (?<!\w) and (?!\w), not \b, so "C++" and "Dr." work and the boundaries are Unicode-aware;
+   - a single left-to-right pass: leftmost match, longest at that position; replaced text is never rescanned (no cascades);
+   - the replacement is inserted as written (no case transfer);
+   - whole-word never matches inside CJK runs (\w includes CJK) → CJK rules need whole_word=false; document it and note it for T07.7.
+ - apply_lexicon returns (text, per-rule counts) plus a helper to total counts over a Book.
+ - LexiconRule.word gets min_length=1 after stripping (whitespace-only rejected).
+ - Reviewer: Sonnet (Builder must not be Sonnet).
+Follow-up: owner opens two Builder sessions.
