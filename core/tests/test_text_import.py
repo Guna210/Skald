@@ -210,6 +210,156 @@ def test_bomless_utf16_le_cjk_and_cyrillic(
     _assert_book_invariants(res.book)
 
 
+@pytest.mark.parametrize(
+    ("text", "source_enc", "expected_enc", "expected_len"),
+    [
+        ("It was a fine morning in the quiet little town.", "utf-8", "utf-8", 48),
+        ("It was a fine morning in the quiet little towns.", "utf-8", "utf-8", 49),
+        ("It was a fine morning in the quiet little café", "utf-8", "utf-8", 48),
+        ("It was a fine morning in the quiet little café.", "utf-8", "utf-8", 49),
+        ("It was a fine morning in the quiet little café", "cp1252", "cp1252", 47),
+        ("It was a fine morning in the quiet little café.", "cp1252", "cp1252", 48),
+    ],
+)
+def test_trailing_ctrl_z_stripped_with_8bit_fallback(
+    tmp_path: Path,
+    text: str,
+    source_enc: str,
+    expected_enc: str,
+    expected_len: int,
+) -> None:
+    raw = text.encode(source_enc) + b"\x1a"
+    assert len(raw) == expected_len
+    path = tmp_path / "ctrl_z.txt"
+    path.write_bytes(raw)
+    res = load_text_book(path)
+    assert res.encoding == expected_enc
+    assert res.guessed is True
+    assert res.book.chapters[0].paragraphs[0].text == text
+    _assert_book_invariants(res.book)
+
+
+def test_bomless_utf16_le_broken_nul_cadence_emoji(tmp_path: Path) -> None:
+    text = ("a 😀 " * 40).strip()
+    raw = ("a 😀 " * 40).encode("utf-16-le")
+    path = tmp_path / "emoji.txt"
+    path.write_bytes(raw)
+    res = load_text_book(path)
+    assert res.encoding == "utf-16-le"
+    assert res.guessed is True
+    assert res.book.chapters[0].paragraphs[0].text == text
+    _assert_book_invariants(res.book)
+
+
+def test_encoding_thresholds_boundaries_and_mutant_killers(tmp_path: Path) -> None:
+    # Step 3 cadence: 30% dominant NULs -> UTF-16-LE; 29% -> 8-bit fallback without NULs
+    at_30 = ("a" * 30 + "你" * 70).encode("utf-16-le")
+    p30 = tmp_path / "at30.txt"
+    p30.write_bytes(at_30)
+    r30 = load_text_book(p30)
+    assert r30.encoding == "utf-16-le"
+    assert r30.guessed is True
+    assert r30.book.chapters[0].paragraphs[0].text == "a" * 30 + "你" * 70
+
+    at_29 = ("a" * 29 + "你" * 71).encode("utf-16-le")
+    p29 = tmp_path / "at29.txt"
+    p29.write_bytes(at_29)
+    r29 = load_text_book(p29)
+    assert r29.encoding == "utf-8"
+    assert r29.guessed is True
+    assert r29.book.chapters[0].paragraphs[0].text == "a" * 29 + "`O" * 71
+
+    # Step 3 other parity at 5% and 6% (both decode as UTF-16-LE via R2-2), and 30%/30% tie rejected
+    other_5 = ("a" * 50 + "\u4e00" * 5 + "你" * 45).encode("utf-16-le")
+    p_o5 = tmp_path / "other5.txt"
+    p_o5.write_bytes(other_5)
+    r_o5 = load_text_book(p_o5)
+    assert r_o5.encoding == "utf-16-le"
+    assert r_o5.guessed is True
+    assert r_o5.book.chapters[0].paragraphs[0].text == "a" * 50 + "\u4e00" * 5 + "你" * 45
+
+    other_6 = ("a" * 50 + "\u4e00" * 6 + "你" * 44).encode("utf-16-le")
+    p_o6 = tmp_path / "other6.txt"
+    p_o6.write_bytes(other_6)
+    r_o6 = load_text_book(p_o6)
+    assert r_o6.encoding == "utf-16-le"
+    assert r_o6.guessed is True
+    assert r_o6.book.chapters[0].paragraphs[0].text == "a" * 50 + "\u4e00" * 6 + "你" * 44
+
+    tie = ("a" * 30 + "\u4e00" * 30 + "你" * 40).encode("utf-16-le")
+    p_tie = tmp_path / "tie.txt"
+    p_tie.write_bytes(tie)
+    r_tie = load_text_book(p_tie)
+    assert r_tie.encoding == "utf-8"
+    assert r_tie.guessed is True
+
+    # Step 4 5% C0 threshold boundary: 1 C0 byte in 20 code units (5%) vs 21 code units (4.76%)
+    c0_at_5 = ("。" + "你" * 19).encode("utf-16-le")
+    p_c0_5 = tmp_path / "c0_5.txt"
+    p_c0_5.write_bytes(c0_at_5)
+    r_c0_5 = load_text_book(p_c0_5)
+    assert r_c0_5.encoding == "utf-16-le"
+    assert r_c0_5.guessed is True
+    assert r_c0_5.book.chapters[0].paragraphs[0].text == "。" + "你" * 19
+
+    c0_below_5 = ("。" + "你" * 20).encode("utf-16-le")
+    p_c0_b5 = tmp_path / "c0_b5.txt"
+    p_c0_b5.write_bytes(c0_below_5)
+    r_c0_b5 = load_text_book(p_c0_b5)
+    assert r_c0_b5.encoding == "utf-8"
+    assert r_c0_b5.guessed is True
+
+    # Even-length requirement: odd length with NUL cadence must NOT decode as UTF-16
+    odd_raw = "Chapter 1.\n\nHello".encode("utf-16-le") + b"!"
+    p_odd = tmp_path / "odd.txt"
+    p_odd.write_bytes(odd_raw)
+    r_odd = load_text_book(p_odd)
+    assert r_odd.encoding == "utf-8"
+    assert r_odd.guessed is True
+    assert r_odd.book.chapters[0].paragraphs[1].text == "Hello!"
+
+    # Step 4 cadence branch (both NULs >=30% and 0x04 C0 bytes)
+    step4_cad = "Hello! Привет!".encode("utf-16-le")
+    p_s4c = tmp_path / "s4cad.txt"
+    p_s4c.write_bytes(step4_cad)
+    r_s4c = load_text_book(p_s4c)
+    assert r_s4c.encoding == "utf-16-le"
+    assert r_s4c.guessed is True
+    assert r_s4c.book.chapters[0].paragraphs[0].text == "Hello! Привет!"
+
+    # Strict decoding: lone UTF-16 surrogates rejected in both Step 3 and Step 4
+    bad_surr_s3 = b"a\x00" * 20 + b"\x00\xd8"
+    p_bs3 = tmp_path / "bad_surr3.txt"
+    p_bs3.write_bytes(bad_surr_s3)
+    r_bs3 = load_text_book(p_bs3)
+    assert r_bs3.encoding == "cp1252"
+    assert r_bs3.guessed is True
+
+    bad_surr_s4 = b"a\x01" * 10 + b"\x01\xd8\xd8\x01"
+    p_bs4 = tmp_path / "bad_surr4.txt"
+    p_bs4.write_bytes(bad_surr_s4)
+    r_bs4 = load_text_book(p_bs4)
+    assert r_bs4.encoding == "cp1252"
+    assert r_bs4.guessed is True
+
+    # Decoded-text C0 check: input decoding to C0 chars in LE (and invalid in BE) is rejected
+    c0_in_decoded = "Hello\x01".encode("utf-16-le") + b"\xd8\x01" + "world".encode("utf-16-le")
+    p_c0d = tmp_path / "c0_decoded.txt"
+    p_c0d.write_bytes(c0_in_decoded)
+    r_c0d = load_text_book(p_c0d)
+    assert r_c0d.encoding == "cp1252"
+    assert r_c0d.guessed is True
+    assert r_c0d.book.chapters[0].paragraphs[0].text == "HelloØworld"
+
+    # C0 set excludes \t and \f -> clean UTF-8 with guessed=False
+    p_tf = tmp_path / "tabs_ff.txt"
+    p_tf.write_bytes(b"Chapter 1\n\nHello\tworld\fnext.")
+    r_tf = load_text_book(p_tf)
+    assert r_tf.encoding == "utf-8"
+    assert r_tf.guessed is False
+    assert r_tf.book.chapters[0].paragraphs[1].text == "Hello world next."
+
+
 def test_crlf_and_cr_line_endings_normalized(tmp_path: Path) -> None:
     txt_path = tmp_path / "crlf.txt"
     txt_path.write_bytes(b"Chapter 1\r\n\r\nFirst wrapped\r\nline here.\r\rSecond paragraph.\r\n")
@@ -581,7 +731,7 @@ def test_markdown_inline_br_and_heading_inside_blockquote(tmp_path: Path) -> Non
     md_path = tmp_path / "md_edge.md"
     md_path.write_text(
         "# Main Chapter\n\n"
-        "world<br>next<br/>again<br />once<BR />more and <span>kept</span>.\n\n"
+        "world<br>next<br/>again<br />once<BR />more and <span>kept</span> <brx>stay.\n\n"
         "> ## Quoted Heading\n>\n> Body inside quote.\n",
         encoding="utf-8",
     )
@@ -589,9 +739,49 @@ def test_markdown_inline_br_and_heading_inside_blockquote(tmp_path: Path) -> Non
     assert [ch.title for ch in res.book.chapters] == ["Main Chapter"]
     assert [(p.text, p.is_heading) for p in res.book.chapters[0].paragraphs] == [
         ("Main Chapter", True),
-        ("world\nnext\nagain\nonce\nmore and kept.", False),
+        ("world\nnext\nagain\nonce\nmore and kept stay.", False),
         ("Quoted Heading", True),
         ("Body inside quote.", False),
+    ]
+    _assert_book_invariants(res.book)
+
+
+def test_txt_heading_boundary_lines_and_words(tmp_path: Path) -> None:
+    txt_path = tmp_path / "boundaries.txt"
+    txt_path.write_text(
+        "Chapter two three four five six seven eight nine\n\n"  # 9 words -> no split
+        "Chapter two three four five six seven eight\n\n"  # 8 words -> splits
+        "Body 1.\n\n"
+        "Chapter 1\nLine two\nLine three\nLine four\n\n"  # 4 lines -> no split
+        "Chapter 2\nLine two\nLine three\n\n"  # 3 lines -> splits
+        "Body 2.\n\n"
+        "Chapter two three four five six seven eight\n"  # 8 words on line 1, >8 total
+        "plus extra words on line two\n\n"
+        "Body 3.\n",
+        encoding="utf-8",
+    )
+    res = load_text_book(txt_path)
+    assert [ch.title for ch in res.book.chapters] == [
+        "Chapter 1",
+        "Chapter two three four five six seven eight",
+        "Chapter 2",
+        "Chapter two three four five six seven eight",
+    ]
+    assert [(p.text, p.is_heading) for p in res.book.chapters[0].paragraphs] == [
+        ("Chapter two three four five six seven eight nine", False),
+    ]
+    assert [(p.text, p.is_heading) for p in res.book.chapters[1].paragraphs] == [
+        ("Chapter two three four five six seven eight", True),
+        ("Body 1.", False),
+        ("Chapter 1 Line two Line three Line four", False),
+    ]
+    assert [(p.text, p.is_heading) for p in res.book.chapters[2].paragraphs] == [
+        ("Chapter 2 Line two Line three", True),
+        ("Body 2.", False),
+    ]
+    assert [(p.text, p.is_heading) for p in res.book.chapters[3].paragraphs] == [
+        ("Chapter two three four five six seven eight plus extra words on line two", True),
+        ("Body 3.", False),
     ]
     _assert_book_invariants(res.book)
 

@@ -68,22 +68,30 @@ def _decode_8bit(raw: bytes) -> tuple[str, str, bool]:
         return raw.decode("latin-1", errors="strict"), "latin-1", True
 
 
+def _try_strict_utf16(raw: bytes, enc: str) -> str | None:
+    try:
+        decoded = raw.decode(enc, errors="strict")
+    except UnicodeDecodeError:
+        return None
+    if _C0_CHAR_RE.search(decoded) is not None:
+        return None
+    return decoded
+
+
 def _nul_cadence_decode(raw: bytes) -> tuple[str, str] | None:
     if len(raw) < 2 or len(raw) % 2 != 0:
         return None
     n = len(raw) // 2
     even_nuls = raw[0::2].count(0)
     odd_nuls = raw[1::2].count(0)
-    if even_nuls * 100 >= 30 * n and odd_nuls * 100 <= 5 * n:
-        try:
-            return raw.decode("utf-16-be", errors="strict"), "utf-16-be"
-        except UnicodeDecodeError:
-            return None
-    if odd_nuls * 100 >= 30 * n and even_nuls * 100 <= 5 * n:
-        try:
-            return raw.decode("utf-16-le", errors="strict"), "utf-16-le"
-        except UnicodeDecodeError:
-            return None
+    if even_nuls * 100 >= 30 * n and even_nuls > odd_nuls:
+        decoded = _try_strict_utf16(raw, "utf-16-be")
+        if decoded is not None:
+            return decoded, "utf-16-be"
+    if odd_nuls * 100 >= 30 * n and odd_nuls > even_nuls:
+        decoded = _try_strict_utf16(raw, "utf-16-le")
+        if decoded is not None:
+            return decoded, "utf-16-le"
     return None
 
 
@@ -120,18 +128,17 @@ def _decode_text_bytes(raw: bytes) -> tuple[str, str, bool]:
         text, enc, _ = _decode_8bit(cleaned_no_nul)
         return text, enc, True
 
-    # 4. Other C0 bytes present -> NUL-cadence first, else strict UTF-16 LE/BE without C0 chars.
+    # 4. Other C0 bytes present -> NUL-cadence first; else if C0 >= 5% of code units,
+    #    try strict UTF-16 LE then BE without C0 chars; else 8-bit path with C0 removed.
     res = _nul_cadence_decode(raw)
     if res is not None:
         return res[0], res[1], True
-    if len(raw) >= 2 and len(raw) % 2 == 0:
+    c0_count = len(raw) - len(cleaned_no_c0)
+    if len(raw) >= 2 and len(raw) % 2 == 0 and c0_count * 20 >= len(raw) // 2:
         # shortcut: LE is tried before BE (Notepad default), so BOM-less BE CJK may decode as LE.
         for enc in ("utf-16-le", "utf-16-be"):
-            try:
-                decoded = raw.decode(enc, errors="strict")
-            except UnicodeDecodeError:
-                continue
-            if _C0_CHAR_RE.search(decoded) is None:
+            decoded = _try_strict_utf16(raw, enc)
+            if decoded is not None:
                 return decoded, enc, True
 
     text, enc, _ = _decode_8bit(cleaned_no_c0)
