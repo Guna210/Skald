@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel
+from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator
 
 from skald_core.catalog.schema import (
     CatalogFile,
@@ -228,11 +228,18 @@ class Chunk(BaseModel):
 class LexiconRule(BaseModel):
     """Per-project pronunciation replacement rule."""
 
-    word: str
+    word: str = Field(min_length=1)
     replacement: str
     case_sensitive: bool = False
     whole_word: bool = True
     match_count: int = 0
+
+    @field_validator("word")
+    @classmethod
+    def _validate_word_not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Lexicon rule word must not be empty or whitespace-only.")
+        return value
 
 
 class PresetVoiceSpec(BaseModel):
