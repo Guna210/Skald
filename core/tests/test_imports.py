@@ -10,6 +10,7 @@ import pytest
 
 def test_runtime_imports() -> None:
     import lxml.etree
+    import markdown_it
     import numpy
     import psutil
     import pydantic
@@ -21,6 +22,7 @@ def test_runtime_imports() -> None:
 
     assert skald_core.__version__ == "0.1.0"
     assert lxml.etree is not None
+    assert markdown_it.__version__
     assert numpy.__version__
     assert psutil.__version__
     assert pydantic.__version__
