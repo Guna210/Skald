@@ -167,3 +167,15 @@ Decision: round 2 goes to the same Opus Reviewer session. FOCUS:
  - the R1-4 comment and Appendix 3 row;
  - nothing else changed.
 Follow-up: owner pastes into the round-1 Reviewer session.
+
+### E-0128 · 2026-11-25 12:45 (Asia/Colombo) · T03.2 · VERDICT
+Context: Reviewer (same Opus session) round 2 on PR #17 @1aa9275: APPROVED.
+ - Checks: ruff, format and mypy clean; 269 passed; the diff is tests plus one comment plus one Appendix 3 row.
+ - All mutations are now caught: the cap disabled (survived in round 1), the cap loosened ×100, and the backslash (survived in round 1), \x00, empty-segment and "."/".." clauses.
+ - Gzip bomb (300 MB of zeros → 1.37 MB, with Content-Length, max_bytes 5 MiB) → http_error with actual_bytes 5,308,416 (the cap plus one chunk) and about 0 MB RSS growth, so memory is bounded by the cap.
+ - The R1-3 tests use a real truncated chunked body; exhaustion → offline, matching T01.6.
+ - R1-1…R1-4 fixed.
+ - New: R2-1 [Nit] the unbounded resp.content branch is not covered by the mid-body retry tests (no caller in this task).
+Decision: Merge PR #17 (normal merge; mergeable and clean, head 1aa9275, CI green 12/12, E-0127). R2-1 is dropped and noted: add a test if a caller of the unbounded branch appears.
+After merge: T03.6 (model file installer, revisions, licence acceptance; it needs T03.2 + T01.6 + T01.3) becomes available. Announce only (E-0057).
+Follow-up: owner merges PR #17.
