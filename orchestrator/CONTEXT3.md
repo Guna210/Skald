@@ -332,3 +332,15 @@ Decision: pre-review fix O-1 (an Orchestrator finding, so it is not a Reviewer r
 Real BOM-less UTF-16 books have hundreds of C0 code units; inputs that small aren't books.
 Why: sending it to review as-is would very likely give a third CHANGES REQUESTED (the CLAUDE.md rethink rule) for a one-line fix.
 Follow-up: after the fix, the round-3 review goes to the same Opus session.
+
+### E-0136 · 2026-11-25 14:41 (Asia/Colombo) · T02.4 · REVIEW-PROMPT (round 3)
+Context: T02.4 O-1 handoff (Gemini), PR #19 @c8230f4. Verified by the Orchestrator:
+ - one commit on 31955d4 (no force-push); master 327927d; mergeable and clean;
+ - 3 files, +53/−9: MIN_UTF16_C0_BYTES = 8 plus the gate, tests, the SPEC row in place;
+ - CI green 12/12 (runs 45581050520 and 45581039834).
+The Builder reports 309 passed and the 3 O-1 mutants killed. The Builder also adjusted the existing cjk_high_bytes and c0_at_5 tests so they meet the 8-byte floor → accepted.
+Orchestrator re-ran its 13-case smoke test: all correct now, including b"caf\xe9 \x1a end" → cp1252 "café  end" guessed=True.
+Known drift: docs/defaults.md "C1.1 Import (TXT and Markdown)" item 1 still describes the round-2 heuristic (no 5%/8-byte gate; old "≤ 5%" cadence). Appendix 3 is correct and is the record of truth.
+Decision: defaults.md sync DEFERRED to T02.7 (the next task touching import; it copies the Appendix 3 encoding row's wording). The Reviewer is told this is not a finding.
+Round 3 goes to the same Opus session, covering R2-1…R2-3 plus O-1.
+Follow-up: owner pastes into the Reviewer session.
