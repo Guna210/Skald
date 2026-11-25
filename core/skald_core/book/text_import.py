@@ -19,6 +19,7 @@ MAX_TEXT_BYTES = 100_000_000  # 100 MB (SPEC T02.4)
 MAX_HEADING_LINE_CHARS = 80
 MAX_HEADING_LINES = 3
 MAX_HEADING_FIRST_LINE_WORDS = 8
+MIN_UTF16_C0_BYTES = 8
 
 _TXT_HEADING_RE = re.compile(r"^(?:chapter|part|book)\b", re.IGNORECASE)
 _HTML_BR_RE = re.compile(r"^<br\s*/?>$", re.IGNORECASE)
@@ -128,13 +129,18 @@ def _decode_text_bytes(raw: bytes) -> tuple[str, str, bool]:
         text, enc, _ = _decode_8bit(cleaned_no_nul)
         return text, enc, True
 
-    # 4. Other C0 bytes present -> NUL-cadence first; else if C0 >= 5% of code units,
-    #    try strict UTF-16 LE then BE without C0 chars; else 8-bit path with C0 removed.
+    # 4. Other C0 bytes present -> NUL-cadence first; else if C0 >= 5% of code units
+    #    and >= MIN_UTF16_C0_BYTES, try strict UTF-16 LE then BE without C0 chars; else 8-bit.
     res = _nul_cadence_decode(raw)
     if res is not None:
         return res[0], res[1], True
     c0_count = len(raw) - len(cleaned_no_c0)
-    if len(raw) >= 2 and len(raw) % 2 == 0 and c0_count * 20 >= len(raw) // 2:
+    if (
+        len(raw) >= 2
+        and len(raw) % 2 == 0
+        and c0_count >= MIN_UTF16_C0_BYTES
+        and c0_count * 20 >= len(raw) // 2
+    ):
         # shortcut: LE is tried before BE (Notepad default), so BOM-less BE CJK may decode as LE.
         for enc in ("utf-16-le", "utf-16-be"):
             decoded = _try_strict_utf16(raw, enc)

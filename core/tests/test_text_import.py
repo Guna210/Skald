@@ -187,7 +187,7 @@ def test_stray_nuls_strip_and_decode_as_guessed_utf8(
     [
         ("cjk_40", "你好世界。" * 40, False),
         ("cyrillic", "Глава первая.\n\nПривет мир!", False),
-        ("cjk_high_bytes", "中文測試。\n\n測試內容。", True),
+        ("cjk_high_bytes", "中文測試。" * 8 + "\n\n測試內容。", True),
     ],
 )
 def test_bomless_utf16_le_cjk_and_cyrillic(
@@ -237,6 +237,44 @@ def test_trailing_ctrl_z_stripped_with_8bit_fallback(
     assert res.guessed is True
     assert res.book.chapters[0].paragraphs[0].text == text
     _assert_book_invariants(res.book)
+
+
+def test_short_cp1252_with_lone_ctrl_z_and_min_c0_boundary(tmp_path: Path) -> None:
+    # O-1 (a): exact b"caf\xe9 \x1a end" (10 bytes) -> "café  end" via cp1252, guessed=True
+    raw_even = b"caf\xe9 \x1a end"
+    assert text_import_mod._decode_text_bytes(raw_even) == ("café  end", "cp1252", True)
+    p_even = tmp_path / "short_even.txt"
+    p_even.write_bytes(raw_even)
+    r_even = load_text_book(p_even)
+    assert r_even.encoding == "cp1252"
+    assert r_even.guessed is True
+    assert r_even.book.chapters[0].paragraphs[0].text == "café end"
+
+    # O-1 (b): odd-length variant b"caf\xe9 \x1a ends" -> cp1252, guessed=True
+    raw_odd = b"caf\xe9 \x1a ends"
+    assert text_import_mod._decode_text_bytes(raw_odd) == ("café  ends", "cp1252", True)
+    p_odd = tmp_path / "short_odd.txt"
+    p_odd.write_bytes(raw_odd)
+    r_odd = load_text_book(p_odd)
+    assert r_odd.encoding == "cp1252"
+    assert r_odd.guessed is True
+    assert r_odd.book.chapters[0].paragraphs[0].text == "café ends"
+
+    # O-1 (c): 5% fraction met, exact 7 vs 8 C0 bytes boundary
+    txt_7 = "。" * 7 + "你" * 7  # 14 code units, 7 C0 bytes (50% >= 5%, 7 < 8)
+    p_7 = tmp_path / "c0_7.txt"
+    p_7.write_bytes(txt_7.encode("utf-16-le"))
+    r_7 = load_text_book(p_7)
+    assert r_7.encoding == "utf-8"
+    assert r_7.guessed is True
+
+    txt_8 = "。" * 8 + "你" * 8  # 16 code units, 8 C0 bytes (50% >= 5%, 8 >= 8)
+    p_8 = tmp_path / "c0_8.txt"
+    p_8.write_bytes(txt_8.encode("utf-16-le"))
+    r_8 = load_text_book(p_8)
+    assert r_8.encoding == "utf-16-le"
+    assert r_8.guessed is True
+    assert r_8.book.chapters[0].paragraphs[0].text == txt_8
 
 
 def test_bomless_utf16_le_broken_nul_cadence_emoji(tmp_path: Path) -> None:
@@ -293,16 +331,16 @@ def test_encoding_thresholds_boundaries_and_mutant_killers(tmp_path: Path) -> No
     assert r_tie.encoding == "utf-8"
     assert r_tie.guessed is True
 
-    # Step 4 5% C0 threshold boundary: 1 C0 byte in 20 code units (5%) vs 21 code units (4.76%)
-    c0_at_5 = ("。" + "你" * 19).encode("utf-16-le")
+    # Step 4 5% C0 threshold boundary with >= 8 C0 bytes: 8 in 160 (5.0%) vs 8 in 161 (4.97%)
+    c0_at_5 = ("。" * 8 + "你" * 152).encode("utf-16-le")
     p_c0_5 = tmp_path / "c0_5.txt"
     p_c0_5.write_bytes(c0_at_5)
     r_c0_5 = load_text_book(p_c0_5)
     assert r_c0_5.encoding == "utf-16-le"
     assert r_c0_5.guessed is True
-    assert r_c0_5.book.chapters[0].paragraphs[0].text == "。" + "你" * 19
+    assert r_c0_5.book.chapters[0].paragraphs[0].text == "。" * 8 + "你" * 152
 
-    c0_below_5 = ("。" + "你" * 20).encode("utf-16-le")
+    c0_below_5 = ("。" * 8 + "你" * 153).encode("utf-16-le")
     p_c0_b5 = tmp_path / "c0_b5.txt"
     p_c0_b5.write_bytes(c0_below_5)
     r_c0_b5 = load_text_book(p_c0_b5)
