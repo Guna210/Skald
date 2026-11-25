@@ -299,3 +299,22 @@ Decision: round 2 goes to the same Opus Reviewer session. FOCUS:
  - the R1-2/R1-3/R1-4/R1-5 tests; no regressions in the round-1 confirmations;
  - the Appendix 3 rows were replaced, not duplicated.
 Follow-up: owner pastes into the round-1 Reviewer session. PR #20 (T02.5) is still open; its handoff has not been pasted yet.
+
+### E-0134 · 2026-11-25 14:11 (Asia/Colombo) · T02.4 · VERDICT + FIX-PROMPT (round 3)
+Context: Reviewer (same Opus session) round 2 on PR #19 @8a54fe2: CHANGES REQUESTED.
+ - Checks: 299 passed (30 under -O); no regressions; timings unchanged (100k chapters 2.5 s; 300k paragraphs 6.9 s).
+ - R1-2/R1-3/R1-4 fixed; R1-1 partly fixed: stray NULs, LE CJK/Cyrillic, ASCII LE/BE and UTF-32 BOMs are now right.
+ - Appendix 3 rows were replaced in place (4 rows, no duplicates).
+Findings:
+ - R2-1 [Major] step 4: a single stray C0 byte in an even-length 8-bit file (e.g. a trailing DOS Ctrl-Z \x1a; b"caf\xe9 \x1a end") → strict UTF-16-LE garbage, because arbitrary even-length bytes are almost always valid UTF-16 and pass the no-C0 check by accident.
+ - R2-2 [Minor] BOM-less UTF-16 whose NUL cadence is broken by a few code units with a NUL low byte (emoji low surrogate DE00, U+0100, U+3000) → other parity over 5% → cp1252 garbage; correct in round 1.
+ - R2-3 [Minor] surviving mutants: the cadence thresholds; the even-length check; guessed=True on three branches; strict vs errors="replace"; skipping the decoded-text C0 check; the C0 set (\f/\t); the <br regex (no <brx> test); the heading limits (8→7, 3→2/4); first-line word counting at the 8-word boundary.
+ - R2-4 [Nit] "# ![](p.png)" followed by a real chapter keeps an empty "Chapter 1" (auto-skipped as short); a 2-line heading block with a 40-word line (intended).
+Decision: round 3, narrowly scoped. This is the last round before CLAUDE.md's rethink rule (a third CHANGES REQUESTED would trigger it).
+ - R2-1 FIX: in step 4, try the strict UTF-16 decodes only when the C0 bytes are at least 5% of the code units (C0 count ≥ 0.05 × len/2). Real BOM-less UTF-16 has about 11% (CJK low bytes) up to about 100% (Cyrillic high byte 0x04). Otherwise go straight to the 8-bit path with the C0 bytes removed, guessed=True. Tests: a trailing \x1a on even and odd lengths, in UTF-8 English, UTF-8 with accents and cp1252 with accents → correct text with \x1a removed, guessed=True.
+ - R2-2 FIX (cheap, restores the round-1 behaviour): in steps 3 and 4, if one parity is at least 30% NUL but the other is over 5%, still try strict UTF-16 for the dominant parity's endianness before falling back. Test: "a 😀 "×40 BOM-less utf-16-le → correct text.
+ - R2-3 FIX: one assertion per surviving mutant, including a boundary pair for 30%/5% and assertions on the guessed flag for every branch.
+ - R2-4: no change. Note for T02.7: chapters with zero paragraphs can exist (dangling EPUB anchors, an image-only Markdown h1); the UI must handle them.
+ - Update the Appendix 3 encoding row in place.
+Why: R2-1 is a silent-garbage bug for ordinary DOS-era TXT files; the 5% fraction guard separates real UTF-16 from stray bytes. R2-2 and R2-3 are a few lines each and close the remaining gaps.
+Follow-up: the same Reviewer for round 3.
