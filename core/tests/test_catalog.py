@@ -804,3 +804,75 @@ def test_whitespace_and_updated_at_format_and_duplicate_file_paths() -> None:
     rev["files"].append(copy.deepcopy(rev["files"][0]))
     with pytest.raises(ValidationError):
         Catalog.model_validate(dup_files)
+
+
+def test_network_deletes_downloaded_files_after_verification(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    local_net_env: None,
+) -> None:
+    payload_a = b"model-file-a"
+    payload_b = b"model-file-b"
+    sha_a = hashlib.sha256(payload_a).hexdigest()
+    sha_b = hashlib.sha256(payload_b).hexdigest()
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, format: str, *args: Any) -> None:
+            return
+
+        def _send(self, send_body: bool) -> None:
+            data = payload_a if self.path == "/a.bin" else payload_b
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            if send_body:
+                self.wfile.write(data)
+
+        def do_HEAD(self) -> None:
+            self._send(send_body=False)
+
+        def do_GET(self) -> None:
+            self._send(send_body=True)
+
+    downloaded_paths: list[Path] = []
+    real_download = net.download
+
+    def spy_download(url: str, dest: Path | str, *args: Any, **kwargs: Any) -> Path:
+        for prev in downloaded_paths:
+            assert not prev.exists(), f"Previous verified file {prev} was not deleted"
+        result = real_download(url, dest, *args, **kwargs)
+        dest_path = Path(dest)
+        assert dest_path.is_file()
+        downloaded_paths.append(dest_path)
+        return result
+
+    with _run_server(Handler) as base_url:
+        monkeypatch.setattr(
+            catalog_validate,
+            "build_file_url",
+            lambda _src, path: f"{base_url}/{path}",
+        )
+        monkeypatch.setattr(net, "download", spy_download)
+
+        model = _make_model("m1", sha256=sha_a, size=len(payload_a))
+        model["checkpoints"][0]["revisions"][0]["files"] = [
+            {"path": "a.bin", "format": "onnx", "size": len(payload_a), "sha256": sha_a},
+            {"path": "b.bin", "format": "onnx", "size": len(payload_b), "sha256": sha_b},
+        ]
+        catalog_path = tmp_path / "catalog.json"
+        catalog_path.write_text(json.dumps(_make_catalog([model])), encoding="utf-8")
+        adapters_file = _write_adapters(tmp_path, {"kokoro": "1.0.0"})
+        docs_dir = _write_cards(tmp_path, ["m1"])
+
+        errors = validate_catalog(
+            catalog_path,
+            network=True,
+            adapters_path=adapters_file,
+            models_doc_dir=docs_dir,
+            base_catalog=Catalog.model_validate(_make_catalog([])),
+            use_git_diff=False,
+        )
+        assert errors == []
+        assert len(downloaded_paths) == 2
+        for path in downloaded_paths:
+            assert not path.exists(), f"Downloaded file {path} still exists after validation"

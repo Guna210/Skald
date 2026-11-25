@@ -7,6 +7,32 @@ import platform
 from pathlib import Path
 
 
+def get_data_dir() -> Path:
+    """Resolve the `<userData>` directory.
+
+    1. ``SKALD_DATA_DIR`` if set and non-empty (passed by Electron main process).
+    2. ``SKALD_DEV_DATA`` if set and non-empty (dev environment).
+    3. Platform default matching Electron userData: Windows ``%APPDATA%\\Skald``,
+       Linux ``$XDG_CONFIG_HOME/Skald`` (default ``~/.config/Skald``).
+    """
+    explicit = os.environ.get("SKALD_DATA_DIR", "").strip()
+    if explicit:
+        return Path(explicit)
+
+    dev_data = os.environ.get("SKALD_DEV_DATA", "").strip()
+    if dev_data:
+        return Path(dev_data)
+
+    if platform.system().lower() == "windows":
+        app_data = os.environ.get("APPDATA", "").strip()
+        base = Path(app_data) if app_data else Path.home() / "AppData" / "Roaming"
+        return base / "Skald"
+
+    xdg_config_home = os.environ.get("XDG_CONFIG_HOME", "").strip()
+    base = Path(xdg_config_home) if xdg_config_home else Path.home() / ".config"
+    return base / "Skald"
+
+
 def get_storage_dir() -> Path:
     """Resolve the `<storage>` directory following Decision F1 precedence.
 

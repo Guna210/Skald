@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import gzip
 import hashlib
 import http.server
+import json
 import os
 import socket
 import threading
@@ -891,3 +893,168 @@ def test_head_follows_redirects_and_maps_errors() -> None:
         with pytest.raises(SkaldError) as exc_404:
             head(f"{base_url}/missing")
         assert exc_404.value.kind == "http_not_found"
+
+
+def test_get_text_and_json_max_bytes_and_recursion_error() -> None:
+    deep_json = (("[" * 15000) + ("]" * 15000)).encode("utf-8")
+    valid_oversize_json = json.dumps({"items": ["x" * 200 for _ in range(5)]}).encode("utf-8")
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
+        def log_message(self, format: str, *args: Any) -> None:
+            return
+
+        def do_GET(self) -> None:
+            if self.path == "/exact":
+                body = b'{"ok":true}'
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+            elif self.path == "/oversize-cl":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", "10000")
+                self.end_headers()
+                self.wfile.write(b"{}")
+            elif self.path == "/oversize-chunked":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Transfer-Encoding", "chunked")
+                self.end_headers()
+                try:
+                    for offset in range(0, len(valid_oversize_json), 200):
+                        chunk = valid_oversize_json[offset : offset + 200]
+                        self.wfile.write(f"{len(chunk):x}\r\n".encode("ascii") + chunk + b"\r\n")
+                        self.wfile.flush()
+                    self.wfile.write(b"0\r\n\r\n")
+                except OSError:
+                    pass
+            elif self.path == "/deep":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(deep_json)))
+                self.end_headers()
+                self.wfile.write(deep_json)
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+    with _run_server(Handler) as (_, base_url):
+        assert get_text(f"{base_url}/exact", max_bytes=11) == '{"ok":true}'
+        assert get_json(f"{base_url}/exact", max_bytes=11) == {"ok": True}
+
+        with pytest.raises(SkaldError) as exc_cl_text:
+            get_text(f"{base_url}/oversize-cl", max_bytes=100)
+        assert exc_cl_text.value.kind == "http_error"
+
+        with pytest.raises(SkaldError) as exc_cl_json:
+            get_json(f"{base_url}/oversize-cl", max_bytes=100)
+        assert exc_cl_json.value.kind == "http_error"
+
+        # (a) Valid JSON body > max_bytes with no Content-Length (chunked).
+        for fetch_fn in (get_text, get_json):
+            with pytest.raises(SkaldError) as exc_chunked:
+                fetch_fn(f"{base_url}/oversize-chunked", max_bytes=500)
+            assert exc_chunked.value.kind == "http_error"
+            assert "exceeds max_bytes" in exc_chunked.value.message
+            assert exc_chunked.value.details["max_bytes"] == 500
+            assert exc_chunked.value.details["actual_bytes"] > 500
+
+        with pytest.raises(SkaldError) as exc_deep:
+            get_json(f"{base_url}/deep", max_bytes=1024 * 1024)
+        assert exc_deep.value.kind == "http_error"
+
+        with pytest.raises(ValueError):
+            get_json(f"{base_url}/exact", max_bytes=-1)
+
+
+def test_get_text_and_json_max_bytes_declared_content_length_under_real_body() -> None:
+    valid_oversize_json = json.dumps({"items": ["x" * 200 for _ in range(5)]}).encode("utf-8")
+    gzip_oversize_json = gzip.compress(valid_oversize_json)
+    assert len(gzip_oversize_json) < 100 < len(valid_oversize_json)
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, format: str, *args: Any) -> None:
+            return
+
+        def do_GET(self) -> None:
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Content-Length", str(len(gzip_oversize_json)))
+            self.end_headers()
+            self.wfile.write(gzip_oversize_json)
+
+    with _run_server(Handler) as (_, base_url):
+        for fetch_fn in (get_text, get_json):
+            with pytest.raises(SkaldError) as exc_gzip:
+                fetch_fn(f"{base_url}/oversize-gzip", max_bytes=100)
+            assert exc_gzip.value.kind == "http_error"
+            assert "exceeds max_bytes" in exc_gzip.value.message
+            assert exc_gzip.value.details["max_bytes"] == 100
+            assert exc_gzip.value.details["actual_bytes"] > 100
+
+
+def test_get_text_and_json_mid_body_drop_retries() -> None:
+    flaky_text_attempts = 0
+    flaky_json_attempts = 0
+    always_drop_attempts = 0
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
+        def log_message(self, format: str, *args: Any) -> None:
+            return
+
+        def _send_truncated_chunked(self) -> None:
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Transfer-Encoding", "chunked")
+            self.end_headers()
+            self.wfile.write(b'8\r\n{"ok": t\r\n')
+            self.wfile.flush()
+            self.close_connection = True
+
+        def do_GET(self) -> None:
+            nonlocal flaky_text_attempts, flaky_json_attempts, always_drop_attempts
+            if self.path == "/flaky-text":
+                flaky_text_attempts += 1
+                if flaky_text_attempts == 1:
+                    self._send_truncated_chunked()
+                    return
+                body = b'{"ok":true}'
+            elif self.path == "/flaky-json":
+                flaky_json_attempts += 1
+                if flaky_json_attempts == 1:
+                    self._send_truncated_chunked()
+                    return
+                body = b'{"ok":true}'
+            elif self.path == "/always-drop":
+                always_drop_attempts += 1
+                self._send_truncated_chunked()
+                return
+            else:
+                self.send_response(404)
+                self.end_headers()
+                return
+
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    with _run_server(Handler) as (_, base_url):
+        assert get_text(f"{base_url}/flaky-text", max_bytes=1024) == '{"ok":true}'
+        assert flaky_text_attempts == 2
+
+        assert get_json(f"{base_url}/flaky-json", max_bytes=1024) == {"ok": True}
+        assert flaky_json_attempts == 2
+
+        with pytest.raises(SkaldError) as exc_drop:
+            get_json(f"{base_url}/always-drop", max_bytes=1024)
+        assert exc_drop.value.kind == "offline"
+        assert always_drop_attempts == 3
