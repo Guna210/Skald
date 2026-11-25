@@ -233,3 +233,24 @@ T02.5 normalization + lexicon (text/normalize.py, text/lexicon.py; pure function
  - LexiconRule.word gets min_length=1 after stripping (whitespace-only rejected).
  - Reviewer: Sonnet (Builder must not be Sonnet).
 Follow-up: owner opens two Builder sessions.
+
+### E-0131 · 2026-11-25 13:49 (Asia/Colombo) · T02.4 · REVIEW-PROMPT
+Context: T02.4 round-1 handoff (Antigravity / Gemini), PR #19 `task/T02.4-text-import` @69fdf1e. Verified by the Orchestrator:
+ - 2 commits on master 327927d (an ancestor); mergeable and clean; CI green 12/12; no secrets;
+ - 7 files, +938/−1: text_import.py +360, test_text_import.py +558, book/__init__ +4, test_imports +2, pyproject (+markdown-it-py==4.3.0), docs/defaults.md +8, SPEC.md (4 Appendix 3 rows plus the index tick);
+ - epub.py and xhtml.py unchanged (their helpers are imported).
+The Builder reports 289 passed; the Windows wheel was checked with pip download. PR #20 (T02.5) is also open; its handoff has not been pasted yet.
+Builder decisions, all accepted by the Orchestrator:
+ (1) The BOM-less UTF-16 NUL-cadence check runs BEFORE strict UTF-8, because ASCII-range UTF-16 is valid UTF-8 with embedded NULs.
+ (2) Markdown h1/h2 also emit a leading heading paragraph (matching TXT and EPUB).
+ (3) A pre-heading Markdown chapter is created only once real content appears (no empty "Chapter 1" from a leading image or comment).
+Decision: Send to a fresh Claude Opus Reviewer (the Builder was Gemini; parser of untrusted input). FOCUS:
+ - decision 1's threshold: a valid UTF-8 file with a few stray NULs must not be misread as UTF-16, and the guessed flag must be correct in every case;
+ - both chapter rules and their negatives;
+ - the Markdown token handling (nested lists and quotes, tables, html_inline keeping its text, code skipped);
+ - pathological inputs: linear time, no RecursionError;
+ - D2 "short" counting; ids via the T02.3 helpers with L{start_line}; no empty paragraphs;
+ - the dependency pin and licence;
+ - Appendix 3 and defaults.md match E-0130;
+ - tests are meaningful (mutations).
+Follow-up: owner runs the Reviewer.
