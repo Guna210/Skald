@@ -10,6 +10,7 @@ from skald_core.book.epub import (
     resolve_body_slices,
     walk_body_slice,
 )
+from skald_core.book.text_import import TextImport, load_markdown_book, load_text_book
 from skald_core.book.xhtml import load_epub_book
 
 __all__ = [
@@ -18,7 +19,10 @@ __all__ = [
     "EpubCover",
     "EpubMetadata",
     "EpubStructure",
+    "TextImport",
     "load_epub_book",
+    "load_markdown_book",
+    "load_text_book",
     "parse_epub",
     "resolve_body_slices",
     "walk_body_slice",
