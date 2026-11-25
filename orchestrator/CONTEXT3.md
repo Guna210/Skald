@@ -179,3 +179,9 @@ Context: Reviewer (same Opus session) round 2 on PR #17 @1aa9275: APPROVED.
 Decision: Merge PR #17 (normal merge; mergeable and clean, head 1aa9275, CI green 12/12, E-0127). R2-1 is dropped and noted: add a test if a caller of the unbounded branch appears.
 After merge: T03.6 (model file installer, revisions, licence acceptance; it needs T03.2 + T01.6 + T01.3) becomes available. Announce only (E-0057).
 Follow-up: owner merges PR #17.
+
+### E-0129 · 2026-11-25 12:48 (Asia/Colombo) · T03.2 · MERGED
+Context: Owner: "Merged #17". master is now 327927d = "Merge pull request #17 from Guna210/task/T03.2-catalog-client" (normal merge). The owner asked whether the 5 MB cap also stops real EPUBs.
+Decision: Answered no. The 5 MiB cap (MAX_CATALOG_BYTES) is used only by catalog/client.py when it fetches catalog.json; net.py's max_bytes is optional and off by default; model downloads use download() with the catalog's pinned size and SHA-256. EPUBs are local files with no download cap; T02.2 refuses only books over 500 MB uncompressed (MAX_UNCOMPRESSED_BYTES), and a typical novel EPUB is 0.3–5 MB.
+T03.2 is done. T03.6 is now available (announced only, E-0057). Available: T02.4, T02.5, T03.3, T03.6, T03.7, T03.9, T06.1.
+Follow-up: none.
