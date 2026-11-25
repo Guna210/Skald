@@ -318,3 +318,17 @@ Decision: round 3, narrowly scoped. This is the last round before CLAUDE.md's re
  - Update the Appendix 3 encoding row in place.
 Why: R2-1 is a silent-garbage bug for ordinary DOS-era TXT files; the 5% fraction guard separates real UTF-16 from stray bytes. R2-2 and R2-3 are a few lines each and close the remaining gaps.
 Follow-up: the same Reviewer for round 3.
+
+### E-0135 · 2026-11-25 14:22 (Asia/Colombo) · T02.4 · FIX-PROMPT (round 3, pre-review)
+Context: T02.4 round-3 handoff (Gemini), PR #19 @31955d4. Verified by the Orchestrator:
+ - one commit on 8a54fe2; 3 files (text_import.py ±41, tests +194, SPEC row in place); CI green 12/12 (runs 45579521916 and 45579515459); mergeable.
+The Builder reports 308 passed and 20 mutants killed.
+Orchestrator smoke test of _decode_text_bytes (extracted with stubs, 13 cases): correct for clean UTF-8 (\t/\f kept, not a guess), a trailing \x1a on even and odd lengths in a 1.7 KB English file, cp1252 odd length, stray NULs, BOM-less UTF-16 LE/BE ASCII, LE CJK, Cyrillic, emoji and mixed, and a UTF-8 BOM.
+FAILS: the Reviewer's own R2-1 example b"caf\xe9 \x1a end" (12 bytes) → utf-16-le garbage '慣ᨠ攠摮'. One C0 byte passes the 5% gate because the file has only 6 code units (1×20 ≥ 6). The Builder's tests used longer inputs.
+Decision: pre-review fix O-1 (an Orchestrator finding, so it is not a Reviewer round):
+ - the step-4 gate also needs an absolute minimum of 8 C0 bytes (MIN_UTF16_C0_BYTES = 8);
+ - add the exact 12-byte case and its odd-length variant as tests, plus a boundary pair at 7 and 8 C0 bytes;
+ - update the Appendix 3 row in place.
+Real BOM-less UTF-16 books have hundreds of C0 code units; inputs that small aren't books.
+Why: sending it to review as-is would very likely give a third CHANGES REQUESTED (the CLAUDE.md rethink rule) for a one-line fix.
+Follow-up: after the fix, the round-3 review goes to the same Opus session.
