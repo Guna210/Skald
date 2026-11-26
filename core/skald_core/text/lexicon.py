@@ -33,8 +33,8 @@ class _CompiledLexicon:
 
 
 def _ci_key(text: str) -> str:
-    # Map dotless 'ı' alongside 'i' to match Python re's IGNORECASE folding.
-    return text.casefold().replace("\u0131", "i")
+    # Map dotless 'ı' and dotted 'İ' (casefolds to "i\u0307") to 'i' to match Python re IGNORECASE.
+    return text.casefold().replace("i\u0307", "i").replace("\u0131", "i")
 
 
 def _is_whole_word(text: str, start: int, end: int) -> bool:
@@ -132,7 +132,7 @@ def _apply_compiled(text: str, compiled: _CompiledLexicon) -> tuple[str, list[in
             counts[cand.rule_index] += 1
             return cand.replacement
 
-        return matched  # pragma: no cover
+        return matched
 
     return compiled.pattern.sub(_replace, text), counts
 
