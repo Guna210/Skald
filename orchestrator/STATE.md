@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-26 23:01 (Asia/Colombo) · last entry: E-0158
+Last updated: 2026-11-26 23:57 (Asia/Colombo) · last entry: E-0159
 Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 … E-0117), `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -10,7 +10,7 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 - **Phase 0 complete** (T00.1–T00.4; E-0046). **Phase 1 complete** (T01.1–T01.6; E-0096).
 - Also merged: T02.1–T02.6 (Phase 2); T03.1–T03.5 (Phase 3).
 - `master` at `bfd16f7` (PR #22 merge). Default branch `master`. Merge method: **normal merge** (E-0021) — never tell the owner to squash.
-- Open PRs: **#23 T02.7** (round 1 @24dc49b, CI green, in review with a fresh Sonnet, E-0158); **#24 T03.6** (open; handoff not pasted yet → Opus Reviewer). Both from bfd16f7; the second to merge rebases.
+- Open PRs: **#23 T02.7** — APPROVED in round 1 (E-0159), head 24dc49b; waiting for the owner to merge (normal merge). **#24 T03.6** — open; handoff not pasted yet; needs a rebase after #23 merges, then a fresh Opus Reviewer.
 - CI: ci.yml (core/worker/app on windows-latest + ubuntu-latest), catalog.yml (PRs on catalog/** + weekly), slow.yml (weekly + workflow_dispatch; real CPU smoke-pack install — first run 43719877209 passed on both OSes, E-0117).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036). Milestones: none yet (M1 after T05.8).
 
@@ -20,7 +20,7 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 - Unlock map: T03.6 ← T03.2 + T01.6 + T01.3; T03.8 ← T03.7 + T03.5 + T01.3; T02.4/T02.5 ← T02.3; T06.2 ← T06.1 + T01.3; T04.1 ← T03.7 + T03.9 + T03.6.
 
 ## Waiting on the owner
-1. Run the T02.7 Reviewer (Sonnet) and paste the verdict; paste the T03.6 handoff.
+1. Merge PR #23 (T02.7); paste the T03.6 handoff (rebase prompt first).
 2. Before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs / open questions
@@ -41,6 +41,7 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 - **T03.7:** adapter registry = module-level dict literal `ADAPTER_VERSIONS = {"<family>": "<semver>"}` in worker/skald_worker/adapters/__init__.py, read by T03.1 via ast.literal_eval (E-0097); worker/pyproject.toml must land with ≥1 test or CI pytest exits 5 (E-0041); evaluate an fd-level stdout redirect (os.dup/os.dup2) — model libraries may print from C (E-0052).
 - **T05.x:** ChunkStatus.status/attempts are provisional (E-0076); a JobContext notify callback that raises fails the job (accepted, E-0092).
 - **T06.1:** setup-node@v7 `package-manager-cache: true` vs the .cache/npm step (E-0044); `npm ci` will run inside the core/worker CI jobs once app/package-lock.json exists (E-0041).
+- **T06.x / T07.1:** a book.import job writes to the project root captured at submit; if the user switches projects mid-import, the old project still receives the book (E-0159).
 - **T06.2:** core.ts passes SKALD_STORAGE_DIR only when the user chose a storage folder (F1, E-0071).
 - **T06.3:** ProjectManifest allows extra keys (TS index signature); the UI ignores unknown keys and never sends them back modified (E-0088).
 - **T07.2:** when a GPU exists but is blocked (old driver, too little VRAM) and the cpu tier is used, consider showing the GPU blocker as a hint; fit.py may need to expose it (E-0152).
@@ -50,7 +51,7 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 - **T02.6 (done, PR #21; E-0144–E-0148):** carry T02.5 R1-1 (make _ci_key consistent with re for İ: casefold "i̇" → "i"; drop the pragma; tests for İstanbul and for rules i/İ on İ → rule 1), R1-2 (a casefold-fallback test: σίσυφος vs ΣΊΣΥΦΟΣ) and R1-3 (defaults.md: U+2028/2029 → space, \r\n → \n) (E-0142); chunk the SYNTHESIS text (lexicon(normalize(display))); a paragraph may contain "\n" (from <br> or a markdown hardbreak) (E-0130).
 - **T02.7:** add T02.4 R3-1 tests (BE-side 29%/30% cadence pair; a decoded-text \x0b/\f case) (E-0137); job.log a warning when TextImport.guessed is true; sync docs/defaults.md "C1.1 Import (TXT and Markdown)" item 1 to the final Appendix 3 encoding row (5% + ≥ 8 C0-byte gate; dominant-parity cadence) (E-0136); chapters with zero paragraphs can exist (dangling EPUB anchors, an image-only Markdown h1); book.get and the UI must handle them (E-0134).
 - **T07.7:** lexicon rules for CJK need whole_word off (whole-word never matches inside CJK runs) (E-0130).
-- **T02.8:** fix T02.3 R1-1 (heading_depth from start_el's h1–h6 ancestors when an anchor sits inside a heading, plus a test) and decide R1-2 (<pre> keeps its line breaks like <br>?) (E-0122); decide whether figure captions (figcaption, Gutenberg div.fig) are skipped by default; Gutenberg header/licence chapters and untagged Contents/ILLUSTRATIONS tables go into the text-review skim (E-0121).
+- **T02.8:** carry T02.7 R1-1 (a test for cleanup when the cover or book.json write fails), R1-2 (no book → lexicon counts 0), R1-3 (cancel at a later chapter and at the pre-save checkpoint) and R1-6 (Appendix 3 row: load_epub_import, not load_epub_book) (E-0159); fix T02.3 R1-1 (heading_depth from start_el's h1–h6 ancestors when an anchor sits inside a heading, plus a test) and decide R1-2 (<pre> keeps its line breaks like <br>?) (E-0122); decide whether figure captions (figcaption, Gutenberg div.fig) are skipped by default; Gutenberg header/licence chapters and untagged Contents/ILLUSTRATIONS tables go into the text-review skim (E-0121).
 - **T05.4:** add T02.6 R2-1 guard tests ("abcd\u200cefgh" and "abcd\U0001f3fdefgh" at max_chars 4); split_paragraph must return (role, sentences, SOURCE separators) so re-packing stays exact (E-0148); record the T02.6 accepted limits in Appendix 3 — a hard split may fall after a virama (splitting an Indic conjunct), and a grapheme longer than max_chars is cut (only for single words/graphemes over max_chars) (E-0147); split sentences ONCE and cache them; re-pack per checkpoint max_chars (packing is under 2% of the cost, pysbd about 95%). Add split → [(role, [sentences])] and pack_spans(spans, max_chars) entry points, with chunk_paragraph composing them. Sentence has no role → store the role per span or re-derive it with the dialogue pass (0.17 s/10k) (E-0146).
 - **T05.4:** carry the quote state across paragraphs so the closing paragraph of a multi-paragraph speech (a stray closer) isn't flagged (E-0146).
 - **T05.4 / T03.8:** the fit result carries gpu_index → use it to choose the CUDA device (e.g. CUDA_VISIBLE_DEVICES) for the worker (E-0144).
@@ -63,4 +64,4 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 - **Open item:** who creates `core/requirements.lock` (B3)? Decide by T04.1/T09.1 (E-0020).
 
 ## Recommended next step
-Wait for the T02.7 / T03.6 handoffs. Available on request: T03.7 (unlocks the model path), T03.9, T06.1. Prompts only on request (E-0057).
+Owner merges #23 → T02.8 becomes available. Then the T03.6 handoff → rebase → Opus review. Available on request: T03.7 (unlocks the model path), T03.9, T06.1. Prompts only on request (E-0057).

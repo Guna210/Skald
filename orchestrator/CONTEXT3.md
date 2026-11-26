@@ -745,3 +745,22 @@ Decision: send to a fresh Claude Sonnet Reviewer (Builder Gemini; RPC plus stora
  - the carry items;
  - Appendix 3 matches E-0157.
 Follow-up: owner runs the Reviewer.
+
+### E-0159 · 2026-11-26 23:57 (Asia/Colombo) · T02.7 · VERDICT
+Context: Reviewer (fresh Claude Sonnet) round 1 on PR #23 @24dc49b: APPROVED.
+ - Checks: 457 passed; ruff and mypy clean.
+ - The round-trip test computes chunk ids on the synthesis text; paragraph ids are stable after edit and reopen.
+ - 10 mutations killed; 3 survived (the cleanup block, the no-book count 0→1, the redundant re-check).
+ - Path safety OK.
+ - Concurrency safe: writers serialise on write_lock; readers see old or new atomic files; book.json appears only at the final write; concurrent imports are serialised.
+Findings:
+ - R1-1 [Minor] the cleanup on a failed cover or book.json write is untested.
+ - R1-2 [Minor] "no book → counts 0" is untested.
+ - R1-3 [Minor] cancel is tested only at chapter 0.
+ - R1-4 [Nit] -32602 carries kind "internal" (consistent with the T01.2 rule → dropped).
+ - R1-5 [Nit] no maximum text length; duplicate ids in one patch are last-wins (dropped).
+ - R1-6 [Nit] Appendix 3 row 1 says load_epub_book, but the code uses load_epub_import.
+ - Note: if the project is switched mid-import, the job writes to the root captured at submit (relevant for T06).
+Decision: Merge PR #23 (normal merge; mergeable and clean, head 24dc49b, CI green 12/12). R1-1, R1-2, R1-3 and R1-6 → CARRIED into T02.8 (the next text task, unlocked by this merge). R1-4 and R1-5 dropped. The project-switch note → T06.x/T07.1.
+After merge: T02.8 (golden text-pipeline tests [REVIEW]) becomes available; announce only (E-0057). PR #24 (T03.6) will need a rebase on the new master.
+Follow-up: owner merges PR #23.
