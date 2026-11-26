@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import codecs
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -195,9 +196,15 @@ def _read_and_decode(path: Path | str) -> tuple[Path, str, str, bool]:
     return file_path, text, encoding, guessed
 
 
-def _build_chapters(drafts: list[_ChapterDraft]) -> list[Chapter]:
+def _build_chapters(
+    drafts: list[_ChapterDraft],
+    on_chapter: Callable[[int, int], None] | None = None,
+) -> list[Chapter]:
     chapters: list[Chapter] = []
+    total = len(drafts)
     for ch_idx, draft in enumerate(drafts):
+        if on_chapter is not None:
+            on_chapter(ch_idx, total)
         ch_id = _chapter_id(ch_idx, f"L{draft.start_line}")
         paragraphs = [
             Paragraph(
@@ -389,15 +396,21 @@ def _finalize_book(
     return TextImport(book=book, encoding=encoding, guessed=guessed)
 
 
-def load_text_book(path: Path | str) -> TextImport:
+def load_text_book(
+    path: Path | str,
+    on_chapter: Callable[[int, int], None] | None = None,
+) -> TextImport:
     """Import a plain text (.txt) file into a ``Book`` wrapped in ``TextImport``."""
     file_path, text, encoding, guessed = _read_and_decode(path)
-    chapters = _build_chapters(_parse_txt_drafts(text))
+    chapters = _build_chapters(_parse_txt_drafts(text), on_chapter=on_chapter)
     return _finalize_book(file_path, chapters, encoding, guessed)
 
 
-def load_markdown_book(path: Path | str) -> TextImport:
+def load_markdown_book(
+    path: Path | str,
+    on_chapter: Callable[[int, int], None] | None = None,
+) -> TextImport:
     """Import a Markdown (.md/.markdown) file into a ``Book`` wrapped in ``TextImport``."""
     file_path, text, encoding, guessed = _read_and_decode(path)
-    chapters = _build_chapters(_parse_markdown_drafts(text))
+    chapters = _build_chapters(_parse_markdown_drafts(text), on_chapter=on_chapter)
     return _finalize_book(file_path, chapters, encoding, guessed)

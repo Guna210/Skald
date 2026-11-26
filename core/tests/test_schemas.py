@@ -29,6 +29,7 @@ from skald_core.schemas import (
     BlendPart,
     BlendVoiceSpec,
     Book,
+    BookUpdateResult,
     CatalogRefreshResult,
     CatalogView,
     Chapter,
@@ -46,6 +47,7 @@ from skald_core.schemas import (
     JobProgress,
     JobRef,
     JobStatus,
+    Lexicon,
     LexiconRule,
     Paragraph,
     PinnedModelRecord,
@@ -67,10 +69,12 @@ _SNAKE_CASE_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 _EXPECTED_MODEL_NAMES = {
     "ProjectManifest",
     "Book",
+    "BookUpdateResult",
     "Chapter",
     "Paragraph",
     "Sentence",
     "Chunk",
+    "Lexicon",
     "LexiconRule",
     "VoiceSpec",
     "VoiceProfile",
@@ -218,6 +222,7 @@ def test_core_models_round_trip_json() -> None:
     paragraph = Paragraph(id="p_1", text="Hello world.", sentences=[sentence])
     chapter = Chapter(id="ch_1", title="Chapter 1", paragraphs=[paragraph])
     book = Book(title="Sample", authors=["Author"], language="en-us", chapters=[chapter])
+    book_update = BookUpdateResult(chapter_ids=["ch_1"], paragraph_ids=["p_1"])
     chunk = Chunk(
         id="ck_1",
         chapter_id="ch_1",
@@ -228,6 +233,7 @@ def test_core_models_round_trip_json() -> None:
         cache_key="abc",
     )
     lexicon_rule = LexiconRule(word="Skald", replacement="skahld")
+    lexicon = Lexicon(rules=[lexicon_rule])
     assignment = Assignment(narrator_voice_id="v_1234abcd")
     plan = RenderPlan(
         total_chunks=1,
@@ -420,8 +426,10 @@ def test_core_models_round_trip_json() -> None:
         manifest,
         profile,
         book,
+        book_update,
         chunk,
         lexicon_rule,
+        lexicon,
         assignment,
         plan,
         chunk_status,

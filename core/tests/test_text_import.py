@@ -307,6 +307,23 @@ def test_encoding_thresholds_boundaries_and_mutant_killers(tmp_path: Path) -> No
     assert r29.guessed is True
     assert r29.book.chapters[0].paragraphs[0].text == "a" * 29 + "`O" * 71
 
+    # Step 3 BE-side cadence: 30% dominant even NULs -> UTF-16-BE; 29% -> 8-bit fallback
+    at_30_be = ("a" * 30 + "你" * 70).encode("utf-16-be")
+    p30_be = tmp_path / "at30_be.txt"
+    p30_be.write_bytes(at_30_be)
+    r30_be = load_text_book(p30_be)
+    assert r30_be.encoding == "utf-16-be"
+    assert r30_be.guessed is True
+    assert r30_be.book.chapters[0].paragraphs[0].text == "a" * 30 + "你" * 70
+
+    at_29_be = ("a" * 29 + "你" * 71).encode("utf-16-be")
+    p29_be = tmp_path / "at29_be.txt"
+    p29_be.write_bytes(at_29_be)
+    r29_be = load_text_book(p29_be)
+    assert r29_be.encoding == "utf-8"
+    assert r29_be.guessed is True
+    assert r29_be.book.chapters[0].paragraphs[0].text == "a" * 29 + "O`" * 71
+
     # Step 3 other parity at 5% and 6% (both decode as UTF-16-LE via R2-2), and 30%/30% tie rejected
     other_5 = ("a" * 50 + "\u4e00" * 5 + "你" * 45).encode("utf-16-le")
     p_o5 = tmp_path / "other5.txt"
@@ -388,6 +405,15 @@ def test_encoding_thresholds_boundaries_and_mutant_killers(tmp_path: Path) -> No
     assert r_c0d.encoding == "cp1252"
     assert r_c0d.guessed is True
     assert r_c0d.book.chapters[0].paragraphs[0].text == "HelloØworld"
+
+    # Decoded-text C0 check with \x0b (vertical tab): rejected in UTF-16 (\f is excluded from C0)
+    c0_vtab_decoded = "Hello\x0b".encode("utf-16-le") + b"\xd8\x01" + "world".encode("utf-16-le")
+    p_c0v = tmp_path / "c0_vtab_decoded.txt"
+    p_c0v.write_bytes(c0_vtab_decoded)
+    r_c0v = load_text_book(p_c0v)
+    assert r_c0v.encoding == "cp1252"
+    assert r_c0v.guessed is True
+    assert r_c0v.book.chapters[0].paragraphs[0].text == "HelloØworld"
 
     # C0 set excludes \t and \f -> clean UTF-8 with guessed=False
     p_tf = tmp_path / "tabs_ff.txt"
