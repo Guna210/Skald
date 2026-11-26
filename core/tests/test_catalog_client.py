@@ -631,7 +631,7 @@ def test_compatibility_and_update_matrix(tmp_path: Path) -> None:
     assert ma.reason is None
     assert ma.installed is True
     assert ma.update_available is True
-    assert ma.fit is None
+    assert ma.fit is not None
 
     cps_a = {cp.id: cp for cp in ma.checkpoints}
     # shared_cp: r1 installed, default r2 compatible & not installed -> update_available!
@@ -640,7 +640,7 @@ def test_compatibility_and_update_matrix(tmp_path: Path) -> None:
     assert cp_upd.reason is None
     assert cp_upd.installed is True
     assert cp_upd.update_available is True
-    assert cp_upd.fit is None
+    assert cp_upd.fit == ma.fit
     revs_upd = {r.id: r for r in cp_upd.revisions}
     assert revs_upd["r1"].installed is True
     assert revs_upd["r1"].update_available is True
@@ -782,7 +782,58 @@ def test_rpc_catalog_get_and_refresh_end_to_end(monkeypatch: pytest.MonkeyPatch)
         assert resp_get_2 is not None
         assert resp_get_2["result"]["source"] == "cache"
         assert resp_get_2["result"]["updated_at"] == "2026-11-22"
+
+        # 5. catalog.get accepts optional char_count; rejects negative or url override.
+        resp_get_chars = server.handle_line(
+            '{"jsonrpc":"2.0","id":5,"method":"catalog.get","params":{"char_count":1500}}'
+        )
+        assert resp_get_chars is not None
+        assert "result" in resp_get_chars
+
+        resp_neg = server.handle_line(
+            '{"jsonrpc":"2.0","id":6,"method":"catalog.get","params":{"char_count":-1}}'
+        )
+        assert resp_neg is not None
+        assert resp_neg["error"]["code"] == -32602
+
+        resp_url = server.handle_line(
+            '{"jsonrpc":"2.0","id":7,"method":"catalog.get","params":{"url":"https://evil.invalid"}}'
+        )
+        assert resp_url is not None
+        assert resp_url["error"]["code"] == -32602
     finally:
         manager.shutdown(timeout=2.0)
         # Keep reference to catalog_client used by register_all.
         assert catalog_client.CATALOG_CACHE_FILENAME == "catalog.cache.json"
+
+
+def test_catalog_get_propagates_fit_and_estimate_to_model_and_checkpoints(tmp_path: Path) -> None:
+    payload = _make_catalog(
+        [
+            {
+                **_make_model(
+                    "fast_cpu",
+                    checkpoints=[_make_checkpoint("cp1"), _make_checkpoint("cp2")],
+                ),
+                "hardware": {"cpu": {"min_ram_gb": 4.0, "rtf_reference": 0.4}, "cuda": None},
+            }
+        ],
+        updated_at="2026-11-25",
+    )
+    get_catalog_cache_path().write_text(json.dumps(payload), encoding="utf-8")
+
+    server = RpcServer(stdin=io.BytesIO(), stdout=io.BytesIO())
+    manager = register_all(server)
+    try:
+        resp = server.handle_line(
+            '{"jsonrpc":"2.0","id":1,"method":"catalog.get","params":{"char_count":1500}}'
+        )
+        assert resp is not None
+        model = resp["result"]["models"][0]
+        assert model["fit"]["tier"] == "cpu"
+        assert model["fit"]["rtf"] == 0.4
+        assert model["fit"]["estimate_seconds"] == pytest.approx(40.0)
+        assert model["checkpoints"][0]["fit"] == model["fit"]
+        assert model["checkpoints"][1]["fit"] == model["fit"]
+    finally:
+        manager.shutdown(timeout=2.0)
