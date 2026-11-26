@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-26 14:14 (Asia/Colombo) · last entry: E-0145
+Last updated: 2026-11-26 14:48 (Asia/Colombo) · last entry: E-0146
 Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 … E-0117), `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -10,7 +10,7 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 - **Phase 0 complete** (T00.1–T00.4; E-0046). **Phase 1 complete** (T01.1–T01.6; E-0096).
 - Also merged: T02.1–T02.5 (Phase 2); T03.1, T03.2, T03.4, T03.5 (Phase 3).
 - `master` at `96125f8` (PR #20 merge). Default branch `master`. Merge method: **normal merge** (E-0021) — never tell the owner to squash.
-- Open PRs: **#21 T02.6** (round 1 @4e78bfa, CI green, in review with a fresh Opus, E-0145); **#22 T03.3** (open; handoff not pasted yet → Opus Reviewer). Both from 96125f8; the second to merge rebases.
+- Open PRs: **#21 T02.6**: round 1 CHANGES REQUESTED (E-0146) → round-2 fix prompt (keep source separators, never insert spaces; grapheme-safe hard split; tests; Appendix 3); then the same Opus Reviewer; **#22 T03.3** (open; handoff not pasted yet → Opus Reviewer). Both from 96125f8; the second to merge rebases.
 - CI: ci.yml (core/worker/app on windows-latest + ubuntu-latest), catalog.yml (PRs on catalog/** + weekly), slow.yml (weekly + workflow_dispatch; real CPU smoke-pack install — first run 43719877209 passed on both OSes, E-0117).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036). Milestones: none yet (M1 after T05.8).
 
@@ -20,7 +20,7 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 - Unlock map: T03.6 ← T03.2 + T01.6 + T01.3; T03.8 ← T03.7 + T03.5 + T01.3; T02.4/T02.5 ← T02.3; T06.2 ← T06.1 + T01.3; T04.1 ← T03.7 + T03.9 + T03.6.
 
 ## Waiting on the owner
-1. Run the T02.6 Reviewer (Opus) and paste the verdict; paste the T03.3 handoff.
+1. Paste the T02.6 round-2 fix prompt into its Builder session; paste the T03.3 handoff.
 2. Before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs / open questions
@@ -48,6 +48,8 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 - **T02.7:** add T02.4 R3-1 tests (BE-side 29%/30% cadence pair; a decoded-text \x0b/\f case) (E-0137); job.log a warning when TextImport.guessed is true; sync docs/defaults.md "C1.1 Import (TXT and Markdown)" item 1 to the final Appendix 3 encoding row (5% + ≥ 8 C0-byte gate; dominant-parity cadence) (E-0136); chapters with zero paragraphs can exist (dangling EPUB anchors, an image-only Markdown h1); book.get and the UI must handle them (E-0134).
 - **T07.7:** lexicon rules for CJK need whole_word off (whole-word never matches inside CJK runs) (E-0130).
 - **T02.8:** fix T02.3 R1-1 (heading_depth from start_el's h1–h6 ancestors when an anchor sits inside a heading, plus a test) and decide R1-2 (<pre> keeps its line breaks like <br>?) (E-0122); decide whether figure captions (figcaption, Gutenberg div.fig) are skipped by default; Gutenberg header/licence chapters and untagged Contents/ILLUSTRATIONS tables go into the text-review skim (E-0121).
+- **T05.4:** split sentences ONCE and cache them; re-pack per checkpoint max_chars (packing is under 2% of the cost, pysbd about 95%). Add split → [(role, [sentences])] and pack_spans(spans, max_chars) entry points, with chunk_paragraph composing them. Sentence has no role → store the role per span or re-derive it with the dialogue pass (0.17 s/10k) (E-0146).
+- **T02.7 or T05.x:** carry the quote state across paragraphs so the closing paragraph of a multi-paragraph speech (a stray closer) isn't flagged (E-0146).
 - **T05.4 / T03.8:** the fit result carries gpu_index → use it to choose the CUDA device (e.g. CUDA_VISIBLE_DEVICES) for the worker (E-0144).
 - **T08.3:** listen for British ‘…’ dialogue (not detected) and for continued-speech paragraphs (E-0144).
 - **T09.1:** the frozen core needs `catalog/catalog.json` and `worker/skald_worker/adapters/__init__.py` as data files under sys._MEIPASS (T03.2 resource-root helper, E-0119); test fixtures (incl. Gutenberg EPUBs) are never packaged (E-0060); exclude vendor/*/.tmp-*, .old-*, vendor/.downloads, ffplay/doc/man (E-0027).

@@ -510,3 +510,29 @@ Decision: Send to a fresh Claude Opus Reviewer. FOCUS:
  - tests are meaningful (mutations);
  - Appendix 3 and defaults.md match E-0144.
 Follow-up: owner runs the Reviewer.
+
+### E-0146 · 2026-11-26 14:48 (Asia/Colombo) · T02.6 · VERDICT + FIX-PROMPT
+Context: Reviewer (fresh Claude Opus) round 1 on PR #21 @4e78bfa: CHANGES REQUESTED.
+ - Checks: 420 passed; ruff and mypy clean.
+ - Fuzz, 20k strings, max_chars 1–200: no exceptions, no chunk over max_chars, no characters lost, duplicated or reordered.
+ - Profile (10k paragraphs, 2.69M chars, this machine): 10.6 s total; pysbd about 95%; dialogue 0.17 s; packing 0.19 s at 200 and 0.05 s at 400; the punctuation fallback is 75× faster than pysbd.
+ - Edge cases match the decisions. Only 1 of 1,245 real paragraphs hit the fallback, with no warning flood. The İ fix creates no collisions.
+Findings:
+ - R1-1 [Major] _pack_span_chunks joins sentences with " " even where the source had none: zh "你好。我是小明。…" → "你好。 我是小明。 …". This alters the model input and the cache key, and the relaxed non-whitespace check (Builder decision 4) hides it.
+ - R1-2 [Minor] the hard-split guard checks unicodedata.combining() (canonical class), which is 0 for Devanagari matras, spacing marks, ZWJ/ZWNJ and variation selectors: "विश्वविद्यालय…" at max_chars 6 starts a chunk with ि; ZWJ emoji at 5 start with U+200D.
+ - R1-3 [Minor] surviving mutants: the ;/: order swap; candidate_end ≤ max_chars+1.
+ - R1-4 [Minor] the reconstruction refinement is not in Appendix 3.
+ - R1-5 [Minor] a stray straight " (an inch mark) flips the roles without a flag → document it as a known limit.
+ - R1-6 [Nit] the pysbd warning is logged per failing line.
+Decision: round 2.
+ - R1-1 FIX, and REPLACE Builder decision 4 with a strict rule. Let N = the span (or paragraph) text with whitespace runs collapsed to one space and stripped. Every chunk text must be an exact contiguous substring of N, in order, and joining the chunks with the SOURCE separator at each boundary (" " if N has a space there, "" otherwise) must equal N exactly. So: keep each sentence's trailing separator (or a has-space flag) and join with it; never insert a space.
+   Tests: zh and ja (no inserted spaces), mixed CJK plus English, and a positional-walk property loop asserting the strict rule for every boundary, including hard splits and quote boundaries.
+ - R1-2 FIX: a cut may not fall immediately before a char whose unicodedata.category starts with "M", U+200C/U+200D, U+FE00–U+FE0F or U+1F3FB–U+1F3FF (skin tones), nor immediately after U+200D. Move the cut left. If no allowed cut exists in (0, max_chars], cut at max_chars (max_chars always wins). Tests: the Hindi repro and a ZWJ family at max_chars 5.
+ - R1-3: a test where a ";" and a ":" are both available and the order changes the chunks; one boundary test for candidate_end.
+ - R1-4: an Appendix 3 row with the strict rule above (it supersedes the Builder's relaxed wording).
+ - R1-5: document the stray straight-quote limit next to the British ‘…’ limit (Appendix 3 and defaults.md C1.2 item 6). No code change.
+ - R1-6: dropped.
+ - Performance: DEFERRED to T05.4. Split once and cache; re-pack per checkpoint with two entry points (split → [(role, [sentences])]; pack_spans(spans, max_chars)), chunk_paragraph composing them. Sentence has no role, so T05.4 stores the role per span or re-derives it with the cheap dialogue pass.
+ - Noted for later: in a multi-paragraph speech the closing paragraph (a stray closer) is flagged, a legitimate fiction pattern → carry the quote state across paragraphs in a later task (T02.7 has the whole book; or T05.x).
+Why: R1-1 changes what the model reads for zh/ja (Kokoro languages) and silently changes cache keys; R1-2 breaks Hindi words. Both are cheap to fix.
+Follow-up: the same Reviewer session for round 2.
