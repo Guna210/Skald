@@ -643,3 +643,12 @@ Decision: pre-review fix O-1 (an Orchestrator finding, not a Reviewer round):
  - tests with a patched clock: two calls within 60 s after a timeout → nvidia-smi runs once; a call after 60 s → it runs again and picks up the GPUs;
  - update the Appendix 3 row and defaults.md.
 Follow-up: then the round-2 review in the same Opus session.
+
+### E-0154 · 2026-11-26 20:25 (Asia/Colombo) · T03.3 · REVIEW-PROMPT (round 2)
+Context: T03.3 O-1 handoff (Gemini), PR #22 @7e48d43. Verified by the Orchestrator:
+ - one commit on 64e6dfc (no force-push); 4 files, +35/−7: probe.py adds GPU_RETRY_SECONDS = 60 and _transient_retry_at checked with time.monotonic() under the lock; a transient failure → [] until the retry time; a definitive result clears it;
+ - tests clock-patched; SPEC and defaults rows updated;
+ - CI green 12/12 (runs 45842614065 and 45842601633); mergeable.
+The Builder reports 447 passed and both O-1 mutants caught.
+Decision: round 2 (R1-1…R1-4 plus O-1, commits 64e6dfc and 7e48d43) goes to the same Opus Reviewer session.
+Follow-up: owner pastes into the Reviewer session.
