@@ -490,3 +490,23 @@ T03.3 hardware probe + fit (hardware/probe.py, hardware/fit.py):
  - Tests: captured nvidia-smi outputs (several GPUs, a GPU name containing a comma, an old driver without compute_cap, none, missing, timeout, garbage); a fit table of fake machines × fake models.
  - Reviewer: Opus (fit defaults, subprocess).
 Follow-up: owner opens two Builder sessions (neither on Claude Opus).
+
+### E-0145 · 2026-11-26 14:14 (Asia/Colombo) · T02.6 · REVIEW-PROMPT
+Context: T02.6 round-1 handoff (Antigravity / Gemini), PR #21 `task/T02.6-chunking` @4e78bfa. Verified by the Orchestrator:
+ - 3 commits on 96125f8 (an ancestor); mergeable and clean; CI green 12/12; no secrets;
+ - 7 files, +1103/−9: chunk.py +377, test_chunk.py +675, the lexicon.py İ fix (_ci_key maps "i\u0307" → "i"; the pragma removed), lexicon tests +35, defaults.md, SPEC.md (3 T02.6 rows plus the index tick).
+The Builder reports 420 passed. PR #22 (T03.3) is also open; its handoff has not been pasted yet.
+Points noted:
+ (a) The 10k-paragraph benchmark is 27.4 s. That's acceptable for import, but render.plan is a SYNC RPC (B8): if T05.4 re-runs chunk_paragraph (including pysbd) per max_chars, planning a novel would block for many seconds. So where does the time go (pysbd vs dialogue/packing)? Can chunks be packed from stored sentences?
+ (b) The Builder weakened the reconstruction acceptance check: exact " ".join for space-delimited prose, but only non-whitespace equality where a split falls between non-whitespace characters (CJK, hard splits, quote punctuation). That is a sensible correction (joining CJK chunks with spaces would insert spaces), but it is not recorded in Appendix 3.
+ (c) Builder decisions accepted: the ParagraphChunks NamedTuple; rejecting pysbd splits at non-whitespace boundaries unless after a CJK terminator, and rejecting orphan closing-quote segments (fallback plus warning); keeping closing quotes attached at ;/:/, splits; the Greek final-sigma test variants for R1-2.
+Decision: Send to a fresh Claude Opus Reviewer. FOCUS:
+ - the pipeline and dialogue rules vs E-0144 (continued speech; the „“ language set; the ≥ 2 words/characters rule; flagged cases);
+ - the reconstruction rule (b): the strict rule must hold wherever a boundary falls at whitespace; the refined rule must be recorded;
+ - performance (a): profile it, and report whether T05.4 needs a sentence-level packing entry point;
+ - no chunk over max_chars, including hard splits and combining marks;
+ - the pysbd fallback triggers;
+ - the İ fix (no new collisions; length is part of the key);
+ - tests are meaningful (mutations);
+ - Appendix 3 and defaults.md match E-0144.
+Follow-up: owner runs the Reviewer.
