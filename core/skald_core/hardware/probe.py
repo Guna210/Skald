@@ -11,6 +11,7 @@ import re
 import shutil
 import subprocess
 import threading
+import time
 from pathlib import Path
 
 import psutil  # type: ignore[import-untyped]
@@ -21,19 +22,22 @@ from skald_core.storage import get_storage_dir
 logger = logging.getLogger(__name__)
 
 _NVIDIA_SMI_TIMEOUT_S = 10.0
+GPU_RETRY_SECONDS = 60
 _CREATE_NO_WINDOW = 0x08000000
 _VERSION_RE = re.compile(r"\d+(?:\.\d+)*")
 _NA_VALUES = frozenset({"", "n/a", "[n/a]", "[not supported]", "not supported"})
 
 _gpu_cache_lock = threading.Lock()
 _cached_gpus: list[GpuInfo] | None = None
+_transient_retry_at: float | None = None
 
 
 def clear_gpu_cache() -> None:
-    """Reset the process-lifetime GPU probe cache (for tests)."""
-    global _cached_gpus
+    """Reset the GPU probe caches (for tests)."""
+    global _cached_gpus, _transient_retry_at
     with _gpu_cache_lock:
         _cached_gpus = None
+        _transient_retry_at = None
 
 
 def parse_numeric_version(version: str) -> tuple[int, ...]:
@@ -245,13 +249,19 @@ def _probe_gpus_uncached() -> tuple[list[GpuInfo], bool]:
 
 
 def _probe_gpus() -> list[GpuInfo]:
-    global _cached_gpus
+    global _cached_gpus, _transient_retry_at
     with _gpu_cache_lock:
         if _cached_gpus is not None:
             return list(_cached_gpus)
+        now = time.monotonic()
+        if _transient_retry_at is not None and now < _transient_retry_at:
+            return []
         gpus, should_cache = _probe_gpus_uncached()
         if should_cache:
             _cached_gpus = gpus
+            _transient_retry_at = None
+        else:
+            _transient_retry_at = now + GPU_RETRY_SECONDS
         return list(gpus)
 
 

@@ -265,12 +265,20 @@ def test_probe_generic_failure_does_not_retry(
 
 
 @pytest.mark.parametrize("failure_mode", ["timeout", "nonzero_exit", "garbage"])
-def test_probe_transient_failures_are_not_cached_and_recover_on_next_call(
+def test_probe_transient_failures_are_cached_60s_and_recover_after(
     failure_mode: str,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    import time
+
+    from skald_core.hardware.probe import GPU_RETRY_SECONDS
+
+    assert GPU_RETRY_SECONDS == 60
     monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/nvidia-smi")
     monkeypatch.setattr(platform, "system", lambda: "Linux")
+
+    clock = [1000.0]
+    monkeypatch.setattr(time, "monotonic", lambda: clock[0])
 
     run_count = 0
 
@@ -291,16 +299,26 @@ def test_probe_transient_failures_are_not_cached_and_recover_on_next_call(
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
+    # Initial transient failure returns [] and starts the 60 s cooldown.
     hw1 = probe_hardware()
     assert hw1.gpus == []
     assert run_count == 1
 
+    # (a) Within 60 s, returns [] without running nvidia-smi again.
+    clock[0] += GPU_RETRY_SECONDS - 1.0
+    hw_within = probe_hardware()
+    assert hw_within.gpus == []
+    assert run_count == 1
+
+    # (b)/(c) Once 60 s have passed, probes again and recovers GPUs.
+    clock[0] += 1.0
     hw2 = probe_hardware()
     assert len(hw2.gpus) == 1
     assert hw2.gpus[0].name == "NVIDIA GeForce RTX 3080"
     assert run_count == 2
 
-    # Definitive success is cached on subsequent calls.
+    # Definitive success stays cached for the process lifetime even after another 60 s.
+    clock[0] += GPU_RETRY_SECONDS * 10
     hw3 = probe_hardware()
     assert hw3.gpus == hw2.gpus
     assert run_count == 2
