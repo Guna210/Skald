@@ -719,3 +719,29 @@ T03.6 model installer, revisions, licences (models/installer.py):
  - Tests: a local HTTP server with tiny files; checksum failure; an interrupted download resuming via Range; non-commercial acceptance and a URL change; pinned-remove refusal plus force; concurrent same-revision; disk check; a crash between the marker and the rename (none possible) / .part resume.
  - Reviewer: Opus (licences, downloads, catalog; Builder must not be Opus).
 Follow-up: owner opens two Builder sessions.
+
+### E-0158 · 2026-11-26 23:01 (Asia/Colombo) · T02.7 · REVIEW-PROMPT
+Context: T02.7 round-1 handoff (Antigravity / Gemini), PR #23 `task/T02.7-book-rpc` @24dc49b. Verified by the Orchestrator:
+ - one commit on bfd16f7 (an ancestor); mergeable and clean; CI green 12/12; no secrets;
+ - 12 files, +1335/−14: book/rpc.py +469, test_book_rpc.py +753, on_chapter hooks in text_import.py and xhtml.py (+ EpubImport/load_epub_import), schemas (BookUpdateResult, Lexicon), methods.py, test_text_import +26, defaults.md, SPEC.md (4 rows plus the tick).
+The Builder reports 457 passed. PR #24 (T03.6) is open; its handoff has not been pasted yet.
+Builder decisions accepted:
+ - the BookUpdateResult and Lexicon schemas, exported;
+ - load_epub_import, so the EPUB is parsed once;
+ - _require_open_project → project_invalid;
+ - parse first, then write the source, cover and book.json, cleaning up on failure;
+ - a lowercased extension and .jpg;
+ - language presence via model_fields_set (omitted keeps it, null clears it);
+ - only actually-changed ids reported;
+ - \x0b instead of \f for the CARRY test (correct: \f is not C0 by definition, so my prompt was wrong to suggest it).
+Decision: send to a fresh Claude Sonnet Reviewer (Builder Gemini; RPC plus storage, no new parser). FOCUS:
+ - the acceptance tests (round-trip; only the edited paragraph's chunk ids change; paragraph ids are not recomputed);
+ - atomicity and cleanup on cancel or failure (no partial book.json; a retry works);
+ - path safety (writes only inside the project);
+ - book.update all-or-nothing plus validation;
+ - lexicon caps and duplicates;
+ - book.get/update while an import job runs;
+ - the loader callbacks don't change output;
+ - the carry items;
+ - Appendix 3 matches E-0157.
+Follow-up: owner runs the Reviewer.
