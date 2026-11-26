@@ -571,3 +571,23 @@ Decision: Merge PR #21 (normal merge; mergeable and clean, head 72cf265, CI gree
 T05.4 now also needs: split_paragraph returning (role, sentences, separators) — the SOURCE separators must be stored to re-pack exactly under the strict rule — plus pack_spans.
 After merge: T02.7 (book.* and lexicon.* RPC) becomes available: it needs T02.4, T02.6, T01.3 and T01.5, all merged after this. Announce only (E-0057). PR #22 (T03.3, head 91a501b) is open; its handoff has not been pasted yet, and it will need a rebase after #21 merges.
 Follow-up: owner merges PR #21.
+
+### E-0149 · 2026-11-26 17:25 (Asia/Colombo) · T02.6 · MERGED
+Context: Owner: "Merged #21". master is now 47e22d7 = "Merge pull request #21 from Guna210/task/T02.6-chunking" (normal merge).
+Decision: T02.6 is done. T02.7 (book.* and lexicon.* RPC) is now available (deps T02.4, T02.6, T01.3, T01.5 are all merged); announced only (E-0057).
+Follow-up: none.
+
+### E-0150 · 2026-11-26 17:25 (Asia/Colombo) · T03.3 · FIX-PROMPT (rebase before review)
+Context: T03.3 round-1 handoff (Antigravity / Gemini), PR #22 `task/T03.3-hardware-fit` @91a501b. Verified by the Orchestrator:
+ - 5 commits on 96125f8; 12 files, +1550/−13: fit.py +254, probe.py +270, hardware/__init__, methods.py, schemas, catalog/client.py, tests (test_hardware +858), defaults.md, SPEC.md (3 rows plus the tick);
+ - CI green 12/12 at 91a501b, including core windows-latest (the Builder's open follow-up about Windows CI is resolved); no secrets;
+ - after #21 merged it CONFLICTS with master 47e22d7 in SPEC.md (Appendix 3 and the index); docs/defaults.md auto-merges.
+The Builder reports 381 passed.
+Builder decisions, to be judged by the Reviewer:
+ - RAM free = psutil available; GB = 1024**3;
+ - for a CUDA-only model with several ineligible GPUs, the reported failure comes from the GPU closest to eligibility;
+ - compute_cap "N/A" → None (eligible, with the gpu_generation_unconfirmed warning);
+ - named literal aliases for the FitRating fields.
+The Builder also ran a self-spawned reviewer subagent; its 2 nits are fixed in 91a501b.
+Decision: rebase-only prompt first (T02.6 rows first, then T03.3's; both index ticks; check the defaults.md auto-merge; --force-with-lease; CI green). Then a fresh Claude Opus Reviewer.
+Follow-up: owner pastes the rebase prompt into the T03.3 Builder session.
