@@ -58,4 +58,4 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 - **Open item:** who creates `core/requirements.lock` (B3)? Decide by T04.1/T09.1 (E-0020).
 
 ## Recommended next step
-Wait for the T02.6 / T03.3 handoffs (Opus Reviewers). Available on request: T03.6, T03.7 (unlocks the model path), T03.9, T06.1. Prompts only on request (E-0057). Available on request: T03.3, T03.6, T03.7 (unlocks the model path), T03.9, T06.1. Prompts only on request (E-0057).
+Wait for the T02.6 / T03.3 handoffs (Opus Reviewers). Available on request: T03.6, T03.7 (unlocks the model path), T03.9, T06.1. Prompts only on request (E-0057).
