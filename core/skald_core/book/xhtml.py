@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import itertools
 import zipfile
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from lxml import etree  # type: ignore[import-untyped]
 from skald_core.book.epub import (
     HEADING_TAGS,
     BodySlice,
+    EpubCover,
     _collapse_ws,
     _get_epub_type_tokens,
     _local_name,
@@ -241,13 +243,25 @@ def _extract_slice_paragraphs(body_slice: BodySlice, chapter_id: str) -> list[Pa
     return paragraphs
 
 
-def load_epub_book(path: Path | str) -> Book:
-    """Parse an EPUB file and extract chapters and paragraphs into a ``Book``."""
+@dataclass(frozen=True, slots=True)
+class EpubImport:
+    """Imported EPUB ``Book`` along with its optional extracted cover."""
+
+    book: Book
+    cover: EpubCover | None = None
+
+
+def load_epub_import(
+    path: Path | str,
+    on_chapter: Callable[[int, int], None] | None = None,
+) -> EpubImport:
+    """Parse an EPUB file and extract chapters, paragraphs, and optional cover."""
     epub_path = Path(path)
     structure = parse_epub(epub_path)
 
     doc_cache: dict[str, etree._Element] = {}
     chapters: list[Chapter] = []
+    total_chapters = len(structure.chapters)
 
     with zipfile.ZipFile(epub_path, "r") as zf:
         for href, group in itertools.groupby(
@@ -264,6 +278,8 @@ def load_epub_book(path: Path | str) -> Book:
             body_slices = resolve_body_slices(doc_root, anchors, href)
 
             for (ch_index, entry), body_slice in zip(entries, body_slices, strict=True):
+                if on_chapter is not None:
+                    on_chapter(ch_index, total_chapters)
                 ch_id = _chapter_id(ch_index, entry.full_href)
                 paragraphs = _extract_slice_paragraphs(body_slice, ch_id)
                 chapters.append(
@@ -277,7 +293,7 @@ def load_epub_book(path: Path | str) -> Book:
                     )
                 )
 
-    return Book(
+    book = Book(
         title=structure.metadata.title,
         authors=list(structure.metadata.authors),
         language=structure.metadata.language,
@@ -285,3 +301,12 @@ def load_epub_book(path: Path | str) -> Book:
         source_path=None,
         chapters=chapters,
     )
+    return EpubImport(book=book, cover=structure.cover)
+
+
+def load_epub_book(
+    path: Path | str,
+    on_chapter: Callable[[int, int], None] | None = None,
+) -> Book:
+    """Parse an EPUB file and extract chapters and paragraphs into a ``Book``."""
+    return load_epub_import(path, on_chapter=on_chapter).book

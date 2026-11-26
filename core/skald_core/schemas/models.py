@@ -212,6 +212,13 @@ class Book(BaseModel):
     chapters: list[Chapter] = Field(default_factory=list)
 
 
+class BookUpdateResult(BaseModel):
+    """Changed chapter and paragraph identifiers returned by `book.update`."""
+
+    chapter_ids: list[str] = Field(default_factory=list)
+    paragraph_ids: list[str] = Field(default_factory=list)
+
+
 class Chunk(BaseModel):
     """A synthesis-ready text chunk within a single paragraph."""
 
@@ -228,8 +235,8 @@ class Chunk(BaseModel):
 class LexiconRule(BaseModel):
     """Per-project pronunciation replacement rule."""
 
-    word: str = Field(min_length=1)
-    replacement: str
+    word: str = Field(min_length=1, max_length=100)
+    replacement: str = Field(max_length=500)
     case_sensitive: bool = False
     whole_word: bool = True
     match_count: int = 0
@@ -240,6 +247,12 @@ class LexiconRule(BaseModel):
         if not value.strip():
             raise ValueError("Lexicon rule word must not be empty or whitespace-only.")
         return value
+
+
+class Lexicon(BaseModel):
+    """Project pronunciation lexicon returned by `lexicon.get` and `lexicon.set`."""
+
+    rules: list[LexiconRule] = Field(default_factory=list)
 
 
 class PresetVoiceSpec(BaseModel):

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from skald_core.book.rpc import register as register_book_methods
 from skald_core.catalog.client import get_catalog, submit_catalog_refresh
 from skald_core.hardware import probe_hardware
 from skald_core.jobs import JobManager
@@ -44,7 +45,8 @@ def register_all(server: RpcServer, job_manager: JobManager | None = None) -> Jo
         lambda: JobRef(job_id=submit_catalog_refresh(manager)),
         result_model=JobRef,
     )
-    register_project_methods(server)
+    store = register_project_methods(server)
+    register_book_methods(server, store, manager)
     server.register("job.cancel", lambda p: manager.cancel(p.job_id), JobIdParams, JobStatus)
     server.register("job.pause", lambda p: manager.pause(p.job_id), JobIdParams, JobStatus)
     server.register("job.resume", lambda p: manager.resume(p.job_id), JobIdParams, JobStatus)
