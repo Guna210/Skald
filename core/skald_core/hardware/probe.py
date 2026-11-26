@@ -120,19 +120,11 @@ def _run_nvidia_smi(binary: str, query_fields: str) -> subprocess.CompletedProce
         f"--query-gpu={query_fields}",
         "--format=csv,noheader,nounits",
     ]
-    if platform.system().lower() == "windows":
-        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", _CREATE_NO_WINDOW)
-        return subprocess.run(
-            cmd,
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=_NVIDIA_SMI_TIMEOUT_S,
-            creationflags=creationflags,
-            check=False,
-        )
+    creationflags = (
+        getattr(subprocess, "CREATE_NO_WINDOW", _CREATE_NO_WINDOW)
+        if platform.system().lower() == "windows"
+        else 0
+    )
     return subprocess.run(
         cmd,
         stdin=subprocess.DEVNULL,
@@ -141,6 +133,7 @@ def _run_nvidia_smi(binary: str, query_fields: str) -> subprocess.CompletedProce
         encoding="utf-8",
         errors="replace",
         timeout=_NVIDIA_SMI_TIMEOUT_S,
+        creationflags=creationflags,
         check=False,
     )
 

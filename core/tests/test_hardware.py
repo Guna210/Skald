@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import builtins
 import io
 import json
 import logging
@@ -381,7 +380,6 @@ def test_probe_cpu_model_linux_winreg_and_fallback(monkeypatch: pytest.MonkeyPat
 
     # 3. Fallback to platform.processor() when winreg fails
     clear_gpu_cache()
-    real_import = builtins.__import__
 
     def failing_open(*_args: object) -> None:
         raise OSError("registry unavailable")
@@ -389,7 +387,6 @@ def test_probe_cpu_model_linux_winreg_and_fallback(monkeypatch: pytest.MonkeyPat
     fake_winreg.OpenKey = failing_open  # type: ignore[attr-defined]
     monkeypatch.setattr(platform, "processor", lambda: "Fallback-CPU-Model")
     assert probe_hardware().cpu_model == "Fallback-CPU-Model"
-    assert real_import is builtins.__import__
 
 
 def test_system_hardware_rpc_and_subprocess(tmp_path: Path) -> None:
