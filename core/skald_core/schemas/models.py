@@ -156,7 +156,7 @@ class GpuInfo(BaseModel):
     name: str
     memory_total_mb: int
     driver_version: str
-    compute_cap: str
+    compute_cap: str | None = None
     bfloat16_capable: bool
 
 
@@ -388,6 +388,29 @@ class RenderRecord(BaseModel):
 
 IncompatibilityReason = Literal["adapter_missing", "adapter_too_old", "app_too_old"]
 CatalogDataSource = Literal["cache", "bundled"]
+FitRatingLevel = Literal["great", "good", "slow", "not_supported"]
+FitTier = Literal["cpu", "cuda"]
+FitReason = Literal[
+    "needs_nvidia_gpu",
+    "not_enough_vram",
+    "not_enough_ram",
+    "driver_too_old",
+    "gpu_too_old",
+]
+FitWarning = Literal["driver_below_recommended", "gpu_generation_unconfirmed"]
+
+
+class FitRating(BaseModel):
+    """Hardware compatibility rating, selected tier, warnings, and time estimate."""
+
+    rating: FitRatingLevel
+    tier: FitTier | None = None
+    gpu_index: int | None = Field(default=None, ge=0)
+    reason: FitReason | None = None
+    details: dict[str, Any] | None = None
+    warnings: list[FitWarning] = Field(default_factory=list)
+    rtf: float | None = None
+    estimate_seconds: float | None = None
 
 
 class AnnotatedCatalogRevision(BaseModel):
@@ -416,7 +439,7 @@ class AnnotatedCatalogCheckpoint(BaseModel):
     reason: IncompatibilityReason | None = None
     installed: bool = False
     update_available: bool = False
-    fit: Any = None
+    fit: FitRating | None = None
 
 
 class AnnotatedCatalogModel(BaseModel):
@@ -438,7 +461,7 @@ class AnnotatedCatalogModel(BaseModel):
     reason: IncompatibilityReason | None = None
     installed: bool = False
     update_available: bool = False
-    fit: Any = None
+    fit: FitRating | None = None
 
 
 class CatalogView(BaseModel):
