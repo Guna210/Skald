@@ -808,3 +808,24 @@ Decision: send to a fresh Claude Opus Reviewer. FOCUS:
  - tests are meaningful (mutations);
  - Appendix 3 matches E-0157.
 Follow-up: owner runs the Reviewer.
+
+### E-0163 · 2026-11-27 01:16 (Asia/Colombo) · T03.6 · VERDICT
+Context: Reviewer (fresh Claude Opus) round 1 on PR #24 @9ba98db: APPROVED.
+ - Checks: 471 passed; ruff clean. mypy stub errors are only local to the venv, in tests (CI is clean).
+ - Licence safety: the only writer is accept_license; exact string equality in both places; the check runs before the lock, the disk check, the pack and downloads; update delegates to install; a URL change invalidates; a corrupt licenses.json → not accepted.
+ - Crash safety OK; the PermissionError retry is bounded (5 tries, about 1.55 s); pins are tolerant; path safety OK; disk counts the remaining bytes on <storage>.
+ - Mutations caught 7; survived 5: case-insensitive and slash-stripped URL comparison; the marker written after the rename; an unbounded retry; a bare raise instead of JobCancelled.
+Findings:
+ - R1-1 [Minor] URL exactness untested (legally sensitive, but the code is exact).
+ - R1-2 [Minor] the marker-before-rename order is untested.
+ - R1-3 [Minor] a failed remove can leave <rev>/ without .complete (install recovers).
+ - R1-4 [Minor] DownloadCancelled → JobCancelled and retry exhaustion are untested.
+ - R1-5 [Minor] removing a pack's last complete revision can delete the pack under another in-flight install on that pack.
+ - R1-6 [Minor] the update no-op returns pack_dir=None without ensuring the pack and duplicates the result-building code.
+ - R1-7…R1-9 [Nits] the Ponytail pre-check; imports of private helpers; stray .part files; get_catalog after delete.
+Decision: Merge PR #24 now (normal merge; mergeable and clean, head 9ba98db, CI green 12/12). The code is correct as written, including exact URL equality verified by reading; the gaps are test coverage plus two narrow races.
+ - R1-1, R1-2, R1-4 (tests) and R1-3, R1-5, R1-6 (small code fixes) → CARRIED to the next task that touches models/installer.py (T04.1, which also revisits bundled revisions). R1-1 is FIRST in that carry list (licence exactness: url.upper() and url+"/" rejected in accept_license and in install).
+ - R1-7…R1-9 dropped.
+Why: approval stands; a test-only follow-up round now would need another review cycle; nothing installs real models until T04.x, and the T04.1 prompt will carry these explicitly.
+After merge: nothing new unlocks (T04.1 also needs T03.7 + T03.9; T07.2 needs T06.3 + T06.4). Available: T02.8, T03.7, T03.9, T06.1.
+Follow-up: owner merges PR #24.

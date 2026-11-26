@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-27 01:07 (Asia/Colombo) · last entry: E-0162
+Last updated: 2026-11-27 01:16 (Asia/Colombo) · last entry: E-0163
 Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 … E-0117), `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -10,7 +10,7 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 - **Phase 0 complete** (T00.1–T00.4; E-0046). **Phase 1 complete** (T01.1–T01.6; E-0096).
 - Also merged: T02.1–T02.7 (Phase 2); T03.1–T03.5 (Phase 3).
 - `master` at `905c62a` (PR #23 merge). Default branch `master`. Merge method: **normal merge** (E-0021) — never tell the owner to squash.
-- Open PRs: **#24 T03.6**, round 1 @9ba98db (rebased on 905c62a, CI green 12/12), in review with a fresh Opus (E-0162).
+- Open PRs: **#24 T03.6** — APPROVED in round 1 (E-0163), head 9ba98db; waiting for the owner to merge (normal merge).
 - CI: ci.yml (core/worker/app on windows-latest + ubuntu-latest), catalog.yml (PRs on catalog/** + weekly), slow.yml (weekly + workflow_dispatch; real CPU smoke-pack install — first run 43719877209 passed on both OSes, E-0117).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036). Milestones: none yet (M1 after T05.8).
 
@@ -20,7 +20,7 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 - Unlock map: T03.6 ← T03.2 + T01.6 + T01.3; T03.8 ← T03.7 + T03.5 + T01.3; T02.4/T02.5 ← T02.3; T06.2 ← T06.1 + T01.3; T04.1 ← T03.7 + T03.9 + T03.6.
 
 ## Waiting on the owner
-1. Run the T03.6 Reviewer (fresh Opus) and paste the verdict.
+1. Merge PR #24 (T03.6); then pick the next task(s).
 2. Before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs / open questions
@@ -37,7 +37,8 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 - **T02.7:** EPUB 2 `<guide>` and `role="doc-*"` are not used for suggested skips (E-0099); remote spine item → epub_invalid and pre-anchor sections don't flag the first chapter (ruled, Appendix 3).
 - **T03.2 (done, PR #17; E-0119, E-0124–E-0128 — userData via SKALD_DATA_DIR, new kind catalog_invalid, 5 MiB cap, schema-only validation):** checkpoint/revision ids are unique per parent, not globally (E-0107); add a test that catalog.validate deletes each downloaded file after verification (T03.1 R2-1, E-0109).
 - **T03.3 (done, PR #22; E-0144, E-0150–E-0155):** a driver ≥ the CUDA 12.x minor-version floor (525.60.13 / 528.33) but < the 12.6 toolkit driver (560.28.03 / 560.76) → "may not work" (PTX-JIT caveat), not a clean fit (E-0114); don't promise Pascal (sm_61) until confirmed on a real card; a future cu13 accelerator drops Maxwell/Pascal/Volta (D9) (E-0069).
-- **T03.6:** models.remove surfaces PackManager's "already in progress" SkaldError (T03.5 R2-3, E-0116); map net.DownloadCancelled → JobCancelled (E-0056).
+- **T04.1 (carry from T03.6, E-0163):** FIRST R1-1 licence-URL exactness tests (url.upper() and url+"/" rejected in accept_license; install refuses when the catalog URL differs only by case or a trailing /); R1-2 a test that .complete exists inside .part at the moment of the rename; R1-4 tests for DownloadCancelled → JobCancelled and for PermissionError retry exhaustion → model_download_failed; R1-3 a remove renames <rev> → <rev>.removing (or deletes .complete) before rmtree, and the scan skips it; R1-5 a pack counts as in use if any revision on it is in _ACTIVE_REVISION_OPS or has a .part; R1-6 the update no-op ensures the pack (or documents why not) via a shared already-installed helper.
+- **T03.6 (done once #24 merges):** models.remove surfaces PackManager's "already in progress" SkaldError (T03.5 R2-3, E-0116); map net.DownloadCancelled → JobCancelled (E-0056).
 - **T03.7:** adapter registry = module-level dict literal `ADAPTER_VERSIONS = {"<family>": "<semver>"}` in worker/skald_worker/adapters/__init__.py, read by T03.1 via ast.literal_eval (E-0097); worker/pyproject.toml must land with ≥1 test or CI pytest exits 5 (E-0041); evaluate an fd-level stdout redirect (os.dup/os.dup2) — model libraries may print from C (E-0052).
 - **T05.x:** ChunkStatus.status/attempts are provisional (E-0076); a JobContext notify callback that raises fails the job (accepted, E-0092).
 - **T06.1:** setup-node@v7 `package-manager-cache: true` vs the .cache/npm step (E-0044); `npm ci` will run inside the core/worker CI jobs once app/package-lock.json exists (E-0041).
@@ -64,4 +65,4 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 - **Open item:** who creates `core/requirements.lock` (B3)? Decide by T04.1/T09.1 (E-0020).
 
 ## Recommended next step
-Wait for the T03.6 verdict. Available on request: T02.8, T03.7 (unlocks the model path), T03.9, T06.1. Prompts only on request (E-0057).
+Owner merges #24 (nothing new unlocks). Available on request: T02.8, T03.7 (unlocks the model path), T03.9, T06.1. Prompts only on request (E-0057).
