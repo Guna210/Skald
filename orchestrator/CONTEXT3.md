@@ -652,3 +652,13 @@ Context: T03.3 O-1 handoff (Gemini), PR #22 @7e48d43. Verified by the Orchestrat
 The Builder reports 447 passed and both O-1 mutants caught.
 Decision: round 2 (R1-1…R1-4 plus O-1, commits 64e6dfc and 7e48d43) goes to the same Opus Reviewer session.
 Follow-up: owner pastes into the Reviewer session.
+
+### E-0155 · 2026-11-26 22:37 (Asia/Colombo) · T03.3 · VERDICT
+Context: Reviewer (same Opus session) round 2 on PR #22 @7e48d43: APPROVED.
+ - Checks: 447 passed; ruff and mypy clean; the scope is the findings plus O-1 only.
+ - The round-1 survivors and lax char_count are all now caught.
+ - State machine probed with a fake clock: 8 concurrent threads make 1 nvidia-smi call; no call at +59.9 s, a re-probe at +60.1 s; a new window after a second failure; success cached permanently; "not found" cached; the reset clears both states.
+Findings: R2-1 [Minor] "not found counts as definitive" is untested (if it regressed, it would only re-run the which lookup every 60 s); R2-2 [Nit] the window starts before the probe (after a 10 s timeout about 50 s remain) → dropped.
+Decision: Merge PR #22 (normal merge; mergeable and clean, head 7e48d43, CI green 12/12, E-0154). R2-1 → "when touched next" (hardware/ or test_hardware.py, e.g. T05.4 or T07.2): add a test that _find_nvidia_smi is called once across two probes when it returns None.
+After merge: nothing newly unlocked (T05.4 also needs T05.3; T07.2 needs T06.3, T06.4 and T03.6). Available: T02.7, T03.6, T03.7, T03.9, T06.1.
+Follow-up: owner merges PR #22.
