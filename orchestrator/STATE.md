@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-26 11:01 (Asia/Colombo) · last entry: E-0139
+Last updated: 2026-11-26 11:48 (Asia/Colombo) · last entry: E-0140
 Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 … E-0117), `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -10,7 +10,7 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 - **Phase 0 complete** (T00.1–T00.4; E-0046). **Phase 1 complete** (T01.1–T01.6; E-0096).
 - Also merged: T02.1, T02.2, T02.3, T02.4 (Phase 2); T03.1, T03.2, T03.4, T03.5 (Phase 3).
 - `master` at `651f8a9` (PR #19 merge). Default branch `master`. Merge method: **normal merge** (E-0021) — never tell the owner to squash.
-- Open PRs: **#20 T02.5**, round 1 @31b03db, CI green but CONFLICTS with master in SPEC.md → rebase-only prompt (E-0139); then a fresh **Opus** Reviewer (upgraded from Sonnet: custom rule-resolution logic).
+- Open PRs: **#20 T02.5**, round 1 @40b78f7 (rebased on 651f8a9, CI green 12/12), in review with a fresh Opus (E-0140).
 - CI: ci.yml (core/worker/app on windows-latest + ubuntu-latest), catalog.yml (PRs on catalog/** + weekly), slow.yml (weekly + workflow_dispatch; real CPU smoke-pack install — first run 43719877209 passed on both OSes, E-0117).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036). Milestones: none yet (M1 after T05.8).
 
@@ -20,7 +20,7 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 - Unlock map: T03.6 ← T03.2 + T01.6 + T01.3; T03.8 ← T03.7 + T03.5 + T01.3; T02.4/T02.5 ← T02.3; T06.2 ← T06.1 + T01.3; T04.1 ← T03.7 + T03.9 + T03.6.
 
 ## Waiting on the owner
-1. Paste the T02.5 rebase prompt into its Builder session, then paste the handoff.
+1. Run the T02.5 Reviewer (fresh Opus) and paste the verdict.
 2. Before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs / open questions
@@ -56,4 +56,4 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 - **Open item:** who creates `core/requirements.lock` (B3)? Decide by T04.1/T09.1 (E-0020).
 
 ## Recommended next step
-Wait for the T02.5 rebased handoff → fresh Opus review. Available on request: T03.3, T03.6, T03.7 (unlocks the model path), T03.9, T06.1. Prompts only on request (E-0057).
+Wait for the T02.5 verdict. Available on request: T03.3, T03.6, T03.7 (unlocks the model path), T03.9, T06.1. Prompts only on request (E-0057).

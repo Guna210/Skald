@@ -385,3 +385,29 @@ Decision:
  - Rebase-only prompt first: onto 651f8a9; keep the T02.4 rows (already on master) then the T02.5 rows; keep both index ticks; check the auto-merged docs/defaults.md keeps both the T02.4 TXT/MD section and the T02.5 C1.2 edits; --force-with-lease; CI green.
  - Then a fresh Claude Opus Reviewer, upgraded from Sonnet (E-0130), because of the custom resolution logic in decision 2.
 Follow-up: owner pastes the rebase prompt into the T02.5 Builder session.
+
+### E-0140 · 2026-11-26 11:48 (Asia/Colombo) · T02.5 · REVIEW-PROMPT
+Context: T02.5 rebase handoff (Gemini / Antigravity), PR #20 @40b78f7. Verified by the Orchestrator:
+ - rebased on 651f8a9 (an ancestor); mergeable and clean;
+ - range-diff: the code commit is identical (=); the docs/SPEC commit differs only in merge context;
+ - the diff vs master has exactly the 2 T02.5 Appendix 3 rows plus C1.2 items 1–2, and the T02.4 section is untouched;
+ - CI green 12/12 (runs 45762799046 and 45762792872).
+The Builder reports 362 passed (this now includes T02.4's tests).
+Orchestrator smoke test of apply_lexicon on the branch:
+ - "İstanbul and istanbul" with rule "istanbul" → only the lowercase one is replaced. re's simple case folding never matches İ, so the regex and the buckets agree and nothing is silently missed.
+ - STRASSE vs straße: not matched (simple folding).
+ - "New York, York" → NY, Y.
+ - A case-sensitive "smith" (rule 0) plus a case-insensitive "Smith" (rule 1) on "Smith smith" → B, A (the tie goes to the earlier rule).
+ - "cat category" with a whole-word "cat" (rule 0) and a substring "cat" (rule 1) → C, Degory.
+ - Greek final sigma, the ǅ/ǆ titlecase digraph and the long s ſ → matched, with counts correct.
+ So the E-0139 silent-miss risk was not reproduced; the Reviewer still probes it.
+Decision: send to a fresh Claude Opus Reviewer (E-0139). FOCUS:
+ - the bucket resolution of decision 2 vs the alternation's priority (try to hit "return matched  # pragma: no cover");
+ - the leftmost-longest rule and no cascades;
+ - whether the benchmark claim justifies the complexity (Ponytail), or whether a simpler correct design exists at acceptable speed;
+ - the lru_cache key and any mutation hazards;
+ - normalize's order and idempotence; the whitespace rules; ZWNJ/ZWJ kept;
+ - the LexiconRule constraint and the schema export;
+ - tests are meaningful;
+ - Appendix 3 and defaults.md match E-0130.
+Follow-up: owner runs the Reviewer.
