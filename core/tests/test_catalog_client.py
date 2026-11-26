@@ -783,24 +783,30 @@ def test_rpc_catalog_get_and_refresh_end_to_end(monkeypatch: pytest.MonkeyPatch)
         assert resp_get_2["result"]["source"] == "cache"
         assert resp_get_2["result"]["updated_at"] == "2026-11-22"
 
-        # 5. catalog.get accepts optional char_count; rejects negative or url override.
+        # 5. catalog.get accepts optional char_count; rejects non-ints, negative, or url override.
         resp_get_chars = server.handle_line(
             '{"jsonrpc":"2.0","id":5,"method":"catalog.get","params":{"char_count":1500}}'
         )
         assert resp_get_chars is not None
         assert "result" in resp_get_chars
 
-        resp_neg = server.handle_line(
-            '{"jsonrpc":"2.0","id":6,"method":"catalog.get","params":{"char_count":-1}}'
-        )
-        assert resp_neg is not None
-        assert resp_neg["error"]["code"] == -32602
-
-        resp_url = server.handle_line(
-            '{"jsonrpc":"2.0","id":7,"method":"catalog.get","params":{"url":"https://evil.invalid"}}'
-        )
-        assert resp_url is not None
-        assert resp_url["error"]["code"] == -32602
+        for bad_id, bad_params in enumerate(
+            [
+                {"char_count": -1},
+                {"char_count": "5"},
+                {"char_count": True},
+                {"char_count": 5.0},
+                {"url": "https://evil.invalid"},
+            ],
+            start=6,
+        ):
+            resp_bad_get = server.handle_line(
+                json.dumps(
+                    {"jsonrpc": "2.0", "id": bad_id, "method": "catalog.get", "params": bad_params}
+                )
+            )
+            assert resp_bad_get is not None
+            assert resp_bad_get["error"]["code"] == -32602, bad_params
     finally:
         manager.shutdown(timeout=2.0)
         # Keep reference to catalog_client used by register_all.

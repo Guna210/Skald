@@ -220,7 +220,9 @@ def test_probe_nvidia_smi_failures_return_empty_and_warn(
             if case == "retry_still_fails":
                 if "compute_cap" in " ".join(cmd):
                     return SimpleNamespace(
-                        returncode=2, stdout="", stderr='Invalid field "compute_cap"'
+                        returncode=2,
+                        stdout="",
+                        stderr='Field "compute_cap" is not a valid field to query.',
                     )
                 return SimpleNamespace(returncode=1, stdout="", stderr="Driver/library mismatch")
             raise AssertionError(f"Unhandled case {case}")
@@ -233,6 +235,107 @@ def test_probe_nvidia_smi_failures_return_empty_and_warn(
     assert hw.gpus == []
     if case != "empty_output":
         assert any(rec.levelno == logging.WARNING for rec in caplog.records)
+
+
+@pytest.mark.parametrize(
+    "stderr_msg",
+    [
+        "some other error",
+        "compute_cap permission denied",
+    ],
+)
+def test_probe_generic_failure_does_not_retry(
+    stderr_msg: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/nvidia-smi")
+    monkeypatch.setattr(platform, "system", lambda: "Linux")
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> SimpleNamespace:
+        calls.append(cmd)
+        return SimpleNamespace(returncode=1, stdout="", stderr=stderr_msg)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    hw = probe_hardware()
+    assert hw.gpus == []
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("failure_mode", ["timeout", "nonzero_exit", "garbage"])
+def test_probe_transient_failures_are_not_cached_and_recover_on_next_call(
+    failure_mode: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/nvidia-smi")
+    monkeypatch.setattr(platform, "system", lambda: "Linux")
+
+    run_count = 0
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> SimpleNamespace:
+        nonlocal run_count
+        run_count += 1
+        if run_count == 1:
+            if failure_mode == "timeout":
+                raise subprocess.TimeoutExpired(cmd, timeout=10.0)
+            if failure_mode == "nonzero_exit":
+                return SimpleNamespace(returncode=1, stdout="", stderr="GPU waking up")
+            return SimpleNamespace(returncode=0, stdout="garbage output\n", stderr="")
+        return SimpleNamespace(
+            returncode=0,
+            stdout="NVIDIA GeForce RTX 3080, 10240, 560.28.03, 8.6\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    hw1 = probe_hardware()
+    assert hw1.gpus == []
+    assert run_count == 1
+
+    hw2 = probe_hardware()
+    assert len(hw2.gpus) == 1
+    assert hw2.gpus[0].name == "NVIDIA GeForce RTX 3080"
+    assert run_count == 2
+
+    # Definitive success is cached on subsequent calls.
+    hw3 = probe_hardware()
+    assert hw3.gpus == hw2.gpus
+    assert run_count == 2
+
+
+def test_probe_caches_missing_nvidia_smi_and_successful_empty_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(platform, "system", lambda: "Linux")
+
+    which_calls = 0
+
+    def missing_which(name: str) -> None:
+        nonlocal which_calls
+        which_calls += 1
+        return None
+
+    monkeypatch.setattr(shutil, "which", missing_which)
+    assert probe_hardware().gpus == []
+    assert probe_hardware().gpus == []
+    assert which_calls == 1
+
+    clear_gpu_cache()
+    monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/nvidia-smi")
+    run_count = 0
+
+    def empty_run(cmd: list[str], **kwargs: Any) -> SimpleNamespace:
+        nonlocal run_count
+        run_count += 1
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", empty_run)
+    assert probe_hardware().gpus == []
+    assert probe_hardware().gpus == []
+    assert run_count == 1
 
 
 def test_probe_windows_nvidia_smi_fallbacks_and_create_no_window(
@@ -798,6 +901,19 @@ def test_fit_multi_gpu_selection_and_failure_details() -> None:
     assert fit.gpu_index == 1
     assert fit.estimate_seconds == 0.0
 
+    # 1b. Two eligible GPUs with equal VRAM: picks the lower gpu_index (0).
+    hw_equal_vram = _fake_hw(
+        ram_gb=16.0,
+        gpus=[
+            _gpu(name="RTX 3060 A", vram_mb=12288, driver="560.28.03", compute_cap="8.6"),
+            _gpu(name="RTX 3060 B", vram_mb=12288, driver="560.28.03", compute_cap="8.6"),
+        ],
+    )
+    fit_equal = rate_model_fit(model_hw, hw_equal_vram)
+    assert fit_equal.rating == "great"
+    assert fit_equal.tier == "cuda"
+    assert fit_equal.gpu_index == 0
+
     # 2. GPU 0 is huge (24 GB) but Kepler (too old); GPU 1 is 12 GB Ampere -> picks GPU 1.
     hw_mixed = _fake_hw(
         ram_gb=16.0,
@@ -822,6 +938,23 @@ def test_fit_multi_gpu_selection_and_failure_details() -> None:
     assert fit_fail.rating == "not_supported"
     assert fit_fail.reason == "driver_too_old"
     assert fit_fail.details == {"needed_driver": "525.60.13", "actual_driver": "510.47.03"}
+
+    # 3b. Multiple ineligible GPUs with equal blocker count and kind: reports highest VRAM GPU.
+    hw_fail_same_blocker = _fake_hw(
+        ram_gb=16.0,
+        gpus=[
+            _gpu(name="GTX 1650", vram_mb=4096, driver="560.28.03", compute_cap="7.5"),
+            _gpu(name="RTX 2060", vram_mb=6144, driver="560.28.03", compute_cap="7.5"),
+        ],
+    )
+    fit_fail_vram = rate_model_fit(model_hw, hw_fail_same_blocker)
+    assert fit_fail_vram.rating == "not_supported"
+    assert fit_fail_vram.reason == "not_enough_vram"
+    assert fit_fail_vram.details == {
+        "needed_vram_gb": 8.0,
+        "actual_vram_mb": 6144,
+        "actual_vram_gb": 6.0,
+    }
 
     # 4. Details populated for not_enough_vram, needs_nvidia_gpu, gpu_too_old, not_enough_ram.
     fit_vram = rate_model_fit(

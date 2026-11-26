@@ -24,7 +24,7 @@ class CatalogGetParams(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    char_count: int | None = Field(default=None, ge=0)
+    char_count: int | None = Field(default=None, ge=0, strict=True)
 
 
 def register_all(server: RpcServer, job_manager: JobManager | None = None) -> JobManager:

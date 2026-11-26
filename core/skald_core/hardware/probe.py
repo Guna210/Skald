@@ -206,29 +206,29 @@ def _parse_nvidia_smi_csv(stdout: str, *, expect_compute_cap: bool) -> list[GpuI
     return gpus
 
 
-def _probe_gpus_uncached() -> list[GpuInfo]:
+def _probe_gpus_uncached() -> tuple[list[GpuInfo], bool]:
     binary = _find_nvidia_smi()
     if binary is None:
         logger.warning("nvidia-smi not found; reporting no NVIDIA GPUs")
-        return []
+        return [], True
 
     expect_compute_cap = True
     try:
         proc = _run_nvidia_smi(binary, "name,memory.total,driver_version,compute_cap")
     except (OSError, subprocess.SubprocessError) as exc:
         logger.warning("Failed to run nvidia-smi at %s: %s", binary, exc)
-        return []
+        return [], False
 
     if proc.returncode != 0:
         combined = f"{proc.stderr}\n{proc.stdout}".lower()
-        if "compute_cap" in combined:
+        if "compute_cap" in combined and "not a valid field" in combined:
             logger.info("nvidia-smi rejected compute_cap; retrying without compute_cap")
             expect_compute_cap = False
             try:
                 proc = _run_nvidia_smi(binary, "name,memory.total,driver_version")
             except (OSError, subprocess.SubprocessError) as exc:
                 logger.warning("Failed to run nvidia-smi retry at %s: %s", binary, exc)
-                return []
+                return [], False
 
     if proc.returncode != 0:
         logger.warning(
@@ -236,20 +236,23 @@ def _probe_gpus_uncached() -> list[GpuInfo]:
             proc.returncode,
             proc.stderr.strip() or proc.stdout.strip() or "no output",
         )
-        return []
+        return [], False
 
     parsed = _parse_nvidia_smi_csv(proc.stdout, expect_compute_cap=expect_compute_cap)
     if parsed is None:
-        return []
-    return parsed
+        return [], False
+    return parsed, True
 
 
 def _probe_gpus() -> list[GpuInfo]:
     global _cached_gpus
     with _gpu_cache_lock:
-        if _cached_gpus is None:
-            _cached_gpus = _probe_gpus_uncached()
-        return list(_cached_gpus)
+        if _cached_gpus is not None:
+            return list(_cached_gpus)
+        gpus, should_cache = _probe_gpus_uncached()
+        if should_cache:
+            _cached_gpus = gpus
+        return list(gpus)
 
 
 def probe_hardware() -> HardwareInfo:
