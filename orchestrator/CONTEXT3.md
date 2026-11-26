@@ -788,3 +788,23 @@ Decision: rebase-only prompt first:
  - re-run the full suite; --force-with-lease; CI green.
 Then a fresh Claude Opus Reviewer.
 Follow-up: owner pastes the rebase prompt into the T03.6 Builder session.
+
+### E-0162 · 2026-11-27 01:07 (Asia/Colombo) · T03.6 · REVIEW-PROMPT
+Context: T03.6 rebase handoff (Gemini), PR #24 @9ba98db. Verified by the Orchestrator:
+ - rebased on 905c62a (an ancestor); mergeable and clean; CI green 12/12 (runs 45881426869 and 45881420427);
+ - range-diff: all 3 commits differ from the pre-rebase head only because of the conflict resolution;
+ - methods.py: the "removed" T02.7 lines were renamed (store → project_store); register_book_methods(server, project_store, manager) is still present, and models.* + license.accept are added.
+The Builder reports 471 passed.
+Decision: send to a fresh Claude Opus Reviewer. FOCUS:
+ - licence safety (no auto-accept; URL equality; acceptance checked before ANY download or pack work; licenses.json is the only store);
+ - the download, verify and marker-rename layout; resume; cancel → JobCancelled;
+ - refusals and their order; the per-revision lock and PackManager "already in progress";
+ - the pin sources (recent.json, the open project, models.lock.json; corrupt ones tolerated);
+ - model_in_use plus force; pack removal only when unused;
+ - the list_installed cleanup_candidates;
+ - path safety (id segments, file paths);
+ - the Builder's decisions (update no-op ordering; parent pruning);
+ - Ponytail: installer.py is 1028 lines (is everything needed?);
+ - tests are meaningful (mutations);
+ - Appendix 3 matches E-0157.
+Follow-up: owner runs the Reviewer.
