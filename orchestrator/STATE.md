@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-25 15:17 (Asia/Colombo) · last entry: E-0137
+Last updated: 2026-11-26 11:01 (Asia/Colombo) · last entry: E-0139
 Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 … E-0117), `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -8,19 +8,19 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4; E-0046). **Phase 1 complete** (T01.1–T01.6; E-0096).
-- Also merged: T02.1, T02.2, T02.3 (Phase 2); T03.1, T03.2, T03.4, T03.5 (Phase 3).
-- `master` at `327927d` (PR #17 merge). Default branch `master`. Merge method: **normal merge** (E-0021) — never tell the owner to squash.
-- Open PRs: **#19 T02.4** — APPROVED in round 3 (E-0137), head c8230f4; waiting for the owner to merge (normal merge). **#20 T02.5** — open; handoff not pasted yet; needs a rebase after #19 merges, then a Sonnet Reviewer.
+- Also merged: T02.1, T02.2, T02.3, T02.4 (Phase 2); T03.1, T03.2, T03.4, T03.5 (Phase 3).
+- `master` at `651f8a9` (PR #19 merge). Default branch `master`. Merge method: **normal merge** (E-0021) — never tell the owner to squash.
+- Open PRs: **#20 T02.5**, round 1 @31b03db, CI green but CONFLICTS with master in SPEC.md → rebase-only prompt (E-0139); then a fresh **Opus** Reviewer (upgraded from Sonnet: custom rule-resolution logic).
 - CI: ci.yml (core/worker/app on windows-latest + ubuntu-latest), catalog.yml (PRs on catalog/** + weekly), slow.yml (weekly + workflow_dispatch; real CPU smoke-pack install — first run 43719877209 passed on both OSes, E-0117).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036). Milestones: none yet (M1 after T05.8).
 
 ## Tasks
-- Merged (PR): T00.1 #2, T00.2 #3, T00.3 #4, T00.4 #5, T01.1 #6, T01.2 #7, T02.1 #8, T01.6 #9, T01.4 #10, T03.4 #11, T01.5 #12, T01.3 #13, T02.2 #14, T03.1 #15, T03.5 #16, T02.3 #18, T03.2 #17.
+- Merged (PR): T00.1 #2, T00.2 #3, T00.3 #4, T00.4 #5, T01.1 #6, T01.2 #7, T02.1 #8, T01.6 #9, T01.4 #10, T03.4 #11, T01.5 #12, T01.3 #13, T02.2 #14, T03.1 #15, T03.5 #16, T02.3 #18, T03.2 #17, T02.4 #19.
 - **Available, not started** (prompt only when the owner asks; E-0057): T03.3 hardware probe + fit rating; T03.6 model file installer + revisions + licence acceptance; T03.7 worker protocol + skald_worker + fake adapter + contract suite (unlocks the most: T03.8 → T04.x); T03.9 Kokoro G2P / espeak-ng GPL spike [SPIKE][REVIEW]; T06.1 Electron + React + TS scaffold.
 - Unlock map: T03.6 ← T03.2 + T01.6 + T01.3; T03.8 ← T03.7 + T03.5 + T01.3; T02.4/T02.5 ← T02.3; T06.2 ← T06.1 + T01.3; T04.1 ← T03.7 + T03.9 + T03.6.
 
 ## Waiting on the owner
-1. Merge PR #19 (T02.4); paste the T02.5 handoff (rebase prompt first).
+1. Paste the T02.5 rebase prompt into its Builder session, then paste the handoff.
 2. Before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs / open questions
@@ -32,7 +32,7 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 ## Standing notes for prompts (by task)
 - **All Builder prompts:** owner authorizes pushing to `task/<ID>-<slug>` and opening the PR even from a `claude/…` session branch (E-0004); source `scripts/dev-env.*` first, venv Python (`core/.venv`), no `.npmrc` (E-0016); fetch_deps.py via the venv Python (E-0027); every subprocess passes stdout explicitly, never inherits it (E-0052); one -32602 mechanism = `SkaldError(kind, …, code=INVALID_PARAMS)` (E-0086); RPC methods are registered in `rpc/methods.py:register_all` (E-0090); spec "YAML" fixture defs = TOML via tomllib (E-0049); pysbd SyntaxWarning needs a scoped ignore under `filterwarnings = error` (E-0048).
 - **Reviewer prompts:** read-only, no pushes or PR comments; verify handoffs against the PR (E-0009, E-0030).
-- **T02.4/T02.5 (in progress; decisions E-0130):** build on load_epub_book's Book; paragraph ids are p_ + 16 hex of sha256(chapter_id\0index\0text) (E-0119).
+- **T02.4 (done, PR #19; E-0130–E-0137) / T02.5 (in progress; decisions E-0130):** build on load_epub_book's Book; paragraph ids are p_ + 16 hex of sha256(chapter_id\0index\0text) (E-0119).
 - **T02.3 (done, PR #18; history E-0119–E-0122):** reuse T02.2's `resolve_body_slices`/`walk_body_slice` unchanged (slices in document order, paired `anchor`, dangling slices empty; pre-anchor text in the first chapter; comments/PIs skipped) (E-0099, E-0101, E-0103); acceptance check "paragraph text count = D2 count (± boundary spaces)"; carry T02.2 R3-1 (pin a dangling entry's position: nav a, gone, c, b) and T00.1 R1-1 (docs/defaults.md C1.1 item 5: alt text / note bodies skipped "by default") (E-0011); Paragraph.is_heading is provisional (E-0076); D1–D4 in Appendix 3 apply.
 - **T02.7:** EPUB 2 `<guide>` and `role="doc-*"` are not used for suggested skips (E-0099); remote spine item → epub_invalid and pre-anchor sections don't flag the first chapter (ruled, Appendix 3).
 - **T03.2 (done, PR #17; E-0119, E-0124–E-0128 — userData via SKALD_DATA_DIR, new kind catalog_invalid, 5 MiB cap, schema-only validation):** checkpoint/revision ids are unique per parent, not globally (E-0107); add a test that catalog.validate deletes each downloaded file after verification (T03.1 R2-1, E-0109).
@@ -56,4 +56,4 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 - **Open item:** who creates `core/requirements.lock` (B3)? Decide by T04.1/T09.1 (E-0020).
 
 ## Recommended next step
-Wait for the T02.4/T02.5 handoffs (Reviewers: T02.4 Opus, T02.5 Sonnet). Available on request: T03.3, T03.6, T03.7 (unlocks the model path), T03.9, T06.1. Prompts only on request (E-0057). Available on request: T02.4, T02.5, T03.3, T03.7 (unlocks the model path), T03.9, T06.1 (E-0057).
+Wait for the T02.5 rebased handoff → Opus review. Available on request: T03.3, T03.6, T03.7 (unlocks the model path), T03.9, T06.1. Prompts only on request (E-0057). Available on request: T02.4, T02.5, T03.3, T03.7 (unlocks the model path), T03.9, T06.1 (E-0057).

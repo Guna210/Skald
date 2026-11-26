@@ -361,3 +361,27 @@ Decision: Merge PR #19 (normal merge; mergeable and clean, head c8230f4, CI gree
 After merge: T02.6 is NOT unlocked yet (it needs T02.5). PR #20 (T02.5) will need a rebase on the new master before review (both PRs append Appendix 3 and tick the index).
 Lesson for future prompts: when a fix cites a Reviewer's exact failing input, tell the Builder to test with that exact input. This avoided a third round here (O-1, E-0135).
 Follow-up: owner merges PR #19.
+
+### E-0138 · 2026-11-26 11:01 (Asia/Colombo) · T02.4 · MERGED
+Context: Owner: "Merged #19". master is now 651f8a9 = "Merge pull request #19 from Guna210/task/T02.4-text-import" (normal merge).
+Decision: T02.4 is done. Nothing new unlocks (T02.6 needs T02.5; T02.7 needs T02.4 + T02.6 + T01.3 + T01.5).
+Follow-up: none.
+
+### E-0139 · 2026-11-26 11:01 (Asia/Colombo) · T02.5 · FIX-PROMPT (rebase before review)
+Context: T02.5 round-1 handoff (Gemini / Antigravity), PR #20 `task/T02.5-normalize-lexicon` @31b03db. Verified by the Orchestrator:
+ - 2 commits on 327927d; 7 files, +587/−5: text/lexicon.py +172, normalize.py +24, text/__init__ +10, schemas/models.py ±11, tests +367, defaults.md ±4, SPEC.md ±4;
+ - CI green 12/12 at 31b03db; no secrets;
+ - after #19 merged it CONFLICTS with master 651f8a9 in SPEC.md (Appendix 3 and the index tick); docs/defaults.md auto-merges.
+The Builder reports 322 passed.
+Builder decisions:
+ (1) the special characters are removed before NFC (idempotence) → accepted;
+ (2) a single alternation WITHOUT capturing groups; the winning rule is resolved via exact_map/ci_map buckets keyed on (len, casefold) with an re.fullmatch fallback; patterns cached with lru_cache(32). The Builder measured 500 capturing groups as about 26× slower;
+ (3) count_lexicon_matches(book, rules).
+Orchestrator read lexicon.py. Risks for the Reviewer:
+ - the bucket lookup can miss when re's IGNORECASE matches but casefold changes the length (e.g. U+0130 İ → "i̇"): then "return matched  # pragma: no cover" silently gives neither a replacement nor a count;
+ - with two rules on the same word but different whole_word or case flags, the resolution order must match the regex alternation's priority;
+ - the added complexity vs Ponytail is justified only if the benchmark holds.
+Decision:
+ - Rebase-only prompt first: onto 651f8a9; keep the T02.4 rows (already on master) then the T02.5 rows; keep both index ticks; check the auto-merged docs/defaults.md keeps both the T02.4 TXT/MD section and the T02.5 C1.2 edits; --force-with-lease; CI green.
+ - Then a fresh Claude Opus Reviewer, upgraded from Sonnet (E-0130), because of the custom resolution logic in decision 2.
+Follow-up: owner pastes the rebase prompt into the T02.5 Builder session.
