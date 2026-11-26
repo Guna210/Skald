@@ -608,3 +608,24 @@ Decision: send to a fresh Claude Opus Reviewer. FOCUS:
  - tests are meaningful (mutations);
  - Appendix 3 and defaults.md.
 Follow-up: owner runs the Reviewer.
+
+### E-0152 · 2026-11-26 18:42 (Asia/Colombo) · T03.3 · VERDICT + FIX-PROMPT
+Context: Reviewer (fresh Claude Opus) round 1 on PR #22 @eda0d97: CHANGES REQUESTED.
+ - Checks: 441 passed; ruff and mypy clean.
+ - About 45 fit probes: every boundary matches E-0144 (VRAM at min and 1.5×; rtf 0.5/0.51/1.0/1.01; the Linux and Windows driver floor and toolkit driver; compute_cap 4.9/5.0/6.9/7.0/None; the cpu fallback; multi-GPU choice).
+ - nvidia-smi and RPC probes OK: empty, garbage, timeout and non-UTF-8 → [] with no raise; the comma name and [N/A] parse; disk free walks up; catalog.get works with none, {} and {char_count}, while url and [] → -32602.
+ - 16 mutations caught, 3 survived.
+Findings:
+ - R1-1 [Major] CatalogGetParams.char_count is lax: "5", true and 5.0 are coerced instead of giving -32602.
+ - R1-2 [Minor] a FAILED probe (timeout, driver not ready at boot) is cached as [] for the whole process, so a GPU machine shows "needs an NVIDIA GPU" until restart.
+ - R1-3 [Minor] unpinned: no retry on a generic failure; the VRAM tiebreak in the failure ranking; the equal-VRAM lowest-index tiebreak.
+ - R1-4 [Nit] the retry condition matches any failure mentioning compute_cap.
+ Notes: Builder decision 2 is deterministic and sound. A cuda+cpu model with a blocked GPU gets a plain cpu rating with no "a GPU upgrade would help" hint → UI later.
+Decision: round 2, all small.
+ - R1-1: char_count strict int (StrictInt or Field(strict=True), ge=0); tests: "5", true, 5.0 → -32602.
+ - R1-2: FIX NOW (a real boot-timing and GPU-wake case). Cache only a definitive result: a successful parse (including 0 GPUs reported) or nvidia-smi not found. Re-probe on the next call after a timeout, a non-zero exit or unparseable output. Tests for both.
+ - R1-3: tests (a), (b) and (c).
+ - R1-4: tighten the retry to the "not a valid field" error that mentions compute_cap (case-insensitive); covered by test (a).
+ Note for T07.2: when a GPU exists but is blocked and the cpu tier is used, the Models screen may show the GPU blocker as a hint; fit.py could expose it later.
+Why: R1-1 is a type-contract bug (E-0086); R1-2 would mislead users with a real GPU; everything else is a few lines.
+Follow-up: the same Reviewer session for round 2.

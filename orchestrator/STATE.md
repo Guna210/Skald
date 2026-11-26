@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-26 18:19 (Asia/Colombo) · last entry: E-0151
+Last updated: 2026-11-26 18:42 (Asia/Colombo) · last entry: E-0152
 Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 … E-0117), `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -10,7 +10,7 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 - **Phase 0 complete** (T00.1–T00.4; E-0046). **Phase 1 complete** (T01.1–T01.6; E-0096).
 - Also merged: T02.1–T02.6 (Phase 2); T03.1, T03.2, T03.4, T03.5 (Phase 3).
 - `master` at `47e22d7` (PR #21 merge). Default branch `master`. Merge method: **normal merge** (E-0021) — never tell the owner to squash.
-- Open PRs: **#22 T03.3**, round 1 @eda0d97 (rebased on 47e22d7, CI green 12/12), in review with a fresh Opus (E-0151).
+- Open PRs: **#22 T03.3**: round 1 CHANGES REQUESTED (E-0152) → round-2 fix prompt (strict char_count; don't cache failed GPU probes; 3 tests; tighter retry). Then the same Opus Reviewer.
 - CI: ci.yml (core/worker/app on windows-latest + ubuntu-latest), catalog.yml (PRs on catalog/** + weekly), slow.yml (weekly + workflow_dispatch; real CPU smoke-pack install — first run 43719877209 passed on both OSes, E-0117).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036). Milestones: none yet (M1 after T05.8).
 
@@ -20,7 +20,7 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 - Unlock map: T03.6 ← T03.2 + T01.6 + T01.3; T03.8 ← T03.7 + T03.5 + T01.3; T02.4/T02.5 ← T02.3; T06.2 ← T06.1 + T01.3; T04.1 ← T03.7 + T03.9 + T03.6.
 
 ## Waiting on the owner
-1. Run the T03.3 Reviewer (fresh Opus) and paste the verdict.
+1. Paste the T03.3 round-2 fix prompt into its Builder session; then the handoff → round-2 review.
 2. Before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs / open questions
@@ -43,6 +43,7 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 - **T06.1:** setup-node@v7 `package-manager-cache: true` vs the .cache/npm step (E-0044); `npm ci` will run inside the core/worker CI jobs once app/package-lock.json exists (E-0041).
 - **T06.2:** core.ts passes SKALD_STORAGE_DIR only when the user chose a storage folder (F1, E-0071).
 - **T06.3:** ProjectManifest allows extra keys (TS index signature); the UI ignores unknown keys and never sends them back modified (E-0088).
+- **T07.2:** when a GPU exists but is blocked (old driver, too little VRAM) and the cpu tier is used, consider showing the GPU blocker as a hint; fit.py may need to expose it (E-0152).
 - **T07.10:** storage-folder move per G11 incl. python/ (E-0070, E-0072); default storage %LOCALAPPDATA%\Skald / ~/.local/share/Skald (G3); "Free up space" retries cleans remove() skipped while other ops ran + a test for that branch; consider a storage-wide lock while pruning (T03.5 R2-1/R2-2, E-0116).
 - **T02.6 (done, PR #21; E-0144–E-0148):** carry T02.5 R1-1 (make _ci_key consistent with re for İ: casefold "i̇" → "i"; drop the pragma; tests for İstanbul and for rules i/İ on İ → rule 1), R1-2 (a casefold-fallback test: σίσυφος vs ΣΊΣΥΦΟΣ) and R1-3 (defaults.md: U+2028/2029 → space, \r\n → \n) (E-0142); chunk the SYNTHESIS text (lexicon(normalize(display))); a paragraph may contain "\n" (from <br> or a markdown hardbreak) (E-0130).
 - **T02.7:** add T02.4 R3-1 tests (BE-side 29%/30% cadence pair; a decoded-text \x0b/\f case) (E-0137); job.log a warning when TextImport.guessed is true; sync docs/defaults.md "C1.1 Import (TXT and Markdown)" item 1 to the final Appendix 3 encoding row (5% + ≥ 8 C0-byte gate; dominant-parity cadence) (E-0136); chapters with zero paragraphs can exist (dangling EPUB anchors, an image-only Markdown h1); book.get and the UI must handle them (E-0134).
@@ -60,4 +61,4 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 - **Open item:** who creates `core/requirements.lock` (B3)? Decide by T04.1/T09.1 (E-0020).
 
 ## Recommended next step
-Wait for the T03.3 verdict. Available on request: T02.7, T03.6, T03.7 (unlocks the model path), T03.9, T06.1. Prompts only on request (E-0057).
+Wait for the T03.3 round-2 handoff. Available on request: T02.7, T03.6, T03.7 (unlocks the model path), T03.9, T06.1. Prompts only on request (E-0057).
