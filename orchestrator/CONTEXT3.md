@@ -662,3 +662,60 @@ Findings: R2-1 [Minor] "not found counts as definitive" is untested (if it regre
 Decision: Merge PR #22 (normal merge; mergeable and clean, head 7e48d43, CI green 12/12, E-0154). R2-1 → "when touched next" (hardware/ or test_hardware.py, e.g. T05.4 or T07.2): add a test that _find_nvidia_smi is called once across two probes when it returns None.
 After merge: nothing newly unlocked (T05.4 also needs T05.3; T07.2 needs T06.3, T06.4 and T03.6). Available: T02.7, T03.6, T03.7, T03.9, T06.1.
 Follow-up: owner merges PR #22.
+
+### E-0156 · 2026-11-26 22:41 (Asia/Colombo) · T03.3 · MERGED
+Context: Owner: "Merged #22". master is now bfd16f7 = "Merge pull request #22 from Guna210/task/T03.3-hardware-fit" (normal merge).
+Decision: T03.3 is done. Nothing newly unlocked.
+Follow-up: none.
+
+### E-0157 · 2026-11-26 22:41 (Asia/Colombo) · T02.7, T03.6 · TASK-ASSIGNED
+Context: Owner asked for the T02.7 and T03.6 prompts. Both from master bfd16f7, in parallel; both touch rpc/methods.py, schemas and Appendix 3 → the second to merge rebases.
+Decisions (the Builders record them in Appendix 3):
+T02.7 book.* and lexicon.* RPC:
+ - Operates on the core's single open project (T01.5); no open project → project_invalid.
+ - book.import {source_path} job:
+   - dispatch by suffix: .epub → load_epub_book; .txt → load_text_book; .md/.markdown → load_markdown_book; otherwise unsupported_format;
+   - copy the source to source/original.<ext> (atomic);
+   - EPUB cover → source/cover.<jpg|png> (raster only; others skipped);
+   - Book.source_path and cover_path are project-relative;
+   - TextImport.guessed → job.log warning;
+   - progress per chapter via a small optional on_chapter(index, total) callback added to the loaders (ctx.checkpoint inside, so cancel works);
+   - refuses if book.json already exists → project_invalid.
+ - book.json = the Book (display text, ids, included). Paragraph.sentences stay EMPTY: sentences depend on the lexicon and language, and T05.4 owns split-once caching.
+ - "Edits mark affected chunks stale" is met by content-addressing (chunk ids and cache keys derive from the synthesis text); no stale flags are stored.
+ - NEW: paragraph ids are assigned at import and NEVER recomputed on edit, so assignment overrides (T05.3) keep their target; only the edited paragraph's chunk ids change.
+ - book.get (sync) returns the Book.
+ - book.update (sync) is a partial patch: {chapters: [{id, included}], paragraphs: [{id, text}], language}. Unknown ids → -32602; empty or whitespace text → -32602; language must be null or match ^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$. It returns the changed chapter and paragraph ids, not the whole Book.
+ - lexicon.json = {schema_version: 1, rules: [LexiconRule]}. lexicon.set replaces the whole list, rejecting exact duplicates (same normalized word plus flags) and enforcing caps (≤ 1000 rules, word ≤ 100 chars, replacement ≤ 500). lexicon.get returns the rules with match_count computed live via count_lexicon_matches (not stored).
+ - Carry:
+   - T02.4 R3-1 tests (the BE 29/30% cadence pair; a decoded-text \x0b/\f case);
+   - sync docs/defaults.md "C1.1 Import (TXT and Markdown)" item 1 to the Appendix 3 encoding row;
+   - zero-paragraph chapters are valid in book.get.
+ - The cross-paragraph quote state is moved to T05.4 (where chunks are computed).
+ - Acceptance test: import → edit → reopen round-trips, and only the edited paragraph's chunk_paragraph ids change.
+ - Reviewer: Sonnet (Builder must not be Sonnet).
+T03.6 model installer, revisions, licences (models/installer.py):
+ - models.install {model_id, checkpoint_id, revision_id?} job. The default revision is the checkpoint's default_revision. Refuse when:
+   - the model is retired (no new downloads; B4.1) → model_download_failed with a hint;
+   - the revision is incompatible (T03.2 annotation) → adapter_unavailable;
+   - the revision is bundled → internal, hint "bundled with the app" (T04.1 revisits);
+   - commercial false without a matching acceptance → license_not_accepted, BEFORE any download or pack work;
+   - free disk < the remaining bytes → not_enough_disk.
+ - Pack: if model.pack is set, use PackManager (T03.5) with family = model.pack and accel from the T03.3 fit tier (cuda → cu12, else cpu); skip if a valid pack already exists; no worker wheel until T03.7.
+ - Files:
+   - each goes into <storage>/models/<m>/<c>/<rev>.part/<path> via net.download (resumable);
+   - id segments are checked with T03.2's _is_safe_id_segment;
+   - after every file verifies, write .complete (JSON: files with sha256, installed_at) INSIDE .part, then os.replace(.part → rev), with a short retry on Windows PermissionError. So a revision dir always has its marker;
+   - on cancel or failure, keep .part for resume; net.DownloadCancelled → JobCancelled (E-0056).
+ - Pickle: SPEC's "pickle_safe_load: true" maps to T03.1's format "pickle" + a non-empty approved_exception. The installer refuses a pickle file without one → unsupported_format (defence in depth; the schema already enforces it).
+ - A per-revision lock: a concurrent install or remove of the same revision → SkaldError "already in progress"; surface PackManager's own "already in progress" error (E-0116).
+ - license.accept {model_id, license_url} (sync): the model must be in the current catalog and the URL must equal its license.url (else -32602). Stored in <userData>/licenses.json {model_id: {license_url, accepted_at}}, written atomically. An acceptance counts only while the URL still matches (a licence URL change → re-accept).
+ - Project pins: NEW coordination formats:
+   - <userData>/recent.json is a JSON array of objects with at least "path" (absolute project folder); unknown keys are ignored; missing or corrupt → none (warning). T07.1 must write this shape. The currently open project also counts.
+   - <project>/models.lock.json = {schema_version: 1, models: [PinnedModelRecord]}; T05.x writes it; unreadable → a warning and treated as no pins.
+ - models.update {model_id, checkpoint_id} installs the default revision and never touches pins.
+ - models.remove {model_id, checkpoint_id, revision_id, force?}: refused while a known project pins the revision, unless force → NEW ErrorKind model_in_use (B8 + ErrorKind), with the hint listing the project names. After removal, if no installed revision of any model uses that pack, remove the pack via PackManager.remove.
+ - models.list_installed (sync): scans for .complete; per revision: size, used_by projects, still_in_catalog, is_default; plus cleanup_candidates (installed, not default, not pinned) = the "cleanup offer".
+ - Tests: a local HTTP server with tiny files; checksum failure; an interrupted download resuming via Range; non-commercial acceptance and a URL change; pinned-remove refusal plus force; concurrent same-revision; disk check; a crash between the marker and the rename (none possible) / .part resume.
+ - Reviewer: Opus (licences, downloads, catalog; Builder must not be Opus).
+Follow-up: owner opens two Builder sessions.
