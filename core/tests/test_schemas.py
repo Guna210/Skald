@@ -37,6 +37,7 @@ from skald_core.schemas import (
     CloneVoiceSpec,
     DesignSource,
     ErrorKind,
+    FitRating,
     GpuInfo,
     HardwareInfo,
     JobError,
@@ -80,6 +81,7 @@ _EXPECTED_MODEL_NAMES = {
     "QcResult",
     "SystemInfo",
     "HardwareInfo",
+    "FitRating",
     "JobRef",
     "JobProgress",
     "JobLog",
@@ -325,6 +327,21 @@ def test_core_models_round_trip_json() -> None:
         message="Working",
         stage="parse",
     )
+    fit_rating = FitRating(
+        rating="good",
+        tier="cuda",
+        gpu_index=0,
+        warnings=["driver_below_recommended"],
+        rtf=0.4,
+        estimate_seconds=40.0,
+    )
+    gpu_no_cap = GpuInfo(
+        name="GeForce GTX 1080",
+        memory_total_mb=8192,
+        driver_version="470.82",
+        compute_cap=None,
+        bfloat16_capable=False,
+    )
     catalog_view = CatalogView(
         schema_version=1,
         min_app_version="0.1.0",
@@ -381,14 +398,14 @@ def test_core_models_round_trip_json() -> None:
                         reason=None,
                         installed=False,
                         update_available=False,
-                        fit=None,
+                        fit=fit_rating,
                     )
                 ],
                 compatible=True,
                 reason=None,
                 installed=False,
                 update_available=False,
-                fit=None,
+                fit=fit_rating,
             )
         ],
     )
@@ -410,6 +427,8 @@ def test_core_models_round_trip_json() -> None:
         chunk_status,
         record,
         sys_info,
+        fit_rating,
+        gpu_no_cap,
         job_ref,
         job_error,
         job_progress,

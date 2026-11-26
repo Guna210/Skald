@@ -14,6 +14,7 @@ from pydantic import ValidationError
 from skald_core import __version__, net
 from skald_core.catalog.schema import Catalog, parse_semver
 from skald_core.catalog.validate import _REPO_ROOT, load_adapter_versions
+from skald_core.hardware import probe_hardware, rate_model_fit
 from skald_core.jobs.manager import JobContext, JobManager
 from skald_core.project.store import atomic_write_json
 from skald_core.rpc.server import SkaldError
@@ -24,6 +25,7 @@ from skald_core.schemas import (
     CatalogDataSource,
     CatalogRefreshResult,
     CatalogView,
+    HardwareInfo,
     IncompatibilityReason,
 )
 from skald_core.storage import get_data_dir, models_dir
@@ -176,6 +178,8 @@ def annotate_catalog(
     adapters_path: Path | None = None,
     app_version: str = __version__,
     models_root: Path | None = None,
+    hardware: HardwareInfo | None = None,
+    char_count: int | None = None,
 ) -> CatalogView:
     """Annotate a validated `Catalog` with compatibility, install, update, and fit state."""
     if adapter_versions is None:
@@ -185,10 +189,15 @@ def annotate_catalog(
         resolved_adapters = adapter_versions
 
     resolved_models_root = models_dir() if models_root is None else models_root
+    resolved_hardware = (
+        hardware if hardware is not None else (probe_hardware() if catalog.models else None)
+    )
     app_too_old = parse_semver(app_version) < parse_semver(catalog.min_app_version)
 
     annotated_models: list[AnnotatedCatalogModel] = []
     for model in catalog.models:
+        assert resolved_hardware is not None
+        model_fit = rate_model_fit(model.hardware, resolved_hardware, char_count=char_count)
         annotated_checkpoints: list[AnnotatedCatalogCheckpoint] = []
         for cp in model.checkpoints:
             rev_states: list[tuple[bool, IncompatibilityReason | None, bool]] = []
@@ -246,7 +255,7 @@ def annotate_catalog(
                     reason=default_reason,
                     installed=cp_installed,
                     update_available=cp_update_available,
-                    fit=None,
+                    fit=model_fit,
                 )
             )
 
@@ -273,7 +282,7 @@ def annotate_catalog(
                 reason=model_reason,
                 installed=model_installed,
                 update_available=model_update_available,
-                fit=None,
+                fit=model_fit,
             )
         )
 
@@ -293,6 +302,8 @@ def get_catalog(
     bundled_path: Path | None = None,
     adapters_path: Path | None = None,
     app_version: str = __version__,
+    hardware: HardwareInfo | None = None,
+    char_count: int | None = None,
 ) -> CatalogView:
     """Return the cached catalog if valid, otherwise fall back to the bundled catalog."""
     cache_path = get_catalog_cache_path(data_dir)
@@ -306,6 +317,8 @@ def get_catalog(
                 adapters_path=adapters_path,
                 app_version=app_version,
                 models_root=models_root,
+                hardware=hardware,
+                char_count=char_count,
             )
         except (OSError, UnicodeDecodeError, SkaldError) as exc:
             logger.warning(
@@ -332,6 +345,8 @@ def get_catalog(
         adapters_path=adapters_path,
         app_version=app_version,
         models_root=models_root,
+        hardware=hardware,
+        char_count=char_count,
     )
 
 
