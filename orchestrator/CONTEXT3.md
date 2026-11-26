@@ -436,3 +436,57 @@ Decision: Merge PR #20 (normal merge; mergeable and clean, head 40b78f7, CI gree
 Why: no blockers or majors; Turkish İ is a real but narrow case; carrying it saves a round trip, and T02.6 works in the same package.
 After merge: T02.6 (sentence splitting, chunking, dialogue) becomes available (announce only, E-0057).
 Follow-up: owner merges PR #20.
+
+### E-0143 · 2026-11-26 12:48 (Asia/Colombo) · T02.5 · MERGED
+Context: Owner: "Merged #20". master is now 96125f8 = "Merge pull request #20 from Guna210/task/T02.5-normalize-lexicon" (normal merge).
+Decision: T02.5 is done. T02.6 is now available.
+Follow-up: none.
+
+### E-0144 · 2026-11-26 12:48 (Asia/Colombo) · T02.6, T03.3 · TASK-ASSIGNED
+Context: Owner asked for the T02.6 and T03.3 prompts. Both from master 96125f8, in parallel (text/ vs hardware/; both append Appendix 3 rows and tick the index → the second to merge rebases).
+Decisions (the Builders record them in Appendix 3 and docs/defaults.md):
+T02.6 sentences, chunks, dialogue (text/chunk.py; pure functions):
+ - Input = the SYNTHESIS text (E-0130). Main entry chunk_paragraph(chapter_id, paragraph_id, text, language, max_chars) → sentences, chunks, unbalanced_quotes. Storage is decided in T02.7/T05.4 (sentences don't depend on max_chars; chunks do).
+ - Order: dialogue spans first, then sentence splitting WITHIN each span, then greedy packing within a span up to max_chars. Chunks never cross a span or a paragraph; Paragraph.sentences = the per-span sentences concatenated.
+ - Ids: Sentence "s_" and Chunk "c_" + 16 hex of sha256(paragraph_id\0index\0text); Chunk.index is per paragraph; voice_id and cache_key are None (T05).
+ - Language: the primary subtag of Book.language, lowercased; None → "en". pysbd if it supports the language (a cached Segmenter per language, clean=False); otherwise a punctuation fallback: [.!?…。！？؟।] plus trailing closing quotes/brackets, then whitespace or end (CJK terminators need no whitespace). If pysbd's segments don't reproduce the span (whitespace-normalized), use the fallback for that span and log a warning. "\n" is a sentence boundary.
+ - Long sentence > max_chars: split at ; then : then , (plus the CJK ；：，、) then spaces, choosing the rightmost split ≤ max_chars and recursing; last resort a hard split at max_chars, never before a combining mark.
+ - Reconstruction rule: " ".join(chunk texts) == the span or paragraph text with every whitespace run collapsed to one space.
+ - Dialogue:
+   - Quote pairs: “…”, "…" (straight quotes alternate), «…», 「…」 in all languages; „…“ for de, cs, sk, pl, bg, ro, hu (where “ closes), otherwise “ opens.
+   - The span includes its quote marks.
+   - At least 2 words (whitespace tokens), or at least 2 characters when the content has no whitespace (CJK).
+ - NEW (approved change to the C1.2 step 6 default): an opener left unclosed at the end of a paragraph, with every earlier quote balanced, is the "continued speech" convention → dialogue to the paragraph end, NOT flagged. Any other imbalance → the whole paragraph is narrator and flagged (Paragraph.unbalanced_quotes).
+ - Known limit: British single-quote ‘…’ dialogue is not detected (apostrophe conflict; not in the C1.2 list) → narrator voice.
+ - Carry T02.5 R1-1/R1-2/R1-3 (E-0142).
+ - Tests: recorded expectations for fixture passages; no chunk over max_chars; a reconstruction property loop (no new dependency); quotes in several languages; unbalanced cases; the pysbd SyntaxWarning scoped ignore (E-0048).
+ - Reviewer: Opus (defaults, complex text logic).
+T03.3 hardware probe + fit (hardware/probe.py, hardware/fit.py):
+ - system.hardware is sync, registered in methods.py, and returns HardwareInfo (T01.4).
+ - CPU model: Linux /proc/cpuinfo "model name"; Windows winreg HKLM\HARDWARE\DESCRIPTION\System\CentralProcessor\0 ProcessorNameString; fallback platform.processor().
+ - RAM via psutil; disk free on the <storage> drive (the nearest existing ancestor of get_storage_dir()).
+ - nvidia-smi:
+   - lookup: shutil.which, then %SystemRoot%\System32\nvidia-smi.exe, then %ProgramFiles%\NVIDIA Corporation\NVSMI\nvidia-smi.exe;
+   - run: 10 s timeout, stdout=PIPE, stderr captured, CREATE_NO_WINDOW on Windows;
+   - parse: `--format=csv,noheader,nounits` (nounits approved as a deviation from B7), read with the csv module;
+   - if compute_cap is rejected (old driver), retry without it → compute_cap None (GpuInfo.compute_cap becomes str | None), bfloat16 False;
+   - missing, failing, timeout or garbage → [] plus a log warning, never an error;
+   - the GPU list is cached for the process lifetime; RAM and disk are fresh on every call.
+ - Fit (computed per MODEL hardware block — the schema puts hardware on the model, not the checkpoint; it is copied to each checkpoint; adapter tasks may extend the schema):
+   - CUDA tier when the model has cuda, a GPU has memory_total ≥ min_vram_gb×1024 MiB, its driver ≥ the pack floor (packs.manager CUDA_DRIVER_REQUIREMENTS["cu126"][os]) and its compute_cap ≥ 5.0 (otherwise Not supported, reason gpu_too_old), and total RAM ≥ min_ram_gb if set.
+   - Pick the eligible GPU with the most VRAM and record gpu_index.
+   - Else the CPU tier if the model has cpu and total RAM ≥ min_ram_gb.
+   - Else Not supported, with a reason code: needs_nvidia_gpu, not_enough_vram, not_enough_ram, driver_too_old, gpu_too_old, plus details (needed/have).
+   - Rating:
+     - great = ≥ 1.5× the tier's minimum (VRAM for cuda, RAM for cpu) AND a known rtf ≤ 0.5;
+     - slow = a known rtf > 1 (either tier);
+     - otherwise good (an unknown rtf caps at good).
+   - Warnings (cap at good):
+     - driver_below_recommended: floor ≤ driver < the 12.6 toolkit driver (E-0114);
+     - gpu_generation_unconfirmed: compute_cap < 7.0 or unknown (do not promise Pascal).
+ - Estimate: estimate_seconds = char_count / 15 × rtf (15 chars per second of speech is a defaults.md entry; labelled an estimate; null if the rtf is unknown).
+ - catalog.get gains an OPTIONAL param {char_count: int ≥ 0}; it doesn't touch the URL, so T03.2's no-URL-over-RPC decision still holds.
+ - FitRating schema: rating, tier, gpu_index, reason, details, warnings, rtf, estimate_seconds. Replaces fit: Any in the annotated schemas, plus the schema export.
+ - Tests: captured nvidia-smi outputs (several GPUs, a GPU name containing a comma, an old driver without compute_cap, none, missing, timeout, garbage); a fit table of fake machines × fake models.
+ - Reviewer: Opus (fit defaults, subprocess).
+Follow-up: owner opens two Builder sessions (neither on Claude Opus).
