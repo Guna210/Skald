@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-26 15:16 (Asia/Colombo) · last entry: E-0147
+Last updated: 2026-11-26 17:23 (Asia/Colombo) · last entry: E-0148
 Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 … E-0117), `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -10,7 +10,7 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 - **Phase 0 complete** (T00.1–T00.4; E-0046). **Phase 1 complete** (T01.1–T01.6; E-0096).
 - Also merged: T02.1–T02.5 (Phase 2); T03.1, T03.2, T03.4, T03.5 (Phase 3).
 - `master` at `96125f8` (PR #20 merge). Default branch `master`. Merge method: **normal merge** (E-0021) — never tell the owner to squash.
-- Open PRs: **#21 T02.6**: round 2 @72cf265 (CI green; Orchestrator smoke test OK for zh/ja/Hindi), in round-2 review with the same Opus session (E-0147); Appendix 3); then the same Opus Reviewer; **#22 T03.3** (open; handoff not pasted yet → Opus Reviewer). Both from 96125f8; the second to merge rebases.
+- Open PRs: **#21 T02.6** — APPROVED in round 2 (E-0148), head 72cf265; waiting for the owner to merge (normal merge). **#22 T03.3** — open @91a501b; handoff not pasted yet; needs a rebase after #21 merges, then a fresh Opus Reviewer.
 - CI: ci.yml (core/worker/app on windows-latest + ubuntu-latest), catalog.yml (PRs on catalog/** + weekly), slow.yml (weekly + workflow_dispatch; real CPU smoke-pack install — first run 43719877209 passed on both OSes, E-0117).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036). Milestones: none yet (M1 after T05.8).
 
@@ -20,7 +20,7 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 - Unlock map: T03.6 ← T03.2 + T01.6 + T01.3; T03.8 ← T03.7 + T03.5 + T01.3; T02.4/T02.5 ← T02.3; T06.2 ← T06.1 + T01.3; T04.1 ← T03.7 + T03.9 + T03.6.
 
 ## Waiting on the owner
-1. Paste the T02.6 round-2 review prompt into the SAME Reviewer session; paste the T03.3 handoff.
+1. Merge PR #21 (T02.6); paste the T03.3 handoff (rebase prompt first).
 2. Before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs / open questions
@@ -48,7 +48,7 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 - **T02.7:** add T02.4 R3-1 tests (BE-side 29%/30% cadence pair; a decoded-text \x0b/\f case) (E-0137); job.log a warning when TextImport.guessed is true; sync docs/defaults.md "C1.1 Import (TXT and Markdown)" item 1 to the final Appendix 3 encoding row (5% + ≥ 8 C0-byte gate; dominant-parity cadence) (E-0136); chapters with zero paragraphs can exist (dangling EPUB anchors, an image-only Markdown h1); book.get and the UI must handle them (E-0134).
 - **T07.7:** lexicon rules for CJK need whole_word off (whole-word never matches inside CJK runs) (E-0130).
 - **T02.8:** fix T02.3 R1-1 (heading_depth from start_el's h1–h6 ancestors when an anchor sits inside a heading, plus a test) and decide R1-2 (<pre> keeps its line breaks like <br>?) (E-0122); decide whether figure captions (figcaption, Gutenberg div.fig) are skipped by default; Gutenberg header/licence chapters and untagged Contents/ILLUSTRATIONS tables go into the text-review skim (E-0121).
-- **T05.4:** record the T02.6 accepted limits in Appendix 3 — a hard split may fall after a virama (splitting an Indic conjunct), and a grapheme longer than max_chars is cut (only for single words/graphemes over max_chars) (E-0147); split sentences ONCE and cache them; re-pack per checkpoint max_chars (packing is under 2% of the cost, pysbd about 95%). Add split → [(role, [sentences])] and pack_spans(spans, max_chars) entry points, with chunk_paragraph composing them. Sentence has no role → store the role per span or re-derive it with the dialogue pass (0.17 s/10k) (E-0146).
+- **T05.4:** add T02.6 R2-1 guard tests ("abcd\u200cefgh" and "abcd\U0001f3fdefgh" at max_chars 4); split_paragraph must return (role, sentences, SOURCE separators) so re-packing stays exact (E-0148); record the T02.6 accepted limits in Appendix 3 — a hard split may fall after a virama (splitting an Indic conjunct), and a grapheme longer than max_chars is cut (only for single words/graphemes over max_chars) (E-0147); split sentences ONCE and cache them; re-pack per checkpoint max_chars (packing is under 2% of the cost, pysbd about 95%). Add split → [(role, [sentences])] and pack_spans(spans, max_chars) entry points, with chunk_paragraph composing them. Sentence has no role → store the role per span or re-derive it with the dialogue pass (0.17 s/10k) (E-0146).
 - **T02.7 or T05.x:** carry the quote state across paragraphs so the closing paragraph of a multi-paragraph speech (a stray closer) isn't flagged (E-0146).
 - **T05.4 / T03.8:** the fit result carries gpu_index → use it to choose the CUDA device (e.g. CUDA_VISIBLE_DEVICES) for the worker (E-0144).
 - **T08.3:** listen for British ‘…’ dialogue (not detected) and for continued-speech paragraphs (E-0144).
@@ -60,4 +60,4 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 - **Open item:** who creates `core/requirements.lock` (B3)? Decide by T04.1/T09.1 (E-0020).
 
 ## Recommended next step
-Wait for the T02.6 / T03.3 handoffs (Opus Reviewers). Available on request: T03.6, T03.7 (unlocks the model path), T03.9, T06.1. Prompts only on request (E-0057).
+Owner merges #21 → T02.7 becomes available. Then the T03.3 handoff → rebase → Opus review. Available on request: T03.6, T03.7 (unlocks the model path), T03.9, T06.1. Prompts only on request (E-0057).

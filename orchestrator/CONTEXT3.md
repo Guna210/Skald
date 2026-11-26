@@ -558,3 +558,16 @@ Round 2 goes to the same Opus session. FOCUS:
  - the Appendix 3 rows (including the "supersedes" wording);
  - no regressions.
 Follow-up: owner pastes into the round-1 Reviewer session.
+
+### E-0148 · 2026-11-26 17:23 (Asia/Colombo) · T02.6 · VERDICT
+Context: Reviewer (same Opus session) round 2 on PR #21 @72cf265: APPROVED.
+ - Checks: 422 passed; ruff and mypy clean.
+ - Strict fuzz, 60k strings, max_chars 1–200: 0 mismatches, 0 over-length, 0 empty chunks.
+ - Strict walk over the 1,245 public-domain paragraphs × 3 max_chars: 0 mismatches.
+ - The round-1 repros are fixed; both accepted limits behave as described; the round-1 survivors are now caught.
+ - The pysbd fallback rate is still 1/1,245; the profile proportions are unchanged (pysbd dominant; packing 0.22 s).
+Findings: R2-1 [Minor] the guard test doesn't pin the U+200C, skin-tone and VS clauses (the VS clause is redundant with M*); the code is correct by direct probe.
+Decision: Merge PR #21 (normal merge; mergeable and clean, head 72cf265, CI green 12/12, E-0147). R2-1 → deferred to T05.4, which touches chunk.py for the split/pack refactor (add the "abcd\u200cefgh" and "abcd\U0001f3fdefgh" tests at max_chars 4 there).
+T05.4 now also needs: split_paragraph returning (role, sentences, separators) — the SOURCE separators must be stored to re-pack exactly under the strict rule — plus pack_spans.
+After merge: T02.7 (book.* and lexicon.* RPC) becomes available: it needs T02.4, T02.6, T01.3 and T01.5, all merged after this. Announce only (E-0057). PR #22 (T03.3, head 91a501b) is open; its handoff has not been pasted yet, and it will need a rebase after #21 merges.
+Follow-up: owner merges PR #21.
