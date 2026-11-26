@@ -536,3 +536,25 @@ Decision: round 2.
  - Noted for later: in a multi-paragraph speech the closing paragraph (a stray closer) is flagged, a legitimate fiction pattern → carry the quote state across paragraphs in a later task (T02.7 has the whole book; or T05.x).
 Why: R1-1 changes what the model reads for zh/ja (Kokoro languages) and silently changes cache keys; R1-2 breaks Hindi words. Both are cheap to fix.
 Follow-up: the same Reviewer session for round 2.
+
+### E-0147 · 2026-11-26 15:16 (Asia/Colombo) · T02.6 · REVIEW-PROMPT (round 2)
+Context: T02.6 round-2 handoff (Gemini), PR #21 @72cf265. Verified by the Orchestrator:
+ - one commit on 4e78bfa (no force-push); master 96125f8; mergeable and clean;
+ - 4 files, +214/−52: chunk.py ±141, tests ±116, SPEC.md, defaults.md;
+ - CI green 12/12 (runs 45794237260 and 45794245555).
+The Builder reports 422 passed and that its 4 mutants were caught.
+Orchestrator smoke test (the branch code plus pysbd 0.3.4 in the scratchpad):
+ - zh "你好。我是小明。今天天气很好！" → one chunk identical to the source (no inserted spaces) ✓;
+ - ja with 「」 → narration / dialogue / narration, exact text ✓;
+ - mixed "He visited 東京。Then he left. 你好。" exact ✓;
+ - English dialogue splits ✓; packing at max_chars 25 ✓.
+ - Hindi repro at max_chars 6 → ['विश्व','विद्या','लयविश्','वविद्','यालय']: no chunk starts with a matra ✓, but one ends with a virama (श्), so a conjunct is split. The rule (E-0146) doesn't forbid cuts after a virama.
+ - ZWJ family at max_chars 5 → chunks start with U+200D. This is the SPECIFIED fallback: a 7-code-point grapheme has no allowed cut in (0, 5], so max_chars wins (E-0146).
+Decision: both are ACCEPTED limits, not findings. They occur only when a single word or grapheme is longer than max_chars, and real catalog max_chars is about 200–400. The Builder records them in Appendix 3 at the next touch (T05.4, which will re-pack). The Reviewer is told this.
+Round 2 goes to the same Opus session. FOCUS:
+ - the strict reconstruction rule at every boundary;
+ - re-run the round-1 fuzz with the positional walk;
+ - the R1-2 guard; the R1-3 tests;
+ - the Appendix 3 rows (including the "supersedes" wording);
+ - no regressions.
+Follow-up: owner pastes into the round-1 Reviewer session.
