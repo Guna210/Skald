@@ -27,6 +27,7 @@ ErrorKind = Literal[
     "out_of_memory",
     "not_enough_disk",
     "license_not_accepted",
+    "model_in_use",
     "adapter_unavailable",
     "ffmpeg_failed",
     "folder_not_empty",
@@ -494,3 +495,69 @@ class CatalogRefreshResult(BaseModel):
     model_count: int
     source: CatalogDataSource = "cache"
     catalog: CatalogView
+
+
+class ModelsLockFile(BaseModel):
+    """Project-level pinned model revisions stored in models.lock.json."""
+
+    schema_version: Literal[1] = 1
+    models: list[PinnedModelRecord] = Field(default_factory=list)
+
+
+class ProjectRef(BaseModel):
+    """Reference to a known project by display name and folder path."""
+
+    name: str
+    path: str
+
+
+class InstalledModelRevision(BaseModel):
+    """Installed model revision metadata, disk usage, and project pin usage."""
+
+    model_id: str
+    checkpoint_id: str
+    revision_id: str
+    path: str
+    size_bytes: int
+    installed_at: str | None = None
+    used_by: list[ProjectRef] = Field(default_factory=list)
+    still_in_catalog: bool
+    is_default: bool
+
+
+class InstalledModelsResult(BaseModel):
+    """Response payload returned by `models.list_installed`."""
+
+    revisions: list[InstalledModelRevision] = Field(default_factory=list)
+    cleanup_candidates: list[InstalledModelRevision] = Field(default_factory=list)
+
+
+class ModelInstallResult(BaseModel):
+    """Result payload produced by `models.install` and `models.update` jobs."""
+
+    model_id: str
+    checkpoint_id: str
+    revision_id: str
+    path: str
+    files: dict[str, str] = Field(default_factory=dict)
+    installed_at: str
+    pack_dir: str | None = None
+    already_installed: bool = False
+
+
+class ModelRemoveResult(BaseModel):
+    """Result payload produced by the `models.remove` background job."""
+
+    model_id: str
+    checkpoint_id: str
+    revision_id: str
+    removed: bool
+    removed_packs: list[str] = Field(default_factory=list)
+
+
+class LicenseAcceptResult(BaseModel):
+    """Response payload returned by `license.accept`."""
+
+    model_id: str
+    license_url: str
+    accepted_at: str

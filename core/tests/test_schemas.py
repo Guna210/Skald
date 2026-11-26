@@ -41,6 +41,8 @@ from skald_core.schemas import (
     FitRating,
     GpuInfo,
     HardwareInfo,
+    InstalledModelRevision,
+    InstalledModelsResult,
     JobError,
     JobFinished,
     JobLog,
@@ -49,10 +51,15 @@ from skald_core.schemas import (
     JobStatus,
     Lexicon,
     LexiconRule,
+    LicenseAcceptResult,
+    ModelInstallResult,
+    ModelRemoveResult,
+    ModelsLockFile,
     Paragraph,
     PinnedModelRecord,
     PresetVoiceSpec,
     ProjectManifest,
+    ProjectRef,
     QcResult,
     RenderPlan,
     RenderRecord,
@@ -94,6 +101,11 @@ _EXPECTED_MODEL_NAMES = {
     "SkaldErrorData",
     "CatalogView",
     "CatalogRefreshResult",
+    "ModelsLockFile",
+    "InstalledModelsResult",
+    "ModelInstallResult",
+    "ModelRemoveResult",
+    "LicenseAcceptResult",
 }
 
 _EXPECTED_ERROR_KINDS = {
@@ -108,6 +120,7 @@ _EXPECTED_ERROR_KINDS = {
     "out_of_memory",
     "not_enough_disk",
     "license_not_accepted",
+    "model_in_use",
     "adapter_unavailable",
     "ffmpeg_failed",
     "folder_not_empty",
@@ -134,6 +147,8 @@ def test_exported_models_cover_spec_and_have_docstrings_and_snake_case_fields() 
         CloneVoiceSpec,
         DesignSource,
         PinnedModelRecord,
+        ProjectRef,
+        InstalledModelRevision,
         AnnotatedCatalogRevision,
         AnnotatedCatalogCheckpoint,
         AnnotatedCatalogModel,
@@ -421,6 +436,52 @@ def test_core_models_round_trip_json() -> None:
         source="cache",
         catalog=catalog_view,
     )
+    models_lock = ModelsLockFile(
+        schema_version=1,
+        models=[
+            PinnedModelRecord(
+                model_id="kokoro",
+                checkpoint_id="kokoro-v1.0",
+                revision_id="r1",
+                adapter_version="1.0.0",
+                file_hashes={"kokoro.onnx": "a" * 64},
+            )
+        ],
+    )
+    installed_rev = InstalledModelRevision(
+        model_id="kokoro",
+        checkpoint_id="kokoro-v1.0",
+        revision_id="r1",
+        path="/tmp/models/kokoro/kokoro-v1.0/r1",
+        size_bytes=128,
+        installed_at="2026-11-26T00:00:00Z",
+        used_by=[ProjectRef(name="Demo", path="/tmp/demo")],
+        still_in_catalog=True,
+        is_default=True,
+    )
+    installed_result = InstalledModelsResult(revisions=[installed_rev], cleanup_candidates=[])
+    install_result = ModelInstallResult(
+        model_id="kokoro",
+        checkpoint_id="kokoro-v1.0",
+        revision_id="r1",
+        path="/tmp/models/kokoro/kokoro-v1.0/r1",
+        files={"kokoro.onnx": "a" * 64},
+        installed_at="2026-11-26T00:00:00Z",
+        pack_dir=None,
+        already_installed=False,
+    )
+    remove_result = ModelRemoveResult(
+        model_id="kokoro",
+        checkpoint_id="kokoro-v1.0",
+        revision_id="r1",
+        removed=True,
+        removed_packs=[],
+    )
+    license_result = LicenseAcceptResult(
+        model_id="nc_model",
+        license_url="https://example.com/nc-license",
+        accepted_at="2026-11-26T00:00:00Z",
+    )
 
     for instance in (
         manifest,
@@ -445,6 +506,11 @@ def test_core_models_round_trip_json() -> None:
         job_status,
         catalog_view,
         catalog_refresh,
+        models_lock,
+        installed_result,
+        install_result,
+        remove_result,
+        license_result,
     ):
         round_tripped = type(instance).model_validate_json(instance.model_dump_json())
         assert round_tripped == instance
