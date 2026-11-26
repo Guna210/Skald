@@ -224,6 +224,41 @@ def test_normalize_idempotence() -> None:
             "SIG1 and SIG1",
             [2, 0],
         ),
+        # R1-2: lower() differs ("σίσυφοσ" vs "σίσυφος", "σ" vs "ς") while re IGNORECASE matches
+        (
+            "ΣΊΣΥΦΟΣ",
+            [LexiconRule(word="σίσυφος", replacement="SIS-uh-fus")],
+            "SIS-uh-fus",
+            [1],
+        ),
+        (
+            "ΣΊΣΥΦΟΣ",
+            [LexiconRule(word="σίσυφοσ", replacement="SIS-uh-fus")],
+            "SIS-uh-fus",
+            [1],
+        ),
+        (
+            "Σ",
+            [LexiconRule(word="ς", replacement="SIG")],
+            "SIG",
+            [1],
+        ),
+        # R1-1: Turkish İ (U+0130) casefolds to "i\u0307" (2 chars) while re matches 'i'/'İ'
+        (
+            "İstanbul",
+            [LexiconRule(word="istanbul", replacement="ees-tahn-BOOL")],
+            "ees-tahn-BOOL",
+            [1],
+        ),
+        (
+            "İ",
+            [
+                LexiconRule(word="i", replacement="RULE0"),
+                LexiconRule(word="İ", replacement="RULE1"),
+            ],
+            "RULE0",
+            [1, 0],
+        ),
         # Regex metacharacters in word: "C++", "Dr.", "a.b"
         (
             "Use C++, (C++), not C++20 or xC++.",
