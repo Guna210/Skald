@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-26 23:57 (Asia/Colombo) · last entry: E-0159
+Last updated: 2026-11-27 00:13 (Asia/Colombo) · last entry: E-0161
 Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 … E-0117), `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -8,19 +8,19 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4; E-0046). **Phase 1 complete** (T01.1–T01.6; E-0096).
-- Also merged: T02.1–T02.6 (Phase 2); T03.1–T03.5 (Phase 3).
-- `master` at `bfd16f7` (PR #22 merge). Default branch `master`. Merge method: **normal merge** (E-0021) — never tell the owner to squash.
-- Open PRs: **#23 T02.7** — APPROVED in round 1 (E-0159), head 24dc49b; waiting for the owner to merge (normal merge). **#24 T03.6** — open; handoff not pasted yet; needs a rebase after #23 merges, then a fresh Opus Reviewer.
+- Also merged: T02.1–T02.7 (Phase 2); T03.1–T03.5 (Phase 3).
+- `master` at `905c62a` (PR #23 merge). Default branch `master`. Merge method: **normal merge** (E-0021) — never tell the owner to squash.
+- Open PRs: **#24 T03.6**, round 1 @6652b55, CI green but CONFLICTS with master (SPEC.md + rpc/methods.py) → rebase-only prompt (E-0161); then a fresh Opus Reviewer.
 - CI: ci.yml (core/worker/app on windows-latest + ubuntu-latest), catalog.yml (PRs on catalog/** + weekly), slow.yml (weekly + workflow_dispatch; real CPU smoke-pack install — first run 43719877209 passed on both OSes, E-0117).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036). Milestones: none yet (M1 after T05.8).
 
 ## Tasks
-- Merged (PR): T00.1 #2, T00.2 #3, T00.3 #4, T00.4 #5, T01.1 #6, T01.2 #7, T02.1 #8, T01.6 #9, T01.4 #10, T03.4 #11, T01.5 #12, T01.3 #13, T02.2 #14, T03.1 #15, T03.5 #16, T02.3 #18, T03.2 #17, T02.4 #19, T02.5 #20, T02.6 #21, T03.3 #22.
-- **Available, not started** (prompt only when the owner asks; E-0057): T03.7 worker protocol + skald_worker + fake adapter + contract suite (unlocks the most: T03.8 → T04.x); T03.9 Kokoro G2P / espeak-ng GPL spike [SPIKE][REVIEW]; T06.1 Electron + React + TS scaffold.
+- Merged (PR): T00.1 #2, T00.2 #3, T00.3 #4, T00.4 #5, T01.1 #6, T01.2 #7, T02.1 #8, T01.6 #9, T01.4 #10, T03.4 #11, T01.5 #12, T01.3 #13, T02.2 #14, T03.1 #15, T03.5 #16, T02.3 #18, T03.2 #17, T02.4 #19, T02.5 #20, T02.6 #21, T03.3 #22, T02.7 #23.
+- **Available, not started** (prompt only when the owner asks; E-0057): T02.8 golden text-pipeline tests [REVIEW]; T03.7 worker protocol + skald_worker + fake adapter + contract suite (unlocks the most: T03.8 → T04.x); T03.9 Kokoro G2P / espeak-ng GPL spike [SPIKE][REVIEW]; T06.1 Electron + React + TS scaffold.
 - Unlock map: T03.6 ← T03.2 + T01.6 + T01.3; T03.8 ← T03.7 + T03.5 + T01.3; T02.4/T02.5 ← T02.3; T06.2 ← T06.1 + T01.3; T04.1 ← T03.7 + T03.9 + T03.6.
 
 ## Waiting on the owner
-1. Merge PR #23 (T02.7); paste the T03.6 handoff (rebase prompt first).
+1. Paste the T03.6 rebase prompt into its Builder session, then paste the handoff.
 2. Before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs / open questions
@@ -64,4 +64,4 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 - **Open item:** who creates `core/requirements.lock` (B3)? Decide by T04.1/T09.1 (E-0020).
 
 ## Recommended next step
-Owner merges #23 → T02.8 becomes available. Then the T03.6 handoff → rebase → Opus review. Available on request: T03.7 (unlocks the model path), T03.9, T06.1. Prompts only on request (E-0057).
+T03.6 rebase → fresh Opus review. Available on request: T02.8, T03.7 (unlocks the model path), T03.9, T06.1. Prompts only on request (E-0057).

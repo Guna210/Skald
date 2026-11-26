@@ -764,3 +764,27 @@ Findings:
 Decision: Merge PR #23 (normal merge; mergeable and clean, head 24dc49b, CI green 12/12). R1-1, R1-2, R1-3 and R1-6 → CARRIED into T02.8 (the next text task, unlocked by this merge). R1-4 and R1-5 dropped. The project-switch note → T06.x/T07.1.
 After merge: T02.8 (golden text-pipeline tests [REVIEW]) becomes available; announce only (E-0057). PR #24 (T03.6) will need a rebase on the new master.
 Follow-up: owner merges PR #23.
+
+### E-0160 · 2026-11-27 00:13 (Asia/Colombo) · T02.7 · MERGED
+Context: Owner: "Merged #23". master is now 905c62a = "Merge pull request #23 from Guna210/task/T02.7-book-rpc" (normal merge).
+Decision: T02.7 is done. T02.8 (golden text-pipeline tests [REVIEW]) is now available; announced only (E-0057).
+Follow-up: none.
+
+### E-0161 · 2026-11-27 00:13 (Asia/Colombo) · T03.6 · FIX-PROMPT (rebase before review)
+Context: T03.6 round-1 handoff (Antigravity / Gemini), PR #24 `task/T03.6-model-installer` @6652b55. Verified by the Orchestrator:
+ - 3 commits on bfd16f7; 8 files, +2838/−6: installer.py +1028, test_model_installer.py +1492, methods.py ±134, schemas, test_schemas, SPEC.md, models/__init__;
+ - CI green 12/12 at 6652b55; no secrets;
+ - after #23 merged it CONFLICTS with master 905c62a in SPEC.md AND core/skald_core/rpc/methods.py; schemas/__init__.py, schemas/models.py and test_schemas.py auto-merge (EXPORTED_MODELS must contain both PRs' models).
+The Builder reports 461 passed.
+Builder decisions:
+ - Pydantic result models plus ModelsLockFile, exported;
+ - models.update checks .complete before the retired/download checks (an idempotent no-op);
+ - empty model and checkpoint folders are pruned after remove.
+Note for the Reviewer: installer.py is 1028 lines; check Ponytail (smallest complete change).
+Decision: rebase-only prompt first:
+ - in methods.py keep BOTH registrations (T02.7's book/lexicon + T03.6's models/license);
+ - SPEC.md: T02.7 rows first, then T03.6's; both index ticks;
+ - verify the merged EXPORTED_MODELS and the test_schemas expectations include both sets;
+ - re-run the full suite; --force-with-lease; CI green.
+Then a fresh Claude Opus Reviewer.
+Follow-up: owner pastes the rebase prompt into the T03.6 Builder session.
