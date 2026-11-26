@@ -629,3 +629,17 @@ Decision: round 2, all small.
  Note for T07.2: when a GPU exists but is blocked and the cpu tier is used, the Models screen may show the GPU blocker as a hint; fit.py could expose it later.
 Why: R1-1 is a type-contract bug (E-0086); R1-2 would mislead users with a real GPU; everything else is a few lines.
 Follow-up: the same Reviewer session for round 2.
+
+### E-0153 · 2026-11-26 19:26 (Asia/Colombo) · T03.3 · FIX-PROMPT (round 2, pre-review)
+Context: T03.3 round-2 handoff (Gemini), PR #22 @64e6dfc. Verified by the Orchestrator:
+ - one commit on eda0d97 (no force-push); 6 files, +169/−27; CI green 12/12 (runs 45829385243 and 45829372453); mergeable;
+ - R1-1 strict=True; R1-4 matches "compute_cap" + "not a valid field" on the lowercased output; the cache is under _gpu_cache_lock;
+ - R1-2: only definitive results are cached ((gpus, should_cache)).
+The Builder reports 447 passed and 5 mutants caught.
+Problem the Orchestrator found in its own R1-2 decision (E-0152): with failures never cached, a machine whose nvidia-smi always hangs (driver hang) pays the full 10 s timeout on EVERY catalog.get, a sync RPC. That stalls the core each time.
+Decision: pre-review fix O-1 (an Orchestrator finding, not a Reviewer round):
+ - cache a non-definitive result (timeout, non-zero exit, garbage) for 60 s (time.monotonic, a module constant GPU_RETRY_SECONDS = 60);
+ - after 60 s, re-probe; definitive results stay cached for the process;
+ - tests with a patched clock: two calls within 60 s after a timeout → nvidia-smi runs once; a call after 60 s → it runs again and picks up the GPUs;
+ - update the Appendix 3 row and defaults.md.
+Follow-up: then the round-2 review in the same Opus session.
