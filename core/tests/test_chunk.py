@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from skald_core.book import load_epub_book
+from skald_core.schemas.models import Chunk
 from skald_core.text import chunk as chunk_mod
 from skald_core.text import chunk_paragraph, normalize, normalize_language
 
@@ -21,6 +22,27 @@ PUBLIC_DOMAIN_DIR = Path(__file__).resolve().parent / "data" / "public_domain"
 def _expected_id(prefix: str, paragraph_id: str, index: int, text: str) -> str:
     digest = hashlib.sha256(f"{paragraph_id}\0{index}\0{text}".encode()).hexdigest()
     return f"{prefix}{digest[:16]}"
+
+
+def _assert_strict_reconstruction(text: str, chunks: list[Chunk]) -> None:
+    expected = re.sub(r"\s+", " ", text).strip()
+    pos = 0
+    rebuilt: list[str] = []
+    for idx, ch in enumerate(chunks):
+        assert ch.text and ch.text == ch.text.strip()
+        if idx > 0:
+            if pos < len(expected) and expected[pos] == " ":
+                rebuilt.append(" ")
+                pos += 1
+            else:
+                rebuilt.append("")
+        assert expected.startswith(ch.text, pos), (
+            f"Chunk {idx} {ch.text!r} mismatches {expected[pos : pos + 40]!r} at pos {pos}"
+        )
+        pos += len(ch.text)
+        rebuilt.append(ch.text)
+    assert pos == len(expected), f"Stopped at {pos} of {len(expected)}"
+    assert "".join(rebuilt) == expected
 
 
 # ---------------------------------------------------------------------------
@@ -181,6 +203,11 @@ def test_long_sentence_delimiter_precedence_and_recursion() -> None:
     res_semi = chunk_paragraph("ch_1", "p_1", s_semi, "en", max_chars=15)
     assert [c.text for c in res_semi.chunks] == ["alpha, beta;", "gamma, delta."]
 
+    # R1-3: both ';' and ':' within reach -> ';' before ':' produces different chunks than swapped.
+    s_semi_colon = "part one; part two: part three"
+    res_semi_colon = chunk_paragraph("ch_1", "p_1", s_semi_colon, "en", max_chars=22)
+    assert [c.text for c in res_semi_colon.chunks] == ["part one;", "part two: part three"]
+
     # Semicolon too late -> falls back to colon.
     s_colon = "part one: part two is quite long; tail"
     res_colon = chunk_paragraph("ch_1", "p_1", s_colon, "en", max_chars=25)
@@ -190,6 +217,13 @@ def test_long_sentence_delimiter_precedence_and_recursion() -> None:
     s_comma = "first clause, second clause, third"
     res_comma = chunk_paragraph("ch_1", "p_1", s_comma, "en", max_chars=16)
     assert [c.text for c in res_comma.chunks] == ["first clause,", "second clause,", "third"]
+
+    # R1-3: candidate_end == max_chars + 1 must NOT split at the delimiter (kills <= max_chars + 1).
+    s_boundary = "abcd, efgh"
+    res_boundary = chunk_paragraph("ch_1", "p_1", s_boundary, "en", max_chars=4)
+    assert [c.text for c in res_boundary.chunks] == ["abcd", ",", "efgh"]
+    assert all(len(c.text) <= 4 for c in res_boundary.chunks)
+    _assert_strict_reconstruction(s_boundary, res_boundary.chunks)
 
     # Space when no punctuation delimiter fits.
     s_space = "one two three four five"
@@ -202,6 +236,43 @@ def test_long_sentence_cjk_delimiters() -> None:
     res = chunk_paragraph("ch_1", "p_1", text, "zh", max_chars=10)
     assert [c.text for c in res.chunks] == ["第一段，很长很长；", "第二段：", "第三段、第四段"]
     assert all(len(c.text) <= 10 for c in res.chunks)
+    _assert_strict_reconstruction(text, res.chunks)
+
+
+def test_cjk_and_mixed_cjk_english_preserve_source_separators() -> None:
+    zh_text = "你好。我是小明。今天天气很好！"
+    res_zh_200 = chunk_paragraph("ch_1", "p_zh", zh_text, "zh", max_chars=200)
+    assert [c.text for c in res_zh_200.chunks] == [zh_text]
+    _assert_strict_reconstruction(zh_text, res_zh_200.chunks)
+
+    res_zh_10 = chunk_paragraph("ch_1", "p_zh", zh_text, "zh", max_chars=10)
+    assert [c.text for c in res_zh_10.chunks] == ["你好。我是小明。", "今天天气很好！"]
+    _assert_strict_reconstruction(zh_text, res_zh_10.chunks)
+
+    ja_text = "こんにちは世界。お元気ですか？今日はいい天気ですね！"
+    res_ja_200 = chunk_paragraph("ch_1", "p_ja", ja_text, "ja", max_chars=200)
+    assert [c.text for c in res_ja_200.chunks] == [ja_text]
+    _assert_strict_reconstruction(ja_text, res_ja_200.chunks)
+
+    res_ja_16 = chunk_paragraph("ch_1", "p_ja", ja_text, "ja", max_chars=16)
+    assert [c.text for c in res_ja_16.chunks] == [
+        "こんにちは世界。お元気ですか？",
+        "今日はいい天気ですね！",
+    ]
+    _assert_strict_reconstruction(ja_text, res_ja_16.chunks)
+
+    mixed_zh = "你好。Hello world! 再见。"
+    res_mixed_zh = chunk_paragraph("ch_1", "p_mix1", mixed_zh, "zh", max_chars=200)
+    assert [c.text for c in res_mixed_zh.chunks] == [mixed_zh]
+    _assert_strict_reconstruction(mixed_zh, res_mixed_zh.chunks)
+
+    mixed_ja = "これはテストです。This is a test. 終わり！"
+    res_mixed_ja = chunk_paragraph("ch_1", "p_mix2", mixed_ja, "ja", max_chars=20)
+    assert [c.text for c in res_mixed_ja.chunks] == [
+        "これはテストです。",
+        "This is a test. 終わり！",
+    ]
+    _assert_strict_reconstruction(mixed_ja, res_mixed_ja.chunks)
 
 
 def test_hard_split_never_splits_before_combining_mark() -> None:
@@ -212,6 +283,40 @@ def test_hard_split_never_splits_before_combining_mark() -> None:
     for c in res.chunks:
         assert len(c.text) <= 5
         assert unicodedata.combining(c.text[0]) == 0
+
+
+def test_hard_split_guards_indic_matras_zwj_zwnj_and_modifiers() -> None:
+    # R1-2 repro 1: Devanagari matras (category 'Mc', combining() == 0) must not start a chunk.
+    hi_text = "विश्वविद्यालयविश्वविद्यालय"
+    res_hi = chunk_paragraph("ch_1", "p_hi", hi_text, "hi", max_chars=6)
+    assert all(len(c.text) <= 6 for c in res_hi.chunks)
+    assert all(not unicodedata.category(c.text[0]).startswith("M") for c in res_hi.chunks)
+    assert res_hi.chunks[0].text == "विश्व"
+    _assert_strict_reconstruction(hi_text, res_hi.chunks)
+
+    # R1-2 repro 2: ZWJ emoji family at max_chars=5:
+    # When a valid cut exists before the family, move left to keep the ZWJ sequence intact.
+    prefixed_family = "abc👨\u200d👩\u200d👧"
+    res_prefixed = chunk_paragraph("ch_1", "p_zwj1", prefixed_family, "en", max_chars=5)
+    assert [c.text for c in res_prefixed.chunks] == ["abc", "👨\u200d👩\u200d👧"]
+    _assert_strict_reconstruction(prefixed_family, res_prefixed.chunks)
+
+    # When no allowed cut exists in (0, max_chars], max_chars limit still wins.
+    family_only = "👨\u200d👩\u200d👧\u200d👦"
+    res_family = chunk_paragraph("ch_1", "p_zwj2", family_only, "en", max_chars=5)
+    assert all(len(c.text) <= 5 for c in res_family.chunks)
+    _assert_strict_reconstruction(family_only, res_family.chunks)
+
+    # ZWNJ, variation selector (U+FE0F), and skin-tone modifier (U+1F3FD)
+    extras = "abcd\u200cef❤️\ufe0f✋\U0001f3fdz"
+    res_extras = chunk_paragraph("ch_1", "p_mod", extras, "en", max_chars=5)
+    assert all(len(c.text) <= 5 for c in res_extras.chunks)
+    for c in res_extras.chunks:
+        first = c.text[0]
+        assert first not in ("\u200c", "\u200d")
+        assert not (0xFE00 <= ord(first) <= 0xFE0F)
+        assert not (0x1F3FB <= ord(first) <= 0x1F3FF)
+    _assert_strict_reconstruction(extras, res_extras.chunks)
 
 
 def test_voice_change_starts_new_chunk_even_when_short() -> None:
@@ -556,11 +661,8 @@ def test_public_domain_epubs_all_paragraphs_invariants() -> None:
                     continue
                 res = chunk_paragraph(ch.id, p.id, text, book.language, 200)
                 assert res.chunks
-                assert all(c.text and c.text == c.text.strip() for c in res.chunks)
                 assert all(len(c.text) <= 200 for c in res.chunks)
-                assert re.sub(r"\s+", "", "".join(c.text for c in res.chunks)) == re.sub(
-                    r"\s+", "", text
-                )
+                _assert_strict_reconstruction(text, res.chunks)
 
 
 # ---------------------------------------------------------------------------
@@ -603,10 +705,9 @@ def test_reconstruction_property_space_delimited_prose() -> None:
         max_chars = rng.choice([25, 60, 200])
         res = chunk_paragraph("ch_prop", "p_prop", text, lang, max_chars)
 
-        assert all(c.text and c.text == c.text.strip() for c in res.chunks)
         assert all(len(c.text) <= max_chars for c in res.chunks)
         assert [c.index for c in res.chunks] == list(range(len(res.chunks)))
-        assert " ".join(c.text for c in res.chunks) == re.sub(r"\s+", " ", text).strip()
+        _assert_strict_reconstruction(text, res.chunks)
 
 
 def test_reconstruction_property_mixed_random_with_cjk_and_hard_splits() -> None:
@@ -658,11 +759,10 @@ def test_reconstruction_property_mixed_random_with_cjk_and_hard_splits() -> None
 
         assert res.sentences
         assert res.chunks
-        assert all(c.text and c.text == c.text.strip() for c in res.chunks)
         assert all(len(c.text) <= max_chars for c in res.chunks)
         assert [c.index for c in res.chunks] == list(range(len(res.chunks)))
         assert res.sentences == chunk_paragraph("ch_mix", "p_mix", text, lang, 9999).sentences
-        assert re.sub(r"\s+", "", "".join(c.text for c in res.chunks)) == re.sub(r"\s+", "", text)
+        _assert_strict_reconstruction(text, res.chunks)
 
 
 def test_chunk_imports_cleanly_under_syntax_warning_error() -> None:

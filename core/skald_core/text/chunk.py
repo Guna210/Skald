@@ -216,8 +216,28 @@ def _pysbd_segments_valid(raw_segs: list[str], cleaned: list[str], line: str) ->
     return True
 
 
-def _split_span_sentences(span_text: str, lang: str) -> list[str]:
-    sentences: list[str] = []
+def _attach_source_seps(line: str, segs: list[str]) -> list[tuple[str, bool]] | None:
+    if not segs:
+        return None
+    out: list[tuple[str, bool]] = []
+    pos = 0
+    for idx, seg in enumerate(segs):
+        if idx > 0:
+            has_space = pos < len(line) and line[pos] == " "
+            if has_space:
+                pos += 1
+            out[-1] = (out[-1][0], has_space)
+        if not line.startswith(seg, pos):
+            return None
+        pos += len(seg)
+        out.append((seg, False))
+    if pos != len(line):
+        return None
+    return out
+
+
+def _split_span_sentences(span_text: str, lang: str) -> list[tuple[str, bool]]:
+    sentences: list[tuple[str, bool]] = []
     use_pysbd = lang in _SUPPORTED_PYSBD_LANGUAGES
     segmenter = _get_segmenter(lang) if use_pysbd else None
 
@@ -225,33 +245,61 @@ def _split_span_sentences(span_text: str, lang: str) -> list[str]:
         line = _WS_RUN_RE.sub(" ", raw_line).strip()
         if not line:
             continue
+        if sentences:
+            prev_text, _ = sentences[-1]
+            sentences[-1] = (prev_text, True)
+
         if segmenter is None:
-            sentences.extend(_fallback_split(line, lang))
+            fb_with_seps = _attach_source_seps(line, _fallback_split(line, lang))
+            if fb_with_seps is not None:
+                sentences.extend(fb_with_seps)
             continue
 
         raw_segs: list[str] = segmenter.segment(line)
         cleaned = [_WS_RUN_RE.sub(" ", seg).strip() for seg in raw_segs]
         cleaned = [seg for seg in cleaned if seg]
 
-        if _pysbd_segments_valid(raw_segs, cleaned, line):
-            sentences.extend(cleaned)
+        with_seps = (
+            _attach_source_seps(line, cleaned)
+            if _pysbd_segments_valid(raw_segs, cleaned, line)
+            else None
+        )
+        if with_seps is not None:
+            sentences.extend(with_seps)
         else:
             logger.warning(
                 "pysbd segments did not reproduce span for language %r; "
                 "using punctuation fallback.",
                 lang,
             )
-            sentences.extend(_fallback_split(line, lang))
+            fb_with_seps = _attach_source_seps(line, _fallback_split(line, lang))
+            if fb_with_seps is not None:
+                sentences.extend(fb_with_seps)
 
     return sentences
 
 
-def _split_long_sentence(text: str, max_chars: int) -> list[str]:
+def _is_forbidden_cut(text: str, cut: int) -> bool:
+    if cut <= 0 or cut >= len(text):
+        return False
+    after = text[cut]
+    code = ord(after)
+    if (
+        unicodedata.category(after).startswith("M")
+        or after in ("\u200c", "\u200d")
+        or 0xFE00 <= code <= 0xFE0F
+        or 0x1F3FB <= code <= 0x1F3FF
+    ):
+        return True
+    return text[cut - 1] == "\u200d"
+
+
+def _split_long_sentence(text: str, max_chars: int) -> list[tuple[str, bool]]:
     text = _WS_RUN_RE.sub(" ", text).strip()
     if not text:
         return []
     if len(text) <= max_chars:
-        return [text]
+        return [(text, False)]
 
     for delims in _SPLIT_DELIMITERS:
         best_end = -1
@@ -265,56 +313,69 @@ def _split_long_sentence(text: str, max_chars: int) -> list[str]:
                 else:
                     break
         if best_end > 0:
-            left = text[:best_end].strip()
-            rest = text[best_end:].strip()
-            if left and len(left) <= max_chars:
-                out = [left]
-                if rest:
-                    out.extend(_split_long_sentence(rest, max_chars))
-                return out
-
-    space_idx = text.rfind(" ", 0, max_chars + 1)
-    if space_idx > 0:
-        left = text[:space_idx].strip()
-        rest = text[space_idx + 1 :].strip()
-        if left and len(left) <= max_chars:
-            out = [left]
+            left = text[:best_end]
+            has_space = best_end < len(text) and text[best_end] == " "
+            rest = text[best_end + (1 if has_space else 0) :]
+            out: list[tuple[str, bool]] = [(left, has_space)]
             if rest:
                 out.extend(_split_long_sentence(rest, max_chars))
             return out
 
+    space_idx = text.rfind(" ", 0, max_chars + 1)
+    if space_idx > 0:
+        left = text[:space_idx]
+        rest = text[space_idx + 1 :]
+        out = [(left, True)]
+        if rest:
+            out.extend(_split_long_sentence(rest, max_chars))
+        return out
+
     cut = max_chars
-    while cut > 0 and unicodedata.combining(text[cut]) != 0:
+    while cut > 0 and _is_forbidden_cut(text, cut):
         cut -= 1
     if cut == 0:
-        # Pathological all-combining prefix: fall back to max_chars so we still advance.
+        # No allowed cut in (0, max_chars]; max_chars limit always wins.
         cut = max_chars
-    left = text[:cut].strip()
-    rest = text[cut:].strip()
-    out = [left] if left else []
+    has_space = cut < len(text) and text[cut] == " "
+    left = text[:cut]
+    rest = text[cut + (1 if has_space else 0) :]
+    out = [(left, has_space)]
     if rest:
         out.extend(_split_long_sentence(rest, max_chars))
     return out
 
 
-def _pack_span_chunks(sentences: list[str], max_chars: int) -> list[str]:
-    pieces: list[str] = []
-    for sent in sentences:
+def _pack_span_chunks(
+    sentences_with_seps: list[tuple[str, bool]],
+    max_chars: int,
+) -> list[str]:
+    pieces: list[tuple[str, bool]] = []
+    for sent, sent_has_space in sentences_with_seps:
         if len(sent) <= max_chars:
-            pieces.append(sent)
+            pieces.append((sent, sent_has_space))
         else:
-            pieces.extend(_split_long_sentence(sent, max_chars))
+            split_pieces = _split_long_sentence(sent, max_chars)
+            if split_pieces:
+                last_text, _ = split_pieces[-1]
+                split_pieces[-1] = (last_text, sent_has_space)
+                pieces.extend(split_pieces)
 
     chunks: list[str] = []
     current = ""
-    for piece in pieces:
+    pending_space = False
+    for piece, has_space in pieces:
         if not current:
             current = piece
-        elif len(current) + 1 + len(piece) <= max_chars:
-            current = f"{current} {piece}"
+            pending_space = has_space
         else:
-            chunks.append(current)
-            current = piece
+            sep = " " if pending_space else ""
+            if len(current) + len(sep) + len(piece) <= max_chars:
+                current = f"{current}{sep}{piece}"
+                pending_space = has_space
+            else:
+                chunks.append(current)
+                current = piece
+                pending_space = has_space
     if current:
         chunks.append(current)
     return chunks
@@ -346,8 +407,8 @@ def chunk_paragraph(
     chunks: list[Chunk] = []
 
     for role, span_text in spans:
-        span_sentences = _split_span_sentences(span_text, lang)
-        for sent_text in span_sentences:
+        span_sentences_with_seps = _split_span_sentences(span_text, lang)
+        for sent_text, _ in span_sentences_with_seps:
             s_idx = len(sentences)
             sentences.append(
                 Sentence(
@@ -355,7 +416,7 @@ def chunk_paragraph(
                     text=sent_text,
                 )
             )
-        for chunk_text in _pack_span_chunks(span_sentences, max_chars):
+        for chunk_text in _pack_span_chunks(span_sentences_with_seps, max_chars):
             c_idx = len(chunks)
             chunks.append(
                 Chunk(
