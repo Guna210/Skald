@@ -411,3 +411,28 @@ Decision: send to a fresh Claude Opus Reviewer (E-0139). FOCUS:
  - tests are meaningful;
  - Appendix 3 and defaults.md match E-0130.
 Follow-up: owner runs the Reviewer.
+
+### E-0141 · 2026-11-26 12:45 (Asia/Colombo) · T02.5 · CORRECTION
+Context: E-0140 says "re's simple case folding never matches İ, so the regex and the buckets agree and nothing is silently missed".
+Decision: that is wrong. re.fullmatch("(?i:i)", "İ") is True (re-checked by the Orchestrator). The İstanbul result in E-0140 came from the reachable "return matched" no-op branch (the bucket lookup misses because casefold("İ") is 2 chars), exactly the risk E-0139 named. See the T02.5 R1-1 finding in E-0142.
+Follow-up: none.
+
+### E-0142 · 2026-11-26 12:45 (Asia/Colombo) · T02.5 · VERDICT
+Context: Reviewer (fresh Claude Opus) round 1 on PR #20 @40b78f7: APPROVED.
+ - Checks: the T02.5 and schema tests pass (59); ruff clean. The full suite and mypy were not reproducible in the Reviewer's sandbox (pytest-timeout and stubs missing); CI is green and is relied on.
+ - Differential fuzz, 20k cases vs a capturing-group reference: 319 mismatches, all involving İ; 0 without İ (outputs and original-position counts).
+ - Mutations caught: tie order, \b, rescan, removal order, ZWNJ/ZWJ removal. Not caught: dropping the casefold fallback.
+ - normalize OK: idempotent; NBSP, U+202F, \t, \v, \f and \r → space; \r\n → \n; U+2028/2029 → space; ZWNJ/ZWJ kept.
+ - Benchmark (500 ci whole-word rules × 10k paragraphs): Builder's design about 9 s, one capturing group per alternative 38.6 s (4.3× slower, so the claim holds), a bare dict lookup 3.7 s but correct only for uniform flags → complexity accepted.
+ - lru_cache key and immutability OK.
+Findings:
+ - R1-1 [Minor] İ (U+0130): re's IGNORECASE matches i/İ, but the bucket key casefold("İ") = "i̇" (2 chars) misses → no replacement, no count; it can also pick a different same-length rule (rules "i" and "İ" on "İ" → rule 2 instead of rule 1).
+ - R1-2 [Minor] the casefold fullmatch fallback is untested.
+ - R1-3 [Nit] defaults.md should mention U+2028/2029 → space and \r\n → \n.
+Decision: Merge PR #20 (normal merge; mergeable and clean, head 40b78f7, CI green 12/12). R1-1, R1-2 and R1-3 are CARRIED into T02.6 (same skald_core.text package, unlocked by this merge):
+ - R1-1: make _ci_key consistent with re for İ (map casefold "i̇" → "i", alongside the existing ı → i), remove "# pragma: no cover", and add tests: rule "istanbul" on "İstanbul" is replaced and counted; rules "i" and "İ" on "İ" → rule 1 wins.
+ - R1-2: a test where lower() differs but casefold is equal (rule "σίσυφος" vs "ΣΊΣΥΦΟΣ"), failing without the fallback.
+ - R1-3: the defaults.md line.
+Why: no blockers or majors; Turkish İ is a real but narrow case; carrying it saves a round trip, and T02.6 works in the same package.
+After merge: T02.6 (sentence splitting, chunking, dialogue) becomes available (announce only, E-0057).
+Follow-up: owner merges PR #20.
