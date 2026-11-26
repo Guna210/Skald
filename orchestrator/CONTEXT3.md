@@ -591,3 +591,20 @@ Builder decisions, to be judged by the Reviewer:
 The Builder also ran a self-spawned reviewer subagent; its 2 nits are fixed in 91a501b.
 Decision: rebase-only prompt first (T02.6 rows first, then T03.3's; both index ticks; check the defaults.md auto-merge; --force-with-lease; CI green). Then a fresh Claude Opus Reviewer.
 Follow-up: owner pastes the rebase prompt into the T03.3 Builder session.
+
+### E-0151 · 2026-11-26 18:19 (Asia/Colombo) · T03.3 · REVIEW-PROMPT
+Context: T03.3 rebase handoff (Gemini), PR #22 @eda0d97. Verified by the Orchestrator:
+ - rebased on 47e22d7 (an ancestor); mergeable and clean;
+ - range-diff: 4 of the 5 commits are identical (=); the docs commit differs only in merge context;
+ - the diff vs master has just the 3 T03.3 Appendix 3 rows plus a new defaults.md "B4.3 / B7" section, with T02.6 untouched;
+ - CI green 12/12 (runs 45821355944 and 45821347226).
+The Builder reports 441 passed.
+Decision: send to a fresh Claude Opus Reviewer. FOCUS:
+ - fit rules vs E-0144 at every boundary (min VRAM, 1.5×, rtf 0.5/1.0, the driver floor and toolkit driver, compute_cap 5.0/7.0, unknown rtf) and the Builder's decisions (psutil available; GiB; the failure from the GPU closest to eligibility; N/A → None);
+ - the nvidia-smi subprocess: timeout, stdout=PIPE, CREATE_NO_WINDOW, the lookup order, retry on a rejected compute_cap, csv parsing, never raising, caching;
+ - the CPU model on both OSes; disk free on the nearest existing ancestor;
+ - catalog.get with no params, {} and {char_count} (the T03.2 no-URL rule still holds; a negative or non-int char_count → -32602);
+ - the fit copied per checkpoint; the schema export;
+ - tests are meaningful (mutations);
+ - Appendix 3 and defaults.md.
+Follow-up: owner runs the Reviewer.
