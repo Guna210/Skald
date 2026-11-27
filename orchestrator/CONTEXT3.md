@@ -838,3 +838,16 @@ Decision: Answered no. T06.1 is only the technical shell: electron-vite + React 
  - SPEC B10 fixes the STRUCTURE (Home; Book → Voices → Render → Export steps on the left; an inspector; the Jobs drawer; a top-bar Models button; Upscayl-style model cards), not the visual style.
  - The owner's visual decisions are needed before T06.4, not before T06.1, so T06.1 can run now.
 Follow-up: before writing the T06.4 prompt, ask for or capture the owner's visual direction (references, colours, fonts, density, any mockups) and record it as a decision.
+
+### E-0165 · 2026-11-27 10:13 (Asia/Colombo) · T06.4 / T07.x · DECISION (owner)
+Context: Owner: the UI will follow Apple's "Liquid Glass" design. It is transparent, shows what is behind it, and has light refraction and edge fringing at the corners, like looking through a lens. It is "not just a blur effect". The owner will share phone screenshots of an app when the UI is implemented. "For now just note this down."
+Decision (owner): the visual direction is Liquid Glass, with real refraction/lensing, specular edge highlights and chromatic fringing, not frosted blur alone.
+Orchestrator's feasibility notes (web research; to be confirmed by a spike):
+ - Chromium (and therefore Electron) supports SVG filters inside backdrop-filter: backdrop-filter: url(#filter) with feDisplacementMap for the refraction. Three displacement passes at different scales for R/G/B give chromatic fringing; feSpecularLighting or gradients give the edge highlights. Safari and Firefox lack this, which doesn't matter in Electron.
+ - LIMIT: page content cannot sample other apps or the desktop behind the window. backdrop-filter only sees content rendered INSIDE the app. So refraction can bend the app's own background layer (e.g. a wallpaper or a blurred book-cover backdrop) and content scrolling under glass bars and panels — not the user's desktop.
+ - The window-level see-through of the desktop is possible only through the OS material (Electron BrowserWindow backgroundMaterial "acrylic"/"mica" on Windows 11, plus transparent). That gives OS blur only, with no refraction control. Community reports note frame, resize and tint quirks.
+ - Likely design: an in-app backdrop layer refracted by the glass panels (the full effect), optionally over an OS acrylic window (a desktop hint). Effects are confined to each element's box. Note the Chromium race where the filter is referenced before the SVG exists (flashes transparent).
+ - Must keep: A6 accessibility (text contrast; a "reduce transparency/motion" setting with a solid fallback), and performance on low-end Windows laptops without a GPU (D19: Windows primary). Effects must degrade gracefully.
+Follow-up:
+ - Before T06.4, run a small UI spike (Electron window + 2–3 glass components; measure GPU/CPU on the owner's laptop; test acrylic and frameless on Windows 11) and get the owner's screenshots.
+ - Record the result as T06.4's design decision. T06.1 is unaffected, except that the window options (transparent/backgroundMaterial/frame) should stay easy to change.

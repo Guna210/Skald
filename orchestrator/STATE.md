@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-27 08:59 (Asia/Colombo) · last entry: E-0164
+Last updated: 2026-11-27 10:13 (Asia/Colombo) · last entry: E-0165
 Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 … E-0117), `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -21,7 +21,7 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 
 ## Waiting on the owner
 1. Merge PR #24 (T03.6); then pick the next task(s).
-2. The owner wants to decide the UI look: capture their visual direction BEFORE the T06.4 prompt (T06.1 has no design and can run any time) (E-0164).
+2. UI look DECIDED by the owner: Apple-style **Liquid Glass**, with real refraction/lensing, specular edges and chromatic fringing, NOT just blur (E-0165). Before T06.4: get the owner's phone screenshots and run a small glass spike (SVG feDisplacementMap in backdrop-filter, Chromium-only; it refracts only in-app content; desktop see-through only via Windows acrylic/mica, which is blur only; check perf on the owner's laptop; reduce-transparency fallback, A6).
 3. Before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs / open questions
@@ -42,7 +42,7 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 - **T03.6 (done once #24 merges):** models.remove surfaces PackManager's "already in progress" SkaldError (T03.5 R2-3, E-0116); map net.DownloadCancelled → JobCancelled (E-0056).
 - **T03.7:** adapter registry = module-level dict literal `ADAPTER_VERSIONS = {"<family>": "<semver>"}` in worker/skald_worker/adapters/__init__.py, read by T03.1 via ast.literal_eval (E-0097); worker/pyproject.toml must land with ≥1 test or CI pytest exits 5 (E-0041); evaluate an fd-level stdout redirect (os.dup/os.dup2) — model libraries may print from C (E-0052).
 - **T05.x:** ChunkStatus.status/attempts are provisional (E-0076); a JobContext notify callback that raises fails the job (accepted, E-0092).
-- **T06.1:** setup-node@v7 `package-manager-cache: true` vs the .cache/npm step (E-0044); `npm ci` will run inside the core/worker CI jobs once app/package-lock.json exists (E-0041).
+- **T06.1:** keep the BrowserWindow options (transparent, backgroundMaterial, frame) easy to change for the Liquid Glass UI (E-0165); setup-node@v7 `package-manager-cache: true` vs the .cache/npm step (E-0044); `npm ci` will run inside the core/worker CI jobs once app/package-lock.json exists (E-0041).
 - **T06.x / T07.1:** a book.import job writes to the project root captured at submit; if the user switches projects mid-import, the old project still receives the book (E-0159).
 - **T06.2:** core.ts passes SKALD_STORAGE_DIR only when the user chose a storage folder (F1, E-0071).
 - **T06.3:** ProjectManifest allows extra keys (TS index signature); the UI ignores unknown keys and never sends them back modified (E-0088).
