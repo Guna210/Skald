@@ -901,3 +901,16 @@ T02.8 golden text tests [REVIEW]:
  - [REVIEW] gate: the owner skims text-review.md before merge; the Orchestrator gives the steps.
  - Reviewer: Sonnet (Builder must not be Sonnet).
 Follow-up: owner opens two Builder sessions.
+
+### E-0168 · 2026-11-27 11:02 (Asia/Colombo) · T02.8 · FIX-PROMPT (pre-review) + OWNER-ACTION
+Context: T02.8 round-1 handoff (Gemini / Antigravity), PR #25 `task/T02.8-golden-text` @f66a039.
+ - 4 commits on 495210f; 10 files, +1282/−9: xhtml.py ±45; epub.py 1 line (walk_body_slice's on_exit now also fires for ancestors while state == "inside", for the heading-anchor fix); make_golden_text.py +232; text_golden.json +257; text-review.md 328 lines; tests; defaults.md; SPEC.md.
+ - The Builder reports 492 passed. PR #26 (T03.7) is also open; its handoff has not been pasted yet.
+CI is RED: core (windows-latest) fails test_make_golden_text_help_refuses_overwrite_and_matches_committed. The script writes LF (newline="\n"), but the committed text_golden.json is checked out with CRLF on the Windows runner (git autocrlf), so the byte comparison fails. Everything else is green.
+Decision:
+ - Pre-review fix O-1: add .gitattributes lines `core/tests/golden/*.json text eol=lf` and `docs/verification/*.md text eol=lf` (same pattern as the packs locks); nothing else; CI must be green on both OSes.
+ - The owner skim ([REVIEW] gate) can start NOW in parallel; O-1 doesn't change the content.
+ - Builder decisions noted for the Reviewer: the walk_body_slice on_exit change in the shared T02.2 walker (check that the T02.2 D2 counts and anchor tests are unaffected); pre_depth from the ancestors; <pre> inside table cells; golden metadata without timestamps.
+ - The Builder's own observation: Christmas Carol's chapter 2 is titled with Gutenberg's edition-selector blurb (an NCX title) → known Gutenberg content, not a parser bug; tell the owner.
+ - Then a fresh Sonnet Reviewer.
+Follow-up: owner pastes O-1 into the Builder session and skims text-review.md.

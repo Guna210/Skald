@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-27 10:16 (Asia/Colombo) · last entry: E-0167
+Last updated: 2026-11-27 11:02 (Asia/Colombo) · last entry: E-0168
 Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 … E-0117), `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -10,7 +10,7 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 - **Phase 0 complete** (T00.1–T00.4; E-0046). **Phase 1 complete** (T01.1–T01.6; E-0096).
 - Also merged: T02.1–T02.7 (Phase 2); T03.1–T03.6 (Phase 3).
 - `master` at `495210f` (PR #24 merge). Default branch `master`. Merge method: **normal merge** (E-0021) — never tell the owner to squash.
-- Open PRs: none yet. **In progress (round 1, prompts E-0167):** T03.7 (`task/T03.7-worker-protocol`) and T02.8 (`task/T02.8-golden-text`), in parallel from 495210f; the second to merge rebases. Reviewers: T03.7 Opus, T02.8 Sonnet. T02.8 has a [REVIEW] gate: the owner skims text-review.md before merge.
+- Open PRs: **#25 T02.8**, round 1 @f66a039: Windows CI red (golden CRLF checkout) → pre-review fix O-1 (.gitattributes eol=lf) (E-0168); the owner skims text-review.md in parallel ([REVIEW] gate); then a fresh Sonnet Reviewer. **#26 T03.7**: open, handoff not pasted yet → Opus Reviewer.
 - CI: ci.yml (core/worker/app on windows-latest + ubuntu-latest), catalog.yml (PRs on catalog/** + weekly), slow.yml (weekly + workflow_dispatch; real CPU smoke-pack install — first run 43719877209 passed on both OSes, E-0117).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036). Milestones: none yet (M1 after T05.8).
 
@@ -20,7 +20,7 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 - Unlock map: T03.6 ← T03.2 + T01.6 + T01.3; T03.8 ← T03.7 + T03.5 + T01.3; T02.4/T02.5 ← T02.3; T06.2 ← T06.1 + T01.3; T04.1 ← T03.7 + T03.9 + T03.6.
 
 ## Waiting on the owner
-1. Run the T03.7 and T02.8 Builder sessions and paste back the handoffs.
+1. Paste T02.8 O-1 into its Builder session; skim docs/verification/text-review.md on the T02.8 branch and report back ([REVIEW] gate); paste the T03.7 handoff.
 2. UI look DECIDED by the owner: Apple-style **Liquid Glass**, with real refraction/lensing, specular edges and chromatic fringing, NOT just blur (E-0165). Before T06.4: get the owner's phone screenshots and run a small glass spike (SVG feDisplacementMap in backdrop-filter, Chromium-only; it refracts only in-app content; desktop see-through only via Windows acrylic/mica, which is blur only; check perf on the owner's laptop; reduce-transparency fallback, A6).
 3. Before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
