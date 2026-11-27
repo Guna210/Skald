@@ -751,3 +751,150 @@ def test_drm_epub_dangling_anchor_zero_para_and_corrupt_json_files(
     assert _rpc_call(server, "book.get")["error"]["data"]["kind"] == "project_invalid"
     (dangling_proj / "lexicon.json").write_text(json.dumps({"schema_version": 99, "rules": []}))
     assert _rpc_call(server, "lexicon.get")["error"]["data"]["kind"] == "project_invalid"
+
+
+def test_import_rollback_on_cover_or_book_json_write_failure_and_retry(
+    rpc_env: tuple[RpcServer, JobManager, _RecordingNotifier],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    server, _, notifier = rpc_env
+    epub_path = EPUB_OUT_DIR / "01_epub3_basic.epub"
+
+    # 1. Cover write failure rolls back source/original.* and allows retry.
+    proj_cov = tmp_path / "cov_fail_proj"
+    _create_project(server, proj_cov)
+    orig_write_bytes = book_rpc.atomic_write_bytes
+
+    def fail_cover_write(dest: Path, data: bytes) -> None:
+        if dest.name.startswith("cover."):
+            raise OSError("simulated cover write failure")
+        orig_write_bytes(dest, data)
+
+    monkeypatch.setattr(book_rpc, "atomic_write_bytes", fail_cover_write)
+    fin_cov = _import_book(server, notifier, epub_path)
+    assert fin_cov["status"] == "failed"
+    assert not (proj_cov / "book.json").exists()
+    assert not any((proj_cov / "source").glob("*")) if (proj_cov / "source").exists() else True
+
+    monkeypatch.setattr(book_rpc, "atomic_write_bytes", orig_write_bytes)
+    fin_cov_retry = _import_book(server, notifier, epub_path)
+    assert fin_cov_retry["status"] == "succeeded", fin_cov_retry
+    assert (proj_cov / "book.json").is_file()
+    assert (proj_cov / "source" / "original.epub").read_bytes() == epub_path.read_bytes()
+    assert (proj_cov / "source" / "cover.png").is_file()
+
+    # 2. book.json write failure rolls back source/original.* and cover, and retry succeeds.
+    proj_json = tmp_path / "json_fail_proj"
+    _create_project(server, proj_json)
+    orig_write_json = book_rpc.atomic_write_json
+
+    def fail_book_json_write(dest: Path, data: Any) -> None:
+        if dest.name == "book.json":
+            raise OSError("simulated book.json write failure")
+        orig_write_json(dest, data)
+
+    monkeypatch.setattr(book_rpc, "atomic_write_json", fail_book_json_write)
+    fin_json = _import_book(server, notifier, epub_path)
+    assert fin_json["status"] == "failed"
+    assert not (proj_json / "book.json").exists()
+    assert not any((proj_json / "source").glob("*")) if (proj_json / "source").exists() else True
+
+    monkeypatch.setattr(book_rpc, "atomic_write_json", orig_write_json)
+    fin_json_retry = _import_book(server, notifier, epub_path)
+    assert fin_json_retry["status"] == "succeeded", fin_json_retry
+    assert (proj_json / "book.json").is_file()
+    assert (proj_json / "source" / "original.epub").read_bytes() == epub_path.read_bytes()
+    assert (proj_json / "source" / "cover.png").is_file()
+
+
+def test_lexicon_set_and_get_without_book_return_zero_match_count(
+    rpc_env: tuple[RpcServer, JobManager, _RecordingNotifier],
+    tmp_path: Path,
+) -> None:
+    server, _, _ = rpc_env
+    proj_dir = tmp_path / "no_book_lex_proj"
+    _create_project(server, proj_dir)
+
+    set_resp = _rpc_call(
+        server,
+        "lexicon.set",
+        {
+            "rules": [
+                {"word": "Skald", "replacement": "skahld"},
+                {"word": "Odyssey", "replacement": "AH-duh-see", "match_count": 42},
+            ]
+        },
+    )
+    assert "result" in set_resp, set_resp
+    lex_set = Lexicon.model_validate(set_resp["result"])
+    assert [(r.word, r.match_count) for r in lex_set.rules] == [("Skald", 0), ("Odyssey", 0)]
+
+    get_resp = _rpc_call(server, "lexicon.get")
+    assert "result" in get_resp, get_resp
+    lex_get = Lexicon.model_validate(get_resp["result"])
+    assert [(r.word, r.match_count) for r in lex_get.rules] == [("Skald", 0), ("Odyssey", 0)]
+
+
+def test_import_cancel_at_later_chapter_and_pre_save_checkpoint(
+    rpc_env: tuple[RpcServer, JobManager, _RecordingNotifier],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    server, _, notifier = rpc_env
+    epub_path = EPUB_OUT_DIR / "01_epub3_basic.epub"
+    orig_load_epub_import = xhtml_mod.load_epub_import
+
+    # 1. Cancel at a later chapter (chapter index 2 of 3).
+    proj_later = tmp_path / "cancel_ch2_proj"
+    _create_project(server, proj_later)
+    entered_ch2 = threading.Event()
+    release_ch2 = threading.Event()
+
+    def gate_ch2(path: Path | str, on_chapter: Any = None) -> Any:
+        def wrapped(idx: int, total: int) -> None:
+            if idx == 2:
+                entered_ch2.set()
+                release_ch2.wait(timeout=5.0)
+            if on_chapter is not None:
+                on_chapter(idx, total)
+
+        return orig_load_epub_import(path, on_chapter=wrapped)
+
+    monkeypatch.setattr(book_rpc, "load_epub_import", gate_ch2)
+    resp1 = _rpc_call(server, "book.import", {"source_path": str(epub_path)})
+    job_id1 = resp1["result"]["job_id"]
+    assert entered_ch2.wait(timeout=5.0)
+    assert "result" in _rpc_call(server, "job.cancel", {"job_id": job_id1})
+    release_ch2.set()
+
+    fin1 = notifier.wait_finished(job_id1)
+    assert fin1["status"] == "cancelled"
+    assert not (proj_later / "book.json").exists()
+    assert not (proj_later / "source" / "original.epub").exists()
+    assert not (proj_later / "source" / "cover.png").exists()
+
+    # 2. Cancel at the pre-save checkpoint (after extraction returns, before saving).
+    proj_presave = tmp_path / "cancel_presave_proj"
+    _create_project(server, proj_presave)
+    entered_presave = threading.Event()
+    release_presave = threading.Event()
+
+    def gate_presave(path: Path | str, on_chapter: Any = None) -> Any:
+        result = orig_load_epub_import(path, on_chapter=on_chapter)
+        entered_presave.set()
+        release_presave.wait(timeout=5.0)
+        return result
+
+    monkeypatch.setattr(book_rpc, "load_epub_import", gate_presave)
+    resp2 = _rpc_call(server, "book.import", {"source_path": str(epub_path)})
+    job_id2 = resp2["result"]["job_id"]
+    assert entered_presave.wait(timeout=5.0)
+    assert "result" in _rpc_call(server, "job.cancel", {"job_id": job_id2})
+    release_presave.set()
+
+    fin2 = notifier.wait_finished(job_id2)
+    assert fin2["status"] == "cancelled"
+    assert not (proj_presave / "book.json").exists()
+    assert not (proj_presave / "source" / "original.epub").exists()
+    assert not (proj_presave / "source" / "cover.png").exists()
