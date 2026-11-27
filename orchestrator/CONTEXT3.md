@@ -914,3 +914,19 @@ Decision:
  - The Builder's own observation: Christmas Carol's chapter 2 is titled with Gutenberg's edition-selector blurb (an NCX title) → known Gutenberg content, not a parser bug; tell the owner.
  - Then a fresh Sonnet Reviewer.
 Follow-up: owner pastes O-1 into the Builder session and skims text-review.md.
+
+### E-0169 · 2026-11-27 11:07 (Asia/Colombo) · T02.8 · REVIEW-PROMPT
+Context: T02.8 O-1 handoff (Gemini), PR #25 @799ae15. Verified by the Orchestrator:
+ - one commit on f66a039 (no force-push), touching only .gitattributes (+2 eol=lf lines);
+ - CI now green 12/12 (runs 45946546502 and 45946540940); mergeable and clean.
+The owner's skim of text-review.md ([REVIEW] gate) is still pending.
+Decision: send to a fresh Claude Sonnet Reviewer (Builder Gemini). FOCUS:
+ - the shared-walker change in epub.py (on_exit for ancestors while "inside") must not alter T02.2's D2 counts or anchor slicing, nor any T02.3 fixture output;
+ - the R1-1 heading fix (no heading flag leaking onto the next paragraphs);
+ - <pre> and <figcaption> per E-0167;
+ - the golden file: content recorded AFTER the extraction changes; deterministic; the --force guard; no timestamps;
+ - text-review.md: readable, with correct known issues;
+ - the T02.7 carry tests are meaningful (mutations);
+ - Appendix 3, defaults.md and the T02.7 row fix.
+Merge needs: APPROVED + the owner's skim.
+Follow-up: owner runs the Reviewer and reports the skim.
