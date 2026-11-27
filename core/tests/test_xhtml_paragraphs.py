@@ -370,3 +370,78 @@ def test_anchor_mid_paragraph_and_dangling_and_duplicate_text_unique_ids(tmp_pat
 
     p_ids = [p.id for ch in book.chapters for p in ch.paragraphs]
     assert len(p_ids) == len(set(p_ids))
+
+
+def test_pre_preserves_line_breaks_like_br(tmp_path: Path) -> None:
+    body = """
+    <pre>
+      First   stanza line
+      <span>Second</span> <em>stanza</em> line
+
+      Third line after blank.<br/>Fourth after br.
+    </pre>
+    <table>
+      <tr><td><pre>Cell line 1
+  Cell line 2  </pre></td><td>Col 2</td></tr>
+    </table>
+    <pre>
+
+    </pre>
+    """
+    epub = _build_epub(tmp_path / "pre.epub", body_xhtml=body)
+    book = load_epub_book(epub)
+    assert [p.text for p in book.chapters[0].paragraphs] == [
+        "First stanza line\nSecond stanza line\nThird line after blank.\nFourth after br.",
+        "Cell line 1\nCell line 2 Col 2",
+    ]
+
+
+def test_figcaption_skipped_while_non_standard_div_fig_kept(tmp_path: Path) -> None:
+    body = """
+    <p>Paragraph before figure.</p>
+    <figure>
+      <img src="plate1.png" alt="Ignored alt text"/>
+      <figcaption><p>Plate 1: Ignored caption text.</p></figcaption>
+    </figure>
+    <div class="fig">Non-standard Gutenberg caption stays in.</div>
+    <p>Paragraph after figure.</p>
+    """
+    epub = _build_epub(tmp_path / "figcaption.epub", body_xhtml=body)
+    book = load_epub_book(epub)
+    assert [p.text for p in book.chapters[0].paragraphs] == [
+        "Paragraph before figure.",
+        "Non-standard Gutenberg caption stays in.",
+        "Paragraph after figure.",
+    ]
+
+
+def test_anchor_inside_heading_keeps_is_heading_and_resets_after_heading(tmp_path: Path) -> None:
+    body = """
+    <h1><a id="c1"/>Chapter One</h1>
+    <p>Body one.</p>
+    <h2><a id="c2"/>Chapter Two</h2>
+    <p>Body two.</p>
+    <div><h3><span><a id="c3"/></span>Chapter Three</h3></div>
+    <p>Body three.</p>
+    """
+    nav = [
+        ("Chapter One", "ch1.xhtml#c1"),
+        ("Chapter Two", "ch1.xhtml#c2"),
+        ("Chapter Three", "ch1.xhtml#c3"),
+    ]
+    epub = _build_epub(tmp_path / "heading_anchors.epub", body_xhtml=body, nav_entries=nav)
+    book = load_epub_book(epub)
+
+    assert len(book.chapters) == 3
+    assert [(p.text, p.is_heading) for p in book.chapters[0].paragraphs] == [
+        ("Chapter One", True),
+        ("Body one.", False),
+    ]
+    assert [(p.text, p.is_heading) for p in book.chapters[1].paragraphs] == [
+        ("Chapter Two", True),
+        ("Body two.", False),
+    ]
+    assert [(p.text, p.is_heading) for p in book.chapters[2].paragraphs] == [
+        ("Chapter Three", True),
+        ("Body three.", False),
+    ]
