@@ -10,7 +10,8 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 - **Phase 0 complete** (T00.1–T00.4; E-0046). **Phase 1 complete** (T01.1–T01.6; E-0096).
 - Also merged: T02.1–T02.7 (Phase 2); T03.1–T03.6 (Phase 3).
 - `master` at `495210f` (PR #24 merge). Default branch `master`. Merge method: **normal merge** (E-0021) — never tell the owner to squash.
-- Open PRs: **#25 T02.8**, round 1 @799ae15 (O-1 fixed, CI green 12/12), in review with a fresh Sonnet (E-0169); the owner's text-review skim is still PENDING ([REVIEW] gate); real CPU smoke-pack install — first run 43719877209 passed on both OSes, E-0117).
+- Open PRs: **#25 T02.8**, round 1 @799ae15 (O-1 fixed, CI green 12/12), in review with a fresh Sonnet (E-0169); the owner's text-review skim is still PENDING ([REVIEW] gate). **#26 T03.7**: open, handoff not pasted yet → Opus Reviewer. Both from 495210f; the second to merge rebases.
+- CI: ci.yml (core/worker/app on windows-latest + ubuntu-latest), catalog.yml (PRs on catalog/** + weekly), slow.yml (weekly + workflow_dispatch; real CPU smoke-pack install — first run 43719877209 passed on both OSes, E-0117).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036). Milestones: none yet (M1 after T05.8).
 
 ## Tasks
