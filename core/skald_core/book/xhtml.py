@@ -25,7 +25,7 @@ from skald_core.book.epub import (
 )
 from skald_core.schemas.models import Book, Chapter, Paragraph
 
-_SKIP_TAGS: frozenset[str] = frozenset({"script", "style", "img", "rt", "rp"})
+_SKIP_TAGS: frozenset[str] = frozenset({"script", "style", "img", "figcaption", "rt", "rp"})
 _SKIP_EPUB_TYPES: frozenset[str] = frozenset({"noteref", "footnote", "endnote", "pagebreak"})
 _SKIP_ROLES: frozenset[str] = frozenset(
     {"doc-noteref", "doc-footnote", "doc-endnote", "doc-pagebreak"}
@@ -124,10 +124,37 @@ def _paragraph_id(chapter_id: str, paragraph_index: int, text: str) -> str:
     return f"p_{digest[:16]}"
 
 
+def _append_segments_text(
+    segments: list[list[str]],
+    text: str,
+    *,
+    preserve_newlines: bool,
+) -> None:
+    if not preserve_newlines:
+        segments[-1].append(text)
+        return
+    lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    segments[-1].append(lines[0])
+    for line in lines[1:]:
+        segments.append([line])
+
+
 def _extract_slice_paragraphs(body_slice: BodySlice, chapter_id: str) -> list[Paragraph]:
     paragraphs: list[Paragraph] = []
     buf_segments: list[list[str]] = [[]]
     heading_depth = 0
+    pre_depth = 0
+    if body_slice.start_el is not None and body_slice.start_el is not body_slice.root:
+        cur = body_slice.start_el.getparent()
+        while cur is not None:
+            parent_tag = _local_name(cur)
+            if parent_tag in HEADING_TAGS:
+                heading_depth += 1
+            elif parent_tag == "pre":
+                pre_depth += 1
+            if cur is body_slice.root:
+                break
+            cur = cur.getparent()
     row_stack: list[_TableRow] = []
     skipped_stack: list[etree._Element] = []
 
@@ -160,7 +187,7 @@ def _extract_slice_paragraphs(body_slice: BodySlice, chapter_id: str) -> list[Pa
             row.cells.append(cell_text)
 
     def _on_enter(el: etree._Element) -> bool | None:
-        nonlocal heading_depth
+        nonlocal heading_depth, pre_depth
         tag_name = _local_name(el)
 
         if _should_skip_element(el, tag_name):
@@ -192,12 +219,16 @@ def _extract_slice_paragraphs(body_slice: BodySlice, chapter_id: str) -> list[Pa
                 row.current_cell = [[]]
             elif tag_name in _BLOCK_TAGS and row.current_cell is not None:
                 row.current_cell[-1].append(" ")
+            if tag_name == "pre":
+                pre_depth += 1
             return None
 
         if tag_name in _BLOCK_TAGS:
             _flush_buffer()
             if tag_name in HEADING_TAGS:
                 heading_depth += 1
+            elif tag_name == "pre":
+                pre_depth += 1
 
         return None
 
@@ -205,12 +236,12 @@ def _extract_slice_paragraphs(body_slice: BodySlice, chapter_id: str) -> list[Pa
         if row_stack:
             cell = row_stack[-1].current_cell
             if cell is not None:
-                cell[-1].append(text)
+                _append_segments_text(cell, text, preserve_newlines=pre_depth > 0)
         else:
-            buf_segments[-1].append(text)
+            _append_segments_text(buf_segments, text, preserve_newlines=pre_depth > 0)
 
     def _on_exit(el: etree._Element) -> None:
-        nonlocal heading_depth
+        nonlocal heading_depth, pre_depth
         if skipped_stack and skipped_stack[-1] is el:
             skipped_stack.pop()
             return
@@ -231,12 +262,16 @@ def _extract_slice_paragraphs(body_slice: BodySlice, chapter_id: str) -> list[Pa
                 _flush_cell()
             elif tag_name in _BLOCK_TAGS and row.current_cell is not None:
                 row.current_cell[-1].append(" ")
+            if tag_name == "pre" and pre_depth > 0:
+                pre_depth -= 1
             return
 
         if tag_name in _BLOCK_TAGS:
             _flush_buffer()
             if tag_name in HEADING_TAGS and heading_depth > 0:
                 heading_depth -= 1
+            elif tag_name == "pre" and pre_depth > 0:
+                pre_depth -= 1
 
     walk_body_slice(body_slice, on_enter=_on_enter, on_text=_on_text, on_exit=_on_exit)
     _flush_buffer()

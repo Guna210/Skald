@@ -1,2 +1,4 @@
 *.epub binary
 packs/**/locks/*.txt text eol=lf
+core/tests/golden/*.json text eol=lf
+docs/verification/*.md text eol=lf

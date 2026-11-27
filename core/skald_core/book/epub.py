@@ -561,7 +561,7 @@ def walk_body_slice(
                 if state == "after":
                     break
 
-        if entered and on_exit is not None:
+        if (entered or state == "inside") and on_exit is not None:
             on_exit(el)
 
         if state == "inside" and el is not root_el and el.tail and on_text is not None:
