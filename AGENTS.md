@@ -171,7 +171,7 @@ Filled in by later tasks as the tooling appears.
 | Activate project-local caches | `. .\scripts\dev-env.ps1` | `source scripts/dev-env.sh` |
 | Fetch pinned binaries (ffmpeg, uv, Python) | `core\.venv\Scripts\python scripts\fetch_deps.py` | `core/.venv/bin/python scripts/fetch_deps.py` |
 | Run core tests | `core\.venv\Scripts\python -m pytest core -m "not network and not slow and not torch and not gpu"` | `core/.venv/bin/python -m pytest core -m "not network and not slow and not torch and not gpu"` |
-| Run worker contract tests | *(added by T03.7)* | *(added by T03.7)* |
+| Run worker contract tests | `core\.venv\Scripts\python -m pytest worker\tests\contract --adapter fake` | `core/.venv/bin/python -m pytest worker/tests/contract --adapter fake` |
 | Validate the catalog | `core\.venv\Scripts\python -m skald_core.catalog.validate catalog\catalog.json` | `core/.venv/bin/python -m skald_core.catalog.validate catalog/catalog.json` |
 | Regenerate pack lockfiles | `core\.venv\Scripts\python scripts\make_locks.py` (add `--check` in CI) | `core/.venv/bin/python scripts/make_locks.py` (add `--check` in CI) |
 | Run the self-test (CPU) | *(added by T04.3)* | *(added by T04.3)* |
