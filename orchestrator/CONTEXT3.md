@@ -851,3 +851,53 @@ Orchestrator's feasibility notes (web research; to be confirmed by a spike):
 Follow-up:
  - Before T06.4, run a small UI spike (Electron window + 2–3 glass components; measure GPU/CPU on the owner's laptop; test acrylic and frameless on Windows 11) and get the owner's screenshots.
  - Record the result as T06.4's design decision. T06.1 is unaffected, except that the window options (transparent/backgroundMaterial/frame) should stay easy to change.
+
+### E-0166 · 2026-11-27 10:16 (Asia/Colombo) · T03.6 · MERGED (CORRECTION of state)
+Context: master is 495210f = "Merge pull request #24 from Guna210/task/T03.6-model-installer". The owner merged it without saying so; GitHub shows #24 merged.
+Decision: T03.6 is done. Nothing new unlocks.
+Follow-up: none.
+
+### E-0167 · 2026-11-27 10:16 (Asia/Colombo) · T03.7, T02.8 · TASK-ASSIGNED
+Context: Owner asked for the T03.7 and T02.8 prompts. Both from master 495210f, in parallel (worker/ vs core/; both append Appendix 3 → the second to merge rebases).
+Decisions (the Builders record them in Appendix 3):
+T03.7 worker package:
+ - worker/pyproject.toml: package skald_worker, requires-python ≥ 3.11; deps pinned to the core's versions (pydantic==2.14.3, numpy==2.5.4, soundfile==0.14.0); setuptools build backend; ruff, mypy and pytest config.
+   - CI runs the worker checks with core/.venv's Python from inside worker/, so the package must be importable there (pytest pythonpath = ["."]) and land with ≥ 1 test (E-0041).
+   - It must not import skald_core.
+ - Registry: worker/skald_worker/adapters/__init__.py holds a module-level dict literal ADAPTER_VERSIONS (E-0097), EMPTY for now ({}).
+   - The fake adapter is always runnable as --adapter fake but is NOT listed in ADAPTER_VERSIONS, so the catalog and app never offer it.
+   - T04.x adds the real families.
+ - Its own stdio JSON-RPC loop with the B8 rules (UTF-8, "\n", one object per line, no batch, by-name params, -32602 with data.kind "internal").
+   - Worker errors use the same envelope with a subset of the B8 kinds (internal, out_of_memory, adapter_unavailable, unsupported_format), declared as a Literal duplicated here; T03.8 adds a core-side subset test.
+ - stdout protection (the E-0052 fd-level decision, now taken):
+   - at startup, os.dup(1) to a private fd for JSON-RPC output;
+   - os.dup2(2, 1), so anything else writing to fd 1 (print, os.write(1), C libraries, inherited children) lands on stderr;
+   - sys.stdout is redirected to stderr;
+   - logs go to stderr.
+ - Cancel (a NEW clarification of B6/V3): no worker.cancel method. The core cancels by terminating the worker process (T03.8 restarts it lazily).
+   - Synthesize writes to a temp file next to out_path, then os.replace, so a kill never leaves a partial WAV.
+   - The contract "cancel" check: kill during a hang mode → no out_path file → a fresh worker works.
+ - Adapter base: capabilities (presets, blend, clone, design, speed, style), a params Pydantic model (hello returns its JSON Schema; invalid → -32602), max_chars, languages, deterministic_cpu, voices.
+ - Output: mono PCM_16 WAV at the native rate via soundfile.
+ - --adapter <name> --check: exit 0 if the adapter imports and its dependencies are present, non-zero otherwise; message on stderr; stdout empty (T03.5 step 4).
+ - Fake adapter: 24 kHz deterministic sine; duration scales with len(text); seeded; deterministic_cpu True.
+   - A params field fake_mode ∈ ok | fail | hang | silence | clip | stdout_noise | crash. stdout_noise does print(), os.write(1, …) and a child process with inherited stdout; crash = os._exit (for T03.8).
+   - All capabilities, including design_sample and clone (a reference_wav that must exist).
+ - Contract suite worker/tests/contract/: reusable; drives `python -m skald_worker --adapter <name>` as a SUBPROCESS over stdio.
+   - pytest options --adapter (default fake) and --checkpoint-dir.
+   - Covers every V3 item (hello, load, voices, synthesize valid WAV/rate/duration > 0, param validation, errors, cancel, unload, shutdown) plus a stdout-purity check in every fake mode.
+   - Real adapters will use the torch/gpu markers.
+ - Reviewer: Opus (protocol, process safety, reused by every adapter).
+T02.8 golden text tests [REVIEW]:
+ - (a) test_golden_text.py compares the synthetic fixtures against the TOML.
+ - (b) For the two public-domain books it records chapter titles, paragraph counts, display-text char counts and chunk counts (chunk_paragraph on the synthesis text with an empty lexicon, language from the book, max_chars 400) via core/tests/golden/make_golden_text.py into core/tests/golden/text_golden.json, compared automatically. Re-recording needs Orchestrator approval (C3.3).
+ - (c) docs/verification/text-review.md: the first and last paragraph of each chapter for the owner's 10-minute skim. It also lists chapters flagged short or skipped, and known Gutenberg boilerplate (header and licence chapters, untagged Contents/ILLUSTRATIONS tables, div.fig captions).
+ - Decisions made now, before recording:
+   - T02.3 R1-2: <pre> keeps its line breaks like <br> (lines → "\n").
+   - Figure captions: <figcaption> is skipped by default (images are skipped; captions interrupt narration). Gutenberg's div.fig span is NOT class-matched → it stays, and is listed in text-review.md. Both go into defaults.md C1.1 item 5.
+ - Carry:
+   - T02.3 R1-1 (heading_depth from start_el's h1–h6 ancestors + a test);
+   - T02.7 R1-1 (cleanup when the cover or book.json write fails), R1-2 (no book → counts 0), R1-3 (cancel at a later chapter and at pre-save), R1-6 (the Appendix 3 row says load_epub_import).
+ - [REVIEW] gate: the owner skims text-review.md before merge; the Orchestrator gives the steps.
+ - Reviewer: Sonnet (Builder must not be Sonnet).
+Follow-up: owner opens two Builder sessions.

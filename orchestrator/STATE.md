@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-27 10:13 (Asia/Colombo) · last entry: E-0165
+Last updated: 2026-11-27 10:16 (Asia/Colombo) · last entry: E-0167
 Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 … E-0117), `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -8,19 +8,19 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 
 ## Where the project is
 - **Phase 0 complete** (T00.1–T00.4; E-0046). **Phase 1 complete** (T01.1–T01.6; E-0096).
-- Also merged: T02.1–T02.7 (Phase 2); T03.1–T03.5 (Phase 3).
-- `master` at `905c62a` (PR #23 merge). Default branch `master`. Merge method: **normal merge** (E-0021) — never tell the owner to squash.
-- Open PRs: **#24 T03.6** — APPROVED in round 1 (E-0163), head 9ba98db; waiting for the owner to merge (normal merge).
+- Also merged: T02.1–T02.7 (Phase 2); T03.1–T03.6 (Phase 3).
+- `master` at `495210f` (PR #24 merge). Default branch `master`. Merge method: **normal merge** (E-0021) — never tell the owner to squash.
+- Open PRs: none yet. **In progress (round 1, prompts E-0167):** T03.7 (`task/T03.7-worker-protocol`) and T02.8 (`task/T02.8-golden-text`), in parallel from 495210f; the second to merge rebases. Reviewers: T03.7 Opus, T02.8 Sonnet. T02.8 has a [REVIEW] gate: the owner skims text-review.md before merge.
 - CI: ci.yml (core/worker/app on windows-latest + ubuntu-latest), catalog.yml (PRs on catalog/** + weekly), slow.yml (weekly + workflow_dispatch; real CPU smoke-pack install — first run 43719877209 passed on both OSes, E-0117).
 - Releases/tags: `deps-v1` (Pre-release, 8 assets, verified E-0036). Milestones: none yet (M1 after T05.8).
 
 ## Tasks
-- Merged (PR): T00.1 #2, T00.2 #3, T00.3 #4, T00.4 #5, T01.1 #6, T01.2 #7, T02.1 #8, T01.6 #9, T01.4 #10, T03.4 #11, T01.5 #12, T01.3 #13, T02.2 #14, T03.1 #15, T03.5 #16, T02.3 #18, T03.2 #17, T02.4 #19, T02.5 #20, T02.6 #21, T03.3 #22, T02.7 #23.
-- **Available, not started** (prompt only when the owner asks; E-0057): T02.8 golden text-pipeline tests [REVIEW]; T03.7 worker protocol + skald_worker + fake adapter + contract suite (unlocks the most: T03.8 → T04.x); T03.9 Kokoro G2P / espeak-ng GPL spike [SPIKE][REVIEW]; T06.1 Electron + React + TS scaffold.
+- Merged (PR): T00.1 #2, T00.2 #3, T00.3 #4, T00.4 #5, T01.1 #6, T01.2 #7, T02.1 #8, T01.6 #9, T01.4 #10, T03.4 #11, T01.5 #12, T01.3 #13, T02.2 #14, T03.1 #15, T03.5 #16, T02.3 #18, T03.2 #17, T02.4 #19, T02.5 #20, T02.6 #21, T03.3 #22, T02.7 #23, T03.6 #24.
+- **Available, not started** (prompt only when the owner asks; E-0057): T03.9 Kokoro G2P / espeak-ng GPL spike [SPIKE][REVIEW]; T06.1 Electron + React + TS scaffold.
 - Unlock map: T03.6 ← T03.2 + T01.6 + T01.3; T03.8 ← T03.7 + T03.5 + T01.3; T02.4/T02.5 ← T02.3; T06.2 ← T06.1 + T01.3; T04.1 ← T03.7 + T03.9 + T03.6.
 
 ## Waiting on the owner
-1. Merge PR #24 (T03.6); then pick the next task(s).
+1. Run the T03.7 and T02.8 Builder sessions and paste back the handoffs.
 2. UI look DECIDED by the owner: Apple-style **Liquid Glass**, with real refraction/lensing, specular edges and chromatic fringing, NOT just blur (E-0165). Before T06.4: get the owner's phone screenshots and run a small glass spike (SVG feDisplacementMap in backdrop-filter, Chromium-only; it refracts only in-app content; desktop see-through only via Windows acrylic/mica, which is blur only; check perf on the owner's laptop; reduce-transparency fallback, A6).
 3. Before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
@@ -39,8 +39,8 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 - **T03.2 (done, PR #17; E-0119, E-0124–E-0128 — userData via SKALD_DATA_DIR, new kind catalog_invalid, 5 MiB cap, schema-only validation):** checkpoint/revision ids are unique per parent, not globally (E-0107); add a test that catalog.validate deletes each downloaded file after verification (T03.1 R2-1, E-0109).
 - **T03.3 (done, PR #22; E-0144, E-0150–E-0155):** a driver ≥ the CUDA 12.x minor-version floor (525.60.13 / 528.33) but < the 12.6 toolkit driver (560.28.03 / 560.76) → "may not work" (PTX-JIT caveat), not a clean fit (E-0114); don't promise Pascal (sm_61) until confirmed on a real card; a future cu13 accelerator drops Maxwell/Pascal/Volta (D9) (E-0069).
 - **T04.1 (carry from T03.6, E-0163):** FIRST R1-1 licence-URL exactness tests (url.upper() and url+"/" rejected in accept_license; install refuses when the catalog URL differs only by case or a trailing /); R1-2 a test that .complete exists inside .part at the moment of the rename; R1-4 tests for DownloadCancelled → JobCancelled and for PermissionError retry exhaustion → model_download_failed; R1-3 a remove renames <rev> → <rev>.removing (or deletes .complete) before rmtree, and the scan skips it; R1-5 a pack counts as in use if any revision on it is in _ACTIVE_REVISION_OPS or has a .part; R1-6 the update no-op ensures the pack (or documents why not) via a shared already-installed helper.
-- **T03.6 (done once #24 merges):** models.remove surfaces PackManager's "already in progress" SkaldError (T03.5 R2-3, E-0116); map net.DownloadCancelled → JobCancelled (E-0056).
-- **T03.7:** adapter registry = module-level dict literal `ADAPTER_VERSIONS = {"<family>": "<semver>"}` in worker/skald_worker/adapters/__init__.py, read by T03.1 via ast.literal_eval (E-0097); worker/pyproject.toml must land with ≥1 test or CI pytest exits 5 (E-0041); evaluate an fd-level stdout redirect (os.dup/os.dup2) — model libraries may print from C (E-0052).
+- **T03.6 (done, PR #24):** models.remove surfaces PackManager's "already in progress" SkaldError (T03.5 R2-3, E-0116); map net.DownloadCancelled → JobCancelled (E-0056).
+- **T03.7 (in progress; E-0167):** adapter registry = module-level dict literal `ADAPTER_VERSIONS = {"<family>": "<semver>"}` in worker/skald_worker/adapters/__init__.py, read by T03.1 via ast.literal_eval (E-0097); worker/pyproject.toml must land with ≥1 test or CI pytest exits 5 (E-0041); evaluate an fd-level stdout redirect (os.dup/os.dup2) — model libraries may print from C (E-0052).
 - **T05.x:** ChunkStatus.status/attempts are provisional (E-0076); a JobContext notify callback that raises fails the job (accepted, E-0092).
 - **T06.1:** keep the BrowserWindow options (transparent, backgroundMaterial, frame) easy to change for the Liquid Glass UI (E-0165); setup-node@v7 `package-manager-cache: true` vs the .cache/npm step (E-0044); `npm ci` will run inside the core/worker CI jobs once app/package-lock.json exists (E-0041).
 - **T06.x / T07.1:** a book.import job writes to the project root captured at submit; if the user switches projects mid-import, the old project still receives the book (E-0159).
@@ -56,6 +56,7 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 - **T02.8:** carry T02.7 R1-1 (a test for cleanup when the cover or book.json write fails), R1-2 (no book → lexicon counts 0), R1-3 (cancel at a later chapter and at the pre-save checkpoint) and R1-6 (Appendix 3 row: load_epub_import, not load_epub_book) (E-0159); fix T02.3 R1-1 (heading_depth from start_el's h1–h6 ancestors when an anchor sits inside a heading, plus a test) and decide R1-2 (<pre> keeps its line breaks like <br>?) (E-0122); decide whether figure captions (figcaption, Gutenberg div.fig) are skipped by default; Gutenberg header/licence chapters and untagged Contents/ILLUSTRATIONS tables go into the text-review skim (E-0121).
 - **T05.4:** add T02.6 R2-1 guard tests ("abcd\u200cefgh" and "abcd\U0001f3fdefgh" at max_chars 4); split_paragraph must return (role, sentences, SOURCE separators) so re-packing stays exact (E-0148); record the T02.6 accepted limits in Appendix 3 — a hard split may fall after a virama (splitting an Indic conjunct), and a grapheme longer than max_chars is cut (only for single words/graphemes over max_chars) (E-0147); split sentences ONCE and cache them; re-pack per checkpoint max_chars (packing is under 2% of the cost, pysbd about 95%). Add split → [(role, [sentences])] and pack_spans(spans, max_chars) entry points, with chunk_paragraph composing them. Sentence has no role → store the role per span or re-derive it with the dialogue pass (0.17 s/10k) (E-0146).
 - **T05.4:** carry the quote state across paragraphs so the closing paragraph of a multi-paragraph speech (a stray closer) isn't flagged (E-0146).
+- **T03.8:** cancel = terminate the worker process (no worker.cancel; E-0167); add a core-side test that the worker's error kinds are a subset of ErrorKind; fake_mode crash exists for the restart-once test.
 - **T05.4 / T03.8:** the fit result carries gpu_index → use it to choose the CUDA device (e.g. CUDA_VISIBLE_DEVICES) for the worker (E-0144).
 - **T08.3:** listen for British ‘…’ dialogue (not detected) and for continued-speech paragraphs (E-0144).
 - **T09.1:** the frozen core needs `catalog/catalog.json` and `worker/skald_worker/adapters/__init__.py` as data files under sys._MEIPASS (T03.2 resource-root helper, E-0119); test fixtures (incl. Gutenberg EPUBs) are never packaged (E-0060); exclude vendor/*/.tmp-*, .old-*, vendor/.downloads, ffplay/doc/man (E-0027).
@@ -66,4 +67,4 @@ Fresh Claude session per review; Sonnet by default; **Opus** for catalog, packs,
 - **Open item:** who creates `core/requirements.lock` (B3)? Decide by T04.1/T09.1 (E-0020).
 
 ## Recommended next step
-Owner merges #24 (nothing new unlocks). Available on request: T02.8, T03.7 (unlocks the model path), T03.9, T06.1. Prompts only on request (E-0057).
+Wait for the T03.7 / T02.8 handoffs. Available on request: T03.9, T06.1. Prompts only on request (E-0057).
