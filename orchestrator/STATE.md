@@ -1,6 +1,6 @@
 # Orchestrator state — snapshot
 
-Last updated: 2026-11-27 01:16 (Asia/Colombo) · last entry: E-0163
+Last updated: 2026-11-27 08:59 (Asia/Colombo) · last entry: E-0164
 Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 … E-0117), `CONTEXT.md` (E-0001 … E-0057).
 
 ## ★ IMPORTANT (owner, E-0066)
@@ -21,7 +21,8 @@ Current log file: `CONTEXT3.md` (E-0118 onward). Older: `CONTEXT2.md` (E-0058 �
 
 ## Waiting on the owner
 1. Merge PR #24 (T03.6); then pick the next task(s).
-2. Before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
+2. The owner wants to decide the UI look: capture their visual direction BEFORE the T06.4 prompt (T06.1 has no design and can run any time) (E-0164).
+3. Before any non-Claude agent builds a pack task: add `download-r2.pytorch.org` to that agent's cloud environment (already in the owner's Claude env) (E-0069).
 
 ## Pending GPU runs / open questions
 None.

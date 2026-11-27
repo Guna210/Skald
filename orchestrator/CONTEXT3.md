@@ -829,3 +829,12 @@ Decision: Merge PR #24 now (normal merge; mergeable and clean, head 9ba98db, CI 
 Why: approval stands; a test-only follow-up round now would need another review cycle; nothing installs real models until T04.x, and the T04.1 prompt will carry these explicitly.
 After merge: nothing new unlocks (T04.1 also needs T03.7 + T03.9; T07.2 needs T06.3 + T06.4). Available: T02.8, T03.7, T03.9, T06.1.
 Follow-up: owner merges PR #24.
+
+### E-0164 · 2026-11-27 08:59 (Asia/Colombo) · T06.1 / T06.4 · NOTE
+Context: Owner asked whether T06.1 is "the actual app", because they want to decide what the UI looks like.
+Decision: Answered no. T06.1 is only the technical shell: electron-vite + React + TS, the security settings, npm scripts and a placeholder window with "Skald" + the version. It contains no visual design.
+ - The look (colours, typography, spacing, light/dark tokens, base components, the B10 layout) is set in T06.4.
+ - The real screens are T07.1–T07.11.
+ - SPEC B10 fixes the STRUCTURE (Home; Book → Voices → Render → Export steps on the left; an inspector; the Jobs drawer; a top-bar Models button; Upscayl-style model cards), not the visual style.
+ - The owner's visual decisions are needed before T06.4, not before T06.1, so T06.1 can run now.
+Follow-up: before writing the T06.4 prompt, ask for or capture the owner's visual direction (references, colours, fonts, density, any mockups) and record it as a decision.
