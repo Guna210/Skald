@@ -1,0 +1,257 @@
+{
+  "books": {
+    "pg43-jekyll-hyde.epub": {
+      "authors": [
+        "Robert Louis Stevenson"
+      ],
+      "chapters": [
+        {
+          "chunk_count": 0,
+          "display_char_count": 0,
+          "paragraph_count": 0,
+          "title": "Chapter 1"
+        },
+        {
+          "chunk_count": 12,
+          "display_char_count": 923,
+          "paragraph_count": 11,
+          "title": "The Strange Case Of Dr. Jekyll And Mr. Hyde"
+        },
+        {
+          "chunk_count": 11,
+          "display_char_count": 236,
+          "paragraph_count": 11,
+          "title": "Contents"
+        },
+        {
+          "chunk_count": 97,
+          "display_char_count": 12688,
+          "paragraph_count": 29,
+          "title": "STORY OF THE DOOR"
+        },
+        {
+          "chunk_count": 158,
+          "display_char_count": 15923,
+          "paragraph_count": 51,
+          "title": "SEARCH FOR MR. HYDE"
+        },
+        {
+          "chunk_count": 49,
+          "display_char_count": 4226,
+          "paragraph_count": 18,
+          "title": "DR. JEKYLL WAS QUITE AT EASE"
+        },
+        {
+          "chunk_count": 64,
+          "display_char_count": 9119,
+          "paragraph_count": 19,
+          "title": "THE CAREW MURDER CASE"
+        },
+        {
+          "chunk_count": 114,
+          "display_char_count": 8851,
+          "paragraph_count": 39,
+          "title": "INCIDENT OF THE LETTER"
+        },
+        {
+          "chunk_count": 60,
+          "display_char_count": 8000,
+          "paragraph_count": 14,
+          "title": "INCIDENT OF DR. LANYON"
+        },
+        {
+          "chunk_count": 35,
+          "display_char_count": 2942,
+          "paragraph_count": 15,
+          "title": "INCIDENT AT THE WINDOW"
+        },
+        {
+          "chunk_count": 275,
+          "display_char_count": 23367,
+          "paragraph_count": 100,
+          "title": "THE LAST NIGHT"
+        },
+        {
+          "chunk_count": 84,
+          "display_char_count": 14946,
+          "paragraph_count": 35,
+          "title": "DR. LANYON’S NARRATIVE"
+        },
+        {
+          "chunk_count": 130,
+          "display_char_count": 37663,
+          "paragraph_count": 29,
+          "title": "HENRY JEKYLL’S FULL STATEMENT OF THE CASE"
+        },
+        {
+          "chunk_count": 95,
+          "display_char_count": 18133,
+          "paragraph_count": 51,
+          "title": "THE FULL PROJECT GUTENBERG™ LICENSE"
+        }
+      ],
+      "language": "en",
+      "title": "The strange case of Dr. Jekyll and Mr. Hyde"
+    },
+    "pg46-christmas-carol.epub": {
+      "authors": [
+        "Charles Dickens"
+      ],
+      "chapters": [
+        {
+          "chunk_count": 0,
+          "display_char_count": 0,
+          "paragraph_count": 0,
+          "title": "Chapter 1"
+        },
+        {
+          "chunk_count": 18,
+          "display_char_count": 1575,
+          "paragraph_count": 17,
+          "title": "There are several editions of this ebook in the Project Gutenberg collection. Various characteristics of each ebook are listed to aid in selecting the preferred file. Click on any of the filenumbers belowto quickly view each ebook."
+        },
+        {
+          "chunk_count": 1,
+          "display_char_count": 17,
+          "paragraph_count": 1,
+          "title": "A CHRISTMAS CAROL"
+        },
+        {
+          "chunk_count": 2,
+          "display_char_count": 13,
+          "paragraph_count": 2,
+          "title": "IN PROSE"
+        },
+        {
+          "chunk_count": 2,
+          "display_char_count": 28,
+          "paragraph_count": 2,
+          "title": "A Ghost Story of Christmas"
+        },
+        {
+          "chunk_count": 1,
+          "display_char_count": 15,
+          "paragraph_count": 1,
+          "title": "CHARLES DICKENS"
+        },
+        {
+          "chunk_count": 1,
+          "display_char_count": 32,
+          "paragraph_count": 1,
+          "title": "WITH ILLUSTRATIONS BY JOHN LEECH"
+        },
+        {
+          "chunk_count": 5,
+          "display_char_count": 312,
+          "paragraph_count": 5,
+          "title": "PREFACE"
+        },
+        {
+          "chunk_count": 2,
+          "display_char_count": 167,
+          "paragraph_count": 2,
+          "title": "CONTENTS"
+        },
+        {
+          "chunk_count": 10,
+          "display_char_count": 248,
+          "paragraph_count": 10,
+          "title": "ILLUSTRATIONS"
+        },
+        {
+          "chunk_count": 1,
+          "display_char_count": 10,
+          "paragraph_count": 1,
+          "title": "STAVE ONE."
+        },
+        {
+          "chunk_count": 200,
+          "display_char_count": 23801,
+          "paragraph_count": 98,
+          "title": "MARLEY’S GHOST."
+        },
+        {
+          "chunk_count": 142,
+          "display_char_count": 11271,
+          "paragraph_count": 76,
+          "title": "Marley’s Ghost"
+        },
+        {
+          "chunk_count": 5,
+          "display_char_count": 742,
+          "paragraph_count": 4,
+          "title": "STAVE TWO."
+        },
+        {
+          "chunk_count": 195,
+          "display_char_count": 21623,
+          "paragraph_count": 96,
+          "title": "THE FIRST OF THE THREE SPIRITS."
+        },
+        {
+          "chunk_count": 110,
+          "display_char_count": 12074,
+          "paragraph_count": 59,
+          "title": "Mr. Fezziwig’s Ball"
+        },
+        {
+          "chunk_count": 1,
+          "display_char_count": 12,
+          "paragraph_count": 1,
+          "title": "STAVE THREE."
+        },
+        {
+          "chunk_count": 26,
+          "display_char_count": 4966,
+          "paragraph_count": 11,
+          "title": "THE SECOND OF THE THREE SPIRITS."
+        },
+        {
+          "chunk_count": 298,
+          "display_char_count": 39724,
+          "paragraph_count": 133,
+          "title": "Scrooge’s Third Visitor"
+        },
+        {
+          "chunk_count": 17,
+          "display_char_count": 1224,
+          "paragraph_count": 9,
+          "title": "STAVE FOUR."
+        },
+        {
+          "chunk_count": 302,
+          "display_char_count": 27443,
+          "paragraph_count": 157,
+          "title": "THE LAST OF THE SPIRITS."
+        },
+        {
+          "chunk_count": 16,
+          "display_char_count": 1268,
+          "paragraph_count": 12,
+          "title": "The Last of the Spirits"
+        },
+        {
+          "chunk_count": 1,
+          "display_char_count": 11,
+          "paragraph_count": 1,
+          "title": "STAVE FIVE."
+        },
+        {
+          "chunk_count": 143,
+          "display_char_count": 11239,
+          "paragraph_count": 70,
+          "title": "THE END OF IT."
+        },
+        {
+          "chunk_count": 100,
+          "display_char_count": 19269,
+          "paragraph_count": 54,
+          "title": "THE FULL PROJECT GUTENBERG™ LICENSE"
+        }
+      ],
+      "language": "en",
+      "title": "A Christmas Carol in Prose; Being a Ghost Story of Christmas"
+    }
+  },
+  "max_chars": 400
+}
