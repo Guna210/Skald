@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "skald-worker"
+version = "0.1.0"
+description = "Skald model worker protocol and adapter runtime."
+requires-python = ">=3.11"
+license = "Apache-2.0"
+dependencies = [
+  "pydantic==2.14.3",
+  "numpy==2.5.4",
+  "soundfile==0.14.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["skald_worker*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["skald_worker"]
+
+[[tool.mypy.overrides]]
+module = ["soundfile"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "--strict-markers"
+markers = [
+  "network: tests that make live network requests",
+  "slow: slow-running tests",
+  "torch: tests that require PyTorch",
+  "gpu: tests that require an NVIDIA GPU",
+]
