@@ -930,3 +930,18 @@ Decision: send to a fresh Claude Sonnet Reviewer (Builder Gemini). FOCUS:
  - Appendix 3, defaults.md and the T02.7 row fix.
 Merge needs: APPROVED + the owner's skim.
 Follow-up: owner runs the Reviewer and reports the skim.
+
+### E-0170 · 2026-11-27 11:16 (Asia/Colombo) · T02.8 · VERDICT
+Context: Reviewer (fresh Claude Sonnet) round 1 on PR #25 @799ae15: APPROVED.
+ - Checks: 492 passed; ruff and mypy clean; the T02.2/T02.3 test files are untouched.
+ - Ad-hoc cases: an anchor in <p>, inline markup, a table cell or <pre> → identical to master. A nested heading anchor is now correct (master was wrong).
+ - <pre> and <figcaption> behave as decided, and a figure's tail is kept.
+ - Golden regeneration is byte-identical; the --force guard works.
+ - The walker change was judged safe (on_exit for never-entered ancestors, balanced by the depth initialisation).
+ - Carry mutations: 3 caught, 2 not (cancel at chapter 0 vs 2; the per-chapter checkpoint removed).
+Findings:
+ - R1-1 [Minor] the "cancel at a later chapter" test can't distinguish a mid-import cancel from the pre-save checkpoint (the production code is correct).
+ - R1-2 [Nit] an unused type: ignore in tests (dropped).
+ - R1-3 [Nit] the public-domain books have no <pre>/<figcaption>, so the golden doesn't cover them; the unit tests do (noted).
+Decision: PR #25 is approved. Merge is BLOCKED only on the owner's text-review.md skim ([REVIEW] gate). R1-1 → "when touched next" (test_book_rpc.py: record the on_chapter indices and a loader-returned flag; assert the cancel happens before the loader finishes). After the owner's "looks fine", the Orchestrator signs off the gate and records the sign-off in Appendix 3 via the next PR (CLAUDE.md [REVIEW] gates).
+Follow-up: owner reports the skim; then merge.
